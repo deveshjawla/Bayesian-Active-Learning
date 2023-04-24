@@ -46,13 +46,13 @@ function gramian_angular_field(input::Int32,
 		error("Not a valid method")
 	end
 				
-    return flatten ? reshape(output,:) : output
+    return flatten ? vec(output) : output
 end
 
 # function split(x::Vector, n)
 #      result = Vector{Vector{eltype(x)}}()
-#      for i in 1:length(n)
-#          if length(x) < n[i]
+#      for i in 1:lastindex(n)
+#          if lastindex(x) < n[i]
 #              push!(result, [])
 #          elseif i==1
 #              push!(result, x[1:n[i]])
@@ -63,9 +63,9 @@ end
 #      result
 # end
 function split(x::Vector, n)
-	result = Vector{Vector{eltype(x)}}(undef,length(n))
-	for i in 1:length(n)
-		if length(x) < n[i]
+	result = Vector{Vector{eltype(x)}}(undef,lastindex(n))
+	for i in 1:lastindex(n)
+		if lastindex(x) < n[i]
 			result[i] = []
 		elseif i==Int32(1)
 			result[i] = x[1:n[i]]
@@ -79,14 +79,14 @@ end
 
 using StatsBase
 function paa(input_vector, output_size)
-	if length(input_vector)%output_size == Int32(0)
-		quotient_ = Int(length(input_vector)/output_size)
+	if lastindex(input_vector)%output_size == Int32(0)
+		quotient_ = Int(lastindex(input_vector)/output_size)
 		indices_list = [((i-1)*quotient_)+1:quotient_*i for i in 1:output_size]
 		output_vector = [mean(indices) for indices in indices_list]
 		output_vector_magnitude = [mean([input_vector[i] for i in indices]) for indices in indices_list]
 	else
-		value_space = 1:(length(input_vector)*output_size)
-		output_indices = cld.(value_space, length(input_vector))
+		value_space = 1:(lastindex(input_vector)*output_size)
+		output_indices = cld.(value_space, lastindex(input_vector))
 		input_indices = cld.(value_space, output_size)
 		count_map = countmap(output_indices)
 		uniques, nUniques = keys(count_map), values(count_map)

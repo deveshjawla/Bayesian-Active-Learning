@@ -245,7 +245,7 @@ test_x = standardize(test_x, train_mean, train_std)
 
 threshold = 0.5
 
-predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = predicitons_analyzer(test_x, test_y, params_set, threshold)
+predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = pred_analyzer(test_x, test_y, params_set, threshold)
 
 writedlm("./experiments/$(name)/predcitions_std.csv", predcitions_std, ',')
 writedlm("./experiments/$(name)/predictions_mean.csv", predictions_mean, ',')
@@ -296,7 +296,7 @@ number_of_bins = 3
 using Distributions
 using Optim
 
-predictions_mean_validate, predcitions_std_validate, classifications_validate, majority_vote_validate, majority_conf_validate = predicitons_analyzer(validate_x, validate_y, params_set, threshold)
+predictions_mean_validate, predcitions_std_validate, classifications_validate, majority_vote_validate, majority_conf_validate = pred_analyzer(validate_x, validate_y, params_set, threshold)
 
 labels = validate_y
 ŷ_validate = classifications_validate
@@ -348,7 +348,7 @@ savefig(reliability_diagram, "./experiments/$(name)/reliability_diagram.png")
 # end
 
 # labels = validate_y
-# predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = predicitons_analyzer(validate_x, validate_y, params_set)
+# predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = pred_analyzer(validate_x, validate_y, params_set)
 # pred_conf = predictions_mean
 
 # loss((a, b)) = -sum(labels[i] * log(platt(pred_conf[i] * a + b)) + (1.0 - labels[i]) * log(1.0 - platt(pred_conf[i] * a + b)) for i = 1:lastindex(pred_conf))
@@ -362,7 +362,7 @@ savefig(reliability_diagram, "./experiments/$(name)/reliability_diagram.png")
 
 # number_of_bins = 10
 
-# predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = predicitons_analyzer(test_x, test_y, params_set)
+# predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = pred_analyzer(test_x, test_y, params_set)
 
 # bins, mean_conf, bin_acc, calibration_gaps = conf_bin_indices(number_of_bins, predictions_mean, test_y, classifications)
 

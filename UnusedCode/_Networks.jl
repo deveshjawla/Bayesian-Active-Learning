@@ -121,8 +121,6 @@ dense_2 = dense_layer(128, 10, 0.1f0, relu)
 network = Chain(conv_1, conv_2, conv_3, flatten, dense_1, dense_2, softmax)
 # network(rand(128,128,1,1))
 
-
-
 # function feedforward(θ::AbstractVector)
 #     W0 = reshape(θ[1:45400], 100, 454)
 #     b0 = θ[45401:45500]
@@ -207,3 +205,38 @@ network = Chain(conv_1, conv_2, conv_3, flatten, dense_1, dense_2, softmax)
 #     )
 #     return model
 # end
+
+
+
+###
+### Conv Network specifications
+###
+
+using Flux
+
+function nn(theta::AbstractVector)
+    W0 = reshape(theta[1:25], 5, 5, 1, 1) # Conv((5, 5), 1=>1, relu)
+    b0 = theta[26:26] #same length as the number of output channels
+    W1 = reshape(theta[27:35], 3, 3, 1, 1) # Conv((3, 3), 1=>1, relu)
+    b1 = theta[36:36]
+    W2 = reshape(theta[37:45], 3, 3, 1, 1) # Conv((3, 3), 1=>1, relu)
+    b2 = theta[46:46]
+
+    W3 = reshape(theta[1:25], 9, 128)
+    b3 = theta[46:46]
+    W4 = reshape(theta[1:25], 3, 9)
+    b4 = theta[46:46]
+    W5 = reshape(theta[1:25], 1, 3)
+    b5 = theta[46:46]
+	
+    model = Chain(
+        Conv(W0, b0, relu),
+        Conv(W1, b1, relu),
+        Conv(W2, b2, relu),
+        flatten, # for a defined input image size, we can calculate the flattened size
+        Dense(W3, b3, tanh),
+        Dense(W4, b4, tanh),
+        Dense(W5, b5, sigmoid) # for binary classification
+    )
+    return model
+end

@@ -6,9 +6,9 @@ import Random
 function textonehot(df,col,delim=";")
 	filtermut = [split(i,delim) for i in df[:,col]]
 	filtermutect = unique(reduce(vcat,filtermut))
-	filtermutectdata = DataFrame(zeros(Float64,nrow(df),length(filtermutect) ),string.(col,"_",filtermutect) )
-	for i in 1:length(filtermut)
-		for j in 1:length(filtermut[i]) # j is column to be set to 1
+	filtermutectdata = DataFrame(zeros(Float64,nrow(df),lastindex(filtermutect) ),string.(col,"_",filtermutect) )
+	for i in 1:lastindex(filtermut)
+		for j in 1:lastindex(filtermut[i]) # j is column to be set to 1
 			id=findfirst(x->x == filtermut[i][j],filtermutect)
 			filtermutectdata[i,id] = 1.0
 		end
@@ -16,7 +16,7 @@ function textonehot(df,col,delim=";")
 	oldnames=names(filtermutectdata)
 	nams = replace.(names(filtermutectdata),"."=>"_")
 	diffs = oldnames .== nams
-	for i in 1:length(nams)
+	for i in 1:lastindex(nams)
 		if ! diffs[i]
 			DataFrames.rename!(filtermutectdata,oldnames[i]=>nams[i])
 		end
@@ -35,8 +35,8 @@ function sampler(xx2,yy2,train,testog,samplskey,way,ratio_under_to_over)
     yy = [i==true for i in yy]
 	truez = findall(x->x,yy)
 	falsez = findall(x->!x,yy)
-	u = length(truez)
-	o = length(falsez)
+	u = lastindex(truez)
+	o = lastindex(falsez)
 	r =  u/o
     println("ratio: ",r)
 	v = []
@@ -46,7 +46,7 @@ function sampler(xx2,yy2,train,testog,samplskey,way,ratio_under_to_over)
 		for i in StatsBase.sample(1:u,x,replace=true)
 			push!(v, truez[i])
 		end
-        train = vcat(train,length(yy2)+1:length(yy2)+length(v))
+        train = vcat(train,lastindex(yy2)+1:lastindex(yy2)+lastindex(v))
 		return vcat(xx2,xx[v,:]),vec(vcat(yy2,yy[v,:])),train,testog,vcat(samplskey,smpsyy[v])
 	elseif way == "under"
 		x = round(Int, u / ratio_under_to_over)
@@ -56,9 +56,9 @@ function sampler(xx2,yy2,train,testog,samplskey,way,ratio_under_to_over)
 		end
 		t1 = vcat(xx[v,:],xx[truez,:])
 		train = collect(1:nrow(t1))
-		# println(length(nrow(t1)+1))
+		# println(lastindex(nrow(t1)+1))
 		# println(nrow(xx2[testog,:]))
-		# println(length(nrow(t1)+nrow(xx2[testog,:])))
+		# println(lastindex(nrow(t1)+nrow(xx2[testog,:])))
 		test = collect(nrow(t1)+1:nrow(t1)+nrow(xx2[testog,:]))
 		t1 = vcat(t1,xx2[testog,:])
 		t2 = vcat(yy[v],yy[truez],yy2[testog] )
@@ -71,7 +71,7 @@ function sampler(xx2,yy2,train,testog,samplskey,way,ratio_under_to_over)
 end
 
 function isonehot(val::Array)::Bool
-	if length(val) > 3
+	if lastindex(val) > 3
 		return false
 	end
 	for i in val
@@ -184,7 +184,7 @@ function fit_standardizer(df)
 end
 
 function transform_standardizer!(df, standardzer)
-	for col in 1:length(standardzer.col_names)
+	for col in 1:lastindex(standardzer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,standardzer.col_names[col] ] = ( df[i,standardzer.col_names[col] ] - standardzer.means[col] ) / standardzer.stds[col]
@@ -197,7 +197,7 @@ end
 
 function transform_standardizer(df2, standardzer)
 	df = copy(df2)
-	for col in 1:length(standardzer.col_names)
+	for col in 1:lastindex(standardzer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,standardzer.col_names[col] ] = ( df[i,standardzer.col_names[col] ] - standardzer.means[col] ) / standardzer.stds[col]
@@ -210,7 +210,7 @@ function transform_standardizer(df2, standardzer)
 end
 
 function untransform_standardizer!(df, standardzer)
-	for col in 1:length(standardzer.col_names)
+	for col in 1:lastindex(standardzer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,standardzer.col_names[col] ] = ( df[i,standardzer.col_names[col] ] * standardzer.stds[col] ) + standardzer.means[col]
@@ -223,7 +223,7 @@ end
 
 function untransform_standardizer(df2, standardzer)
 	df = copy(df2)
-	for col in 1:length(standardzer.col_names)
+	for col in 1:lastindex(standardzer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,standardzer.col_names[col] ] = ( df[i,standardzer.col_names[col] ] * standardzer.stds[col] ) + standardzer.means[col]
@@ -261,7 +261,7 @@ function fit_normalizer(df)
 end
 
 function transform_normalizer!(df, normalizer)
-	for col in 1:length(normalizer.col_names)
+	for col in 1:lastindex(normalizer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,normalizer.col_names[col] ] = ( df[i,normalizer.col_names[col] ] - normalizer.mins[col] ) / ( normalizer.maxs[col] - normalizer.mins[col]  )
@@ -274,7 +274,7 @@ end
 
 function transform_normalizer(df2, normalizer)
 	df = copy(df2)
-	for col in 1:length(normalizer.col_names)
+	for col in 1:lastindex(normalizer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,normalizer.col_names[col] ] = ( df[i,normalizer.col_names[col] ] - normalizer.mins[col] ) / ( normalizer.maxs[col] - normalizer.mins[col]  )
@@ -287,7 +287,7 @@ function transform_normalizer(df2, normalizer)
 end
 
 function untransform_normalizer!(df, normalizer)
-	for col in 1:length(normalizer.col_names)
+	for col in 1:lastindex(normalizer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,normalizer.col_names[col] ] = df[i,normalizer.col_names[col] ] * ( normalizer.maxs[col] - normalizer.mins[col]  ) + normalizer.mins[col]  
@@ -300,7 +300,7 @@ end
 
 function untransform_normalizer(df2, normalizer)
 	df = copy(df2)
-	for col in 1:length(normalizer.col_names)
+	for col in 1:lastindex(normalizer.col_names)
 		try
 		for i in 1:DataFrames.nrow(df)
 			df[i,normalizer.col_names[col] ] = df[i,normalizer.col_names[col] ] * ( normalizer.maxs[col] - normalizer.mins[col]  ) + normalizer.mins[col]  
@@ -328,7 +328,7 @@ function savechunk(df::DataFrame,sample_key::Vector{String},name::String;overwri
 		end
 	end
 	ids = collect(Iterators.partition(collect(1:nrow(df)), chunk_size))
-	for j in 1:length(ids)
+	for j in 1:lastindex(ids)
 		FileIO.save("$name/$j.jld2", Dict("sample_key"=>sample_key[ids[j]],"x" => x[ids[j],:],
 			"y" => y[ids[j]], 
 			#         "train" => train, "test" => test
@@ -347,7 +347,7 @@ function loadchunk(name::String)
 	end
 	ids = readdir(name)
 	sample_key, xold, yold = FileIO.load("$name/1.jld2","sample_key","x" ,"y" );
-	for j in 1:length(ids)
+	for j in 1:lastindex(ids)
 		if occursin(".jld2",ids[j]) 
 			n = parse(Int,split(ids[j],".")[1])
 			if n > 1

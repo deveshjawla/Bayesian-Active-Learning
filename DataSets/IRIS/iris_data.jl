@@ -1,3 +1,9 @@
+using Distributed
+using Turing
+# Add four processes to use for sampling.
+addprocs(4; exeflags=`--project`)
+
+
 # Function to split samples.
 function split_data(df; at=0.70)
     r = size(df, 1)
@@ -16,11 +22,12 @@ end
 ### Data
 ###
 PATH = @__DIR__
+cd(PATH)
 using Flux, Turing
 using CSV
 using DataFrames
 
-iris = CSV.read("Data/IRIS/Iris_cleaned.csv", DataFrame, header=1)
+iris = CSV.read("./Iris_cleaned.csv", DataFrame, header=1)
 target = "Species"
 
 using Random
@@ -68,9 +75,9 @@ Turing.setadbackend(:reversediff)
 alpha = 0.09
 sigma = sqrt(1.0 / alpha)
 
-activations_file = open("./activations_file.txt")
-weights_file = open("./weights_file.txt")
-activations_file = open("./activations_file.txt")
+# activations_file = open("./activations_file.txt")
+# weights_file = open("./weights_file.txt")
+# activations_file = open("./activations_file.txt")
 
 @model bayesnn(x, y) = begin
     θ ~ MvNormal(zeros(43), sigma .* ones(43))
@@ -82,8 +89,8 @@ activations_file = open("./activations_file.txt")
     end
 end
 
-close(activations_file)
-close(weights_file)
+# close(activations_file)
+# close(weights_file)
 
 ###
 ### Inference
@@ -97,7 +104,7 @@ elapsed = chain_timed.time
 
 params_set = collect.(eachrow(θ[:, :, 1]))
 
-function predicitons_analyzer(test_xs, test_ys, params_set)
+function pred_analyzer(test_xs, test_ys, params_set)
     means = []
     stds = []
     accuracies = []
@@ -123,7 +130,7 @@ function predicitons_analyzer(test_xs, test_ys, params_set)
     return means, stds, accuracies
 end
 
-predictions_mean, predcitions_std, predictions_acc = predicitons_analyzer(test_x, test_y, params_set)
+predictions_mean, predcitions_std, predictions_acc = pred_analyzer(test_x, test_y, params_set)
 
 param_matrix = mapreduce(permutedims, vcat, params_set)
 mkdir("./test_results_$(name)")

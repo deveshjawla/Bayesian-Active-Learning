@@ -35,7 +35,7 @@ end
     in_channels::Int = 1
     out_channels::Int = 1
     activation_fn = relu
-    stride_length::Int = 1
+    stride_lastindex::Int = 1
     pad::Int = 1
     pool_window::Tuple{Int,Int} = (2, 2)
     pool_stride::Int = 1
@@ -69,7 +69,7 @@ gr()
 
 
 function conv_out_dims(input_dims::Tuple, cp::ConvParams)
-    output_dims_conv = (((input_dims[1] - cp.filter_size[1] + 2 * cp.pad) / cp.stride_length) + 1)
+    output_dims_conv = (((input_dims[1] - cp.filter_size[1] + 2 * cp.pad) / cp.stride_lastindex) + 1)
     println(output_dims_conv)
     output_dims = ((output_dims_conv - cp.pool_window[1]) / cp.pool_stride) + 1
     return (Int(output_dims), Int(output_dims))
@@ -101,10 +101,10 @@ function layer_params(params_vec::AbstractVector, dp::DenseParams)
 end
 
 function split(x::AbstractVector, n)
-    result = Vector{Vector{eltype(x)}}(undef, length(n))
+    result = Vector{Vector{eltype(x)}}(undef, lastindex(n))
     sum_elements = sum(n)
-    if sum_elements == length(x)
-        for i in 1:length(n)
+    if sum_elements == lastindex(x)
+        for i in 1:lastindex(n)
             result[i] = splice!(x, 1:n[i])
         end
     end
@@ -232,7 +232,7 @@ sig = sqrt(1.0 / alpha)
     ŷ = forward(x, θ, layers_spec)
     # println(size(ŷ))
     # Observe each prediction.
-    for i = 1:length(y)
+    for i = 1:lastindex(y)
         # println(y[i], typeof(ŷ[i]))
         y[i] ~ Bernoulli(ŷ[i])
     end
