@@ -70,3 +70,27 @@ function split_data(df; at=0.70)
     test = df[(index+1):end, :]
     return pool, test
 end
+
+using EvalMetrics
+function performance_stats(ground_truth_, predictions_)
+	ground_truth = deepcopy(Int.(vec(ground_truth_)))
+    predictions = deepcopy(Int.(vec(predictions_)))
+    ground_truth[ground_truth.==2] .= 0
+    predictions[predictions.==2] .= 0
+    f1 = f1_score(ground_truth, predictions)
+    mcc = matthews_correlation_coefficient(ground_truth, predictions)
+    acc = accuracy(ground_truth, predictions)
+    fpr = false_positive_rate(ground_truth, predictions)
+    # fnr = fnr(ground_truth, predictions)
+    # tpr = tpr(ground_truth, predictions)
+    # tnr = tnr(ground_truth, predictions)
+    prec = precision(ground_truth, predictions)
+    recall = true_positive_rate(ground_truth, predictions)
+	threat_score = EvalMetrics.threat_score(ground_truth, predictions)
+	cm = ConfusionMatrix(ground_truth, predictions)
+    return acc, mcc, f1, fpr, prec, recall, threat_score, cm
+end
+
+function accuracy_multiclass(true_labels, predictions)
+    return mean(true_labels .== predictions)
+end

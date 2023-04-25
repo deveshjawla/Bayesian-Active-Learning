@@ -1,4 +1,4 @@
-function entropy(prob_vec::Vector, n_output)
+function normalized_entropy(prob_vec::Vector, n_output)
 	return (-sum(prob_vec.*log2.(prob_vec)))/log2(n_output)
 end
 
@@ -6,13 +6,13 @@ end
 Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
 
 
-Returns : H(Entropy), E+H(BALD score, Mutual Information)
+Returns : H(normalized_entropy), E+H(BALD score, Mutual Information)
 """
 function bald(prob_matrix::Matrix, n_output)
 	# println(size(prob_matrix))
 	mean_prob_per_class = vec(mean(prob_matrix, dims = 2))
-	H = entropy(mean_prob_per_class, n_output)
-	E_H = mean(mapslices(x->entropy(x, n_output), prob_matrix, dims=1))
+	H = normalized_entropy(mean_prob_per_class, n_output)
+	E_H = mean(mapslices(x->normalized_entropy(x, n_output), prob_matrix, dims=1))
 	return H, H + E_H
 end
 

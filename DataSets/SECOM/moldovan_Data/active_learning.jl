@@ -219,7 +219,7 @@ let
 			performance_data[1, al_step] = m[1, 2]
 			cl_dist_string=m[2,2]*","*m[2,3]
 			class_dict=eval(Meta.parse(cl_dist_string))
-			class_dist_ent=entropy(softmax(collect(values(class_dict))), n_output)
+			class_dist_ent=normalized_entropy(softmax(collect(values(class_dict))), n_output)
 			performance_data[2, al_step] = class_dist_ent
 			performance_data[3, al_step] = m[3, 2]
 			c = readdlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain.csv", ',')
@@ -246,7 +246,7 @@ let
 				performance_data[1, al_step] = m[1, 2]
 				cl_dist_string=m[2,2]*","*m[2,3]
 				class_dict=eval(Meta.parse(cl_dist_string))
-				class_dist_ent=entropy(softmax(collect(values(class_dict))), n_output)
+				class_dist_ent=normalized_entropy(softmax(collect(values(class_dict))), n_output)
 				performance_data[2, al_step] = class_dist_ent
 				performance_data[3, al_step] = m[3, 2]
 				c = readdlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain.csv", ',')
@@ -295,9 +295,15 @@ let
 	CSV.write("./experiments/df.csv", df)
 end
 
-using Gadfly, Cairo, Fontconfig
-set_default_plot_size(6inch, 4inch)
-df = CSV.read("./experiments/df.csv", DataFrame, header = 1)
+PATH = @__DIR__
+cd(PATH)
+experiments = "4_experiments_1000"
+using Gadfly, Cairo, Fontconfig, DataFrames, CSV
+set_default_plot_size(6inch, 12inch)
+df = CSV.read("./$(experiments)/df.csv", DataFrame, header = 1)
 for (j,i) in enumerate(groupby(df, :AcquisitionSize))
-	plot(i, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm])) |> PNG("./experiments/$(j).png")
+	fig1a = plot(i, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]))
+	fig1b = plot(i, x=:CumTrainedSize, y=:ClassDistEntropy, color=:AcquisitionFunction, Geom.step)
+	fig1c = plot(i, x=:CumTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.step,  Guide.ylabel("Time Elapsed Training (seconds)"))
+	vstack(fig1a, fig1b, fig1c) |> PNG("./$(experiments)/$(j).png")
 end
