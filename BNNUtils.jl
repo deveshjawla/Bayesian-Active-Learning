@@ -22,7 +22,6 @@ function pred_analyzer(test_xs, test_ys, params_set, threshold)::Tuple{Array{Flo
             # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
             ŷ = model(collect(test_x))
             append!(predictions, ŷ)
-
         end
         individual_classifications = map(x -> ifelse(x > threshold, 1, 0), predictions)
         majority_vote = ifelse(mean(individual_classifications) > 0.5, 1, 0)
@@ -112,47 +111,47 @@ function pool_predictions(test_xs, params_set, n_output)::Array{Float32, 3}
 end
 
 
-# function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, name_exp)
-# 	location_prior, scale_prior = prior
-# 	@everywhere location_prior = $location_prior
-# 	@everywhere scale_prior = $scale_prior
-# 	train_x, train_y = training_data
-# 	@everywhere train_x = $train_x
-# 	@everywhere train_y = $train_y
-# 	# println("Checking dimensions of train_x and train_y just before training:", train_x[1,1], " & ", train_y[1,1])
-# 	@everywhere model = bayesnnMVG(train_x, train_y, location_prior, scale_prior)
-# 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
-# 	chain = chain_timed.value
-# 	elapsed = chain_timed.time
-# 	# writedlm("./experiments/$(name_exp)/elapsed.txt", elapsed)
-# 	θ = MCMCChains.group(chain, :θ).value
-
-# 	burn_in = Int(0.6*nsteps)
-# 	n_indep_samples = Int((nsteps-burn_in) / 10)
-# 	param_matrices_accumulated = Array{Float64}(undef, n_chains*n_indep_samples, total_num_params)
-#     for i in 1:n_chains
-# 		params_set = collect.(eachrow(θ[:, :, i]))
-#     	param_matrix = mapreduce(permutedims, vcat, params_set)
-
-# 		independent_param_matrix = Array{Float64}(undef, n_indep_samples, total_num_params)
-# 		for i in 1:nsteps-burn_in
-# 			if i % 10 == 0
-# 				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
-# 			end
-# 		end
-
-# 		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed)
-
-#     	writedlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
-# 		# println(oob_rhat)
-
-# 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
-#     end
-#     writedlm("./experiments/$(name_exp)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
-# 	return param_matrices_accumulated
-# end
-
 function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, name_exp)
+	location_prior, scale_prior = prior
+	@everywhere location_prior = $location_prior
+	@everywhere scale_prior = $scale_prior
+	train_x, train_y = training_data
+	@everywhere train_x = $train_x
+	@everywhere train_y = $train_y
+	# println("Checking dimensions of train_x and train_y just before training:", train_x[1,1], " & ", train_y[1,1])
+	@everywhere model = bayesnnMVG(train_x, train_y, location_prior, scale_prior)
+	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
+	chain = chain_timed.value
+	elapsed = chain_timed.time
+	# writedlm("./experiments/$(name_exp)/elapsed.txt", elapsed)
+	θ = MCMCChains.group(chain, :θ).value
+
+	burn_in = Int(0.6*nsteps)
+	n_indep_samples = Int((nsteps-burn_in) / 10)
+	param_matrices_accumulated = Array{Float64}(undef, n_chains*n_indep_samples, total_num_params)
+    for i in 1:n_chains
+		params_set = collect.(eachrow(θ[:, :, i]))
+    	param_matrix = mapreduce(permutedims, vcat, params_set)
+
+		independent_param_matrix = Array{Float64}(undef, n_indep_samples, total_num_params)
+		for i in 1:nsteps-burn_in
+			if i % 10 == 0
+				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
+			end
+		end
+
+		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed)
+
+    	writedlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+		# println(oob_rhat)
+
+		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
+    end
+    writedlm("./experiments/$(name_exp)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+	return param_matrices_accumulated
+end
+
+function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, al_step, name_exp)
 	location_prior, scale_prior = prior
 	train_x, train_y = training_data
 	# println("Checking dimensions of train_x and train_y just before training:", train_x[1,1], " & ", train_y[1,1])

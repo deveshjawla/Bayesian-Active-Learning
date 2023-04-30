@@ -113,3 +113,69 @@ function get_methods_with(mod::Module, type::Type)
     end
     return methods_list
 end
+
+macro timeout(expr, seconds=-1, cb=(tsk) -> Base.throwto(tsk, InterruptException()))
+    quote
+        tsk = @task $expr
+        schedule(tsk)
+
+        if $seconds > -1
+            Timer((timer) -> $cb(tsk), $seconds)
+        end
+
+        return fetch(tsk)
+    end
+end
+
+macro timeout(seconds, expr, err_expr=:(nothing))
+    esc(quote
+        tsk__ = @task $expr
+        schedule(tsk__)
+        start_time__ = time()
+        curt__ = time()
+        Base.Timer(0.001, interval=0.001) do timer__
+            if tsk__ === nothing || istaskdone(tsk__)
+                close(timer__)
+            else
+                curt__ = time()
+                if curt__ - start_time__ > $seconds
+                    Base.throwto(tsk__, InterruptException())
+                end
+            end
+        end
+        try
+            fetch(tsk__)
+        catch err__
+            if err__.task.exception isa InterruptException
+                RemoteHPC.log_error(RemoteHPC.StallException(err__))
+                $err_expr
+            else
+                rethrow(err__.task.exception)
+            end
+        end
+    end)
+end
+
+@timeout (sleep(3); println("done"), 2)
+
+@timeout (sleep(3); println("done")) 4
+
+macro timeout(seconds, expr, fail)
+    quote
+        tsk = @task $esc(expr)
+        schedule(tsk)
+        Timer($(esc(seconds))) do timer
+            istaskdone(tsk) || Base.throwto(tsk, InterruptException())
+        end
+        try
+            fetch(tsk)
+        catch _
+            $(esc(fail))
+        end
+    end
+end
+
+
+# Parse Dictionary from a String
+cl_dist_string = m[2, 2] * "," * m[2, 3]
+class_dict = eval(Meta.parse(cl_dist_string))
