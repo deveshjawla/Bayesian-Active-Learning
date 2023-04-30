@@ -53,19 +53,19 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 	
 	test_x, test_y = test_data
 	predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
-    writedlm("./experiments/$(name_exp)/predictions/$al_step.csv", predictions, ',')
+    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
 	ŷ_test = permutedims(Int.(predictions[1,:]))
 	# println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
 	# pŷ_test = predictions[:,2]
 	if n_output == 2
 		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
-		writedlm("./experiments/$(name_exp)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
 	else
 		acc = accuracy_multiclass(test_y, ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"]], ',')
-		writedlm("./experiments/$(name_exp)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]])
 	end
 	#Turning the posterior obtained after training on new samples into the new prior for the next iteration
@@ -76,7 +76,7 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 	# println("Means of Prior and Posterior distribution's Means are  ", mean(prior[1]), " & ", mean(param_matrix_mean))	
 	# println("Means of Prior and Posterior distribution's stds are  ", mean(prior[2]), " & ", mean(param_matrix_std))
 
-	writedlm("./experiments/$(name_exp)/log_distribution_changes/$al_step.csv", [["Euclidean distance between Prior and Posterior distribution's means is  ","Euclidean distance between Prior and Posterior distribution's stds is ", "Means of Prior", "and Posterior distribution's Means are  ", "Means of Prior", "and Posterior distribution's stds are  "] [euclidean(param_matrix_mean, prior[1]), euclidean(param_matrix_std, prior[2]), mean(prior[1]), mean(param_matrix_mean), mean(prior[2]), mean(param_matrix_std)]], ',')
+	writedlm("./$(experiment_name)/$(pipeline_name)/log_distribution_changes/$al_step.csv", [["Euclidean distance between Prior and Posterior distribution's means is  ","Euclidean distance between Prior and Posterior distribution's stds is ", "Means of Prior", "and Posterior distribution's Means are  ", "Means of Prior", "and Posterior distribution's stds are  "] [euclidean(param_matrix_mean, prior[1]), euclidean(param_matrix_std, prior[2]), mean(prior[1]), mean(param_matrix_mean), mean(prior[2]), mean(param_matrix_std)]], ',')
 
 	new_prior = (param_matrix_mean, param_matrix_std)
 

@@ -57,7 +57,7 @@ addprocs(5; exeflags=`--project`)
     validate_y[validate_y.==0] .= 2
     test_y[test_y.==0] .= 2
     name = "calibration_study"
-    mkpath("./experiments/$(name)")
+    mkpath("./$(experiment_name)/$(name)")
 
     ###
     ### Dense Network specifications
@@ -152,11 +152,11 @@ chain = chain_timed.value
 elapsed_ = chain_timed.time
 θ = MCMCChains.group(chain, :θ).value
 using DelimitedFiles
-mkpath("./experiments/$(name)/calibration_step/Validate/Uncalibrated")
-mkpath("./experiments/$(name)/calibration_step/Test/Uncalibrated")
-mkpath("./experiments/$(name)/calibration_step/Test/Calibrated")
-mkpath("./experiments/$(name)/post_calibration/Test/Calibrated")
-mkpath("./experiments/$(name)/post_calibration/Test/Uncalibrated")
+mkpath("./$(experiment_name)/$(name)/calibration_step/Validate/Uncalibrated")
+mkpath("./$(experiment_name)/$(name)/calibration_step/Test/Uncalibrated")
+mkpath("./$(experiment_name)/$(name)/calibration_step/Test/Calibrated")
+mkpath("./$(experiment_name)/$(name)/post_calibration/Test/Calibrated")
+mkpath("./$(experiment_name)/$(name)/post_calibration/Test/Uncalibrated")
 
 using EvalMetrics
 # set_encoding(OneTwo())
@@ -201,14 +201,14 @@ function calibration_plot_maker(i, number_of_bins, confidence, ground_truth_, st
 
     ECE, MCE = ece_mce(bins, calibration_gaps, total_samples)
 
-    writedlm("./experiments/$(name)/" * stepname * "/ece_mce_$(i).txt", [["ECE", "MCE"] [ECE, MCE]], ',')
+    writedlm("./$(experiment_name)/$(name)/" * stepname * "/ece_mce_$(i).txt", [["ECE", "MCE"] [ECE, MCE]], ',')
 
     f(x) = x
     reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false, title="Reliability diagram with \n ECE:$(ECE), MCE:$(MCE)",
         xlabel="Confidence",
         ylabel="# Class labels in Target", size=(800, 600))
     plot!(f, 0, 1, label="Perfect Calibration")
-    savefig(reliability_diagram, "./experiments/$(name)/" * stepname * "/reliability_diagram_$(i).png")
+    savefig(reliability_diagram, "./$(experiment_name)/$(name)/" * stepname * "/reliability_diagram_$(i).png")
 end
 
 number_of_bins = 3
@@ -224,34 +224,34 @@ for i in 1:n_chains
             independent_param_matrix[Int((i) / 10), :] = param_matrix[i, :]
         end
     end
-    writedlm("./experiments/$(name)/calibration_step/param_matrix_$(i).csv", independent_param_matrix, ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/param_matrix_$(i).csv", independent_param_matrix, ',')
 
     ŷ_validate, pŷ_validate = pred_analyzer_multiclass(validate_x, validate_y, independent_param_matrix)
     ŷ_test, pŷ_test = pred_analyzer_multiclass(test_x, independent_param_matrix)
 
     # println(countmap(ŷ_test))
 
-    writedlm("./experiments/$(name)/calibration_step/ŷ_validate_$(i).csv", hcat(ŷ_validate, pŷ_validate), ',')
-    writedlm("./experiments/$(name)/calibration_step/ŷ_test_$(i).csv", hcat(ŷ_test, pŷ_test), ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/ŷ_validate_$(i).csv", hcat(ŷ_validate, pŷ_validate), ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/ŷ_test_$(i).csv", hcat(ŷ_test, pŷ_test), ',')
 
     # gr()
     # prplot(test_y, pŷ_test)
     # no_skill(x) = count(==(1), test_y) / length(test_y)
     # plot!(no_skill, 0, 1, label="No Skill Classifier")
-    # savefig("./experiments/$(name)/PRCurve_$(i).png")
+    # savefig("./$(experiment_name)/$(name)/PRCurve_$(i).png")
     # prauc = au_prcurve(test_y, pŷ_test)
 
 
     elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed_)
 
-    writedlm("./experiments/$(name)/calibration_step/convergence_statistics_chain_$(i).csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/convergence_statistics_chain_$(i).csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 
 
     acc, mcc, f1, fpr, prec, recall = performance_stats(validate_y, ŷ_validate)
-    writedlm("./experiments/$(name)/calibration_step/performance_statistics_validate_chain_$(i).csv", [["Accuracy", "MCC", "f1", "fpr", "precision", "recall"] [acc, mcc, f1, fpr, prec, recall]], ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/performance_statistics_validate_chain_$(i).csv", [["Accuracy", "MCC", "f1", "fpr", "precision", "recall"] [acc, mcc, f1, fpr, prec, recall]], ',')
 
     acc, mcc, f1, fpr, prec, recall = performance_stats(test_y, ŷ_test)
-    writedlm("./experiments/$(name)/calibration_step/performance_statistics_test_chain_$(i).csv", [["Accuracy", "MCC", "f1", "fpr", "precision", "recall"] [acc, mcc, f1, fpr, prec, recall]], ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/performance_statistics_test_chain_$(i).csv", [["Accuracy", "MCC", "f1", "fpr", "precision", "recall"] [acc, mcc, f1, fpr, prec, recall]], ',')
 
     calibration_plot_maker(i, number_of_bins, pŷ_validate, validate_y, "calibration_step/Validate/Uncalibrated", name)
     calibration_plot_maker(i, number_of_bins, pŷ_test, test_y, "calibration_step/Test/Uncalibrated", name)
@@ -261,7 +261,7 @@ for i in 1:n_chains
     a, b = result.minimizer
     calibrated_pŷ_test = platt(pŷ_test .* a .+ b)
 	println(calibrated_pŷ_test[1:5])
-    writedlm("./experiments/$(name)/calibration_step/calibration_fit_params.csv", [a, b], ',')
+    writedlm("./$(experiment_name)/$(name)/calibration_step/calibration_fit_params.csv", [a, b], ',')
 
     calibration_plot_maker(i, number_of_bins, calibrated_pŷ_test, test_y, "calibration_step/Test/Calibrated", name)
 end
@@ -280,15 +280,15 @@ begin
     avg_ece_mce_test_uncalibrated = Array{Any}(undef, 2, n_chains)
     avg_ece_mce_test_calibrated = Array{Any}(undef, 2, n_chains)
     for i = 1:n_chains
-        a = readdlm("./experiments/$(name)/calibration_step/convergence_statistics_chain_$(i).csv", ',')
-        b = readdlm("./experiments/$(name)/calibration_step/performance_statistics_validate_chain_$(i).csv", ',')
-        c = readdlm("./experiments/$(name)/calibration_step/performance_statistics_test_chain_$(i).csv", ',')
+        a = readdlm("./$(experiment_name)/$(name)/calibration_step/convergence_statistics_chain_$(i).csv", ',')
+        b = readdlm("./$(experiment_name)/$(name)/calibration_step/performance_statistics_validate_chain_$(i).csv", ',')
+        c = readdlm("./$(experiment_name)/$(name)/calibration_step/performance_statistics_test_chain_$(i).csv", ',')
         avg_convergence_stats[:, i] = a[:, 2]
         avg_perf_stats_validate[:, i] = b[:, 2]
         avg_perf_stats_test[:, i] = c[:, 2]
-        e = readdlm("./experiments/$(name)/calibration_step/Validate/Uncalibrated/ece_mce_$(i).txt", ',')
-        f = readdlm("./experiments/$(name)/calibration_step/Test/Uncalibrated/ece_mce_$(i).txt", ',')
-        g = readdlm("./experiments/$(name)/calibration_step/Test/Calibrated/ece_mce_$(i).txt", ',')
+        e = readdlm("./$(experiment_name)/$(name)/calibration_step/Validate/Uncalibrated/ece_mce_$(i).txt", ',')
+        f = readdlm("./$(experiment_name)/$(name)/calibration_step/Test/Uncalibrated/ece_mce_$(i).txt", ',')
+        g = readdlm("./$(experiment_name)/$(name)/calibration_step/Test/Calibrated/ece_mce_$(i).txt", ',')
         avg_ece_mce_validate[:, i] = e[:, 2]
         avg_ece_mce_test_uncalibrated[:, i] = f[:, 2]
         avg_ece_mce_test_calibrated[:, i] = g[:, 2]
@@ -299,19 +299,19 @@ begin
     _e = mean(avg_ece_mce_validate, dims=2)
     _f = mean(avg_ece_mce_test_uncalibrated, dims=2)
     _g = mean(avg_ece_mce_test_calibrated, dims=2)
-    mkpath("./experiments/$(name)/calibration_step/means")
-    writedlm("./experiments/$(name)/calibration_step/means/convergence_statistics.txt", _a)
-    writedlm("./experiments/$(name)/calibration_step/means/performance_statistics_validate.txt", _b)
-    writedlm("./experiments/$(name)/calibration_step/means/performance_statistics_test.txt", _c)
-    writedlm("./experiments/$(name)/calibration_step/means/ece_mce_validate.txt", _e)
-    writedlm("./experiments/$(name)/calibration_step/means/ece_mce_test_uncalibrated.txt", _f)
-    writedlm("./experiments/$(name)/calibration_step/means/ece_mce_test_calibrated.txt", _g)
+    mkpath("./$(experiment_name)/$(name)/calibration_step/means")
+    writedlm("./$(experiment_name)/$(name)/calibration_step/means/convergence_statistics.txt", _a)
+    writedlm("./$(experiment_name)/$(name)/calibration_step/means/performance_statistics_validate.txt", _b)
+    writedlm("./$(experiment_name)/$(name)/calibration_step/means/performance_statistics_test.txt", _c)
+    writedlm("./$(experiment_name)/$(name)/calibration_step/means/ece_mce_validate.txt", _e)
+    writedlm("./$(experiment_name)/$(name)/calibration_step/means/ece_mce_test_uncalibrated.txt", _f)
+    writedlm("./$(experiment_name)/$(name)/calibration_step/means/ece_mce_test_calibrated.txt", _g)
 end
 
 begin
     param_matrices_accumulated = Array{Float64}(undef, n_chains*Int(nsteps / 10), total_num_params)
     for i in 1:n_chains
-        a = readdlm("./experiments/$(name)/calibration_step/param_matrix_$(i).csv", ',')
+        a = readdlm("./$(experiment_name)/$(name)/calibration_step/param_matrix_$(i).csv", ',')
         param_matrices_accumulated[(i-1)*100+1:i*100,:] = a
     end
     param_matrix_mean = mean(param_matrices_accumulated, dims=1)
@@ -354,33 +354,33 @@ for i in 1:n_chains
             independent_param_matrix[Int((i) / 10), :] = param_matrix[i, :]
         end
     end
-    writedlm("./experiments/$(name)/post_calibration/param_matrix_$(i).csv", independent_param_matrix, ',')
+    writedlm("./$(experiment_name)/$(name)/post_calibration/param_matrix_$(i).csv", independent_param_matrix, ',')
 
     ŷ_test, pŷ_test = pred_analyzer_multiclass(test_x, independent_param_matrix)
 
     # println(countmap(ŷ_test))
 
-    writedlm("./experiments/$(name)/post_calibration/ŷ_test_$(i).csv", hcat(ŷ_test, pŷ_test), ',')
+    writedlm("./$(experiment_name)/$(name)/post_calibration/ŷ_test_$(i).csv", hcat(ŷ_test, pŷ_test), ',')
 
     # gr()
     # prplot(test_y, pŷ_test)
     # no_skill(x) = count(==(1), test_y) / length(test_y)
     # plot!(no_skill, 0, 1, label="No Skill Classifier")
-    # savefig("./experiments/$(name)/PRCurve_$(i).png")
+    # savefig("./$(experiment_name)/$(name)/PRCurve_$(i).png")
     # prauc = au_prcurve(test_y, pŷ_test)
 
 
     elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed_)
 
-    writedlm("./experiments/$(name)/post_calibration/convergence_statistics_chain_$(i).csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+    writedlm("./$(experiment_name)/$(name)/post_calibration/convergence_statistics_chain_$(i).csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 
     acc, mcc, f1, fpr, prec, recall = performance_stats(test_y, ŷ_test)
-    writedlm("./experiments/$(name)/post_calibration/performance_statistics_test_chain_$(i).csv", [["Accuracy", "MCC", "f1", "fpr", "precision", "recall"] [acc, mcc, f1, fpr, prec, recall]], ',')
+    writedlm("./$(experiment_name)/$(name)/post_calibration/performance_statistics_test_chain_$(i).csv", [["Accuracy", "MCC", "f1", "fpr", "precision", "recall"] [acc, mcc, f1, fpr, prec, recall]], ',')
 
 
     calibration_plot_maker(i, number_of_bins, pŷ_test, test_y, "post_calibration/Test/Uncalibrated", name)
 
-    a, b = readdlm("./experiments/$(name)/calibration_step/calibration_fit_params.csv", ',')
+    a, b = readdlm("./$(experiment_name)/$(name)/calibration_step/calibration_fit_params.csv", ',')
 	println(pŷ_test[10:15])
     calibrated_pŷ_test = platt(pŷ_test .* a .+ b)
 	println(calibrated_pŷ_test[10:15])
@@ -394,12 +394,12 @@ begin
     avg_ece_mce_test_uncalibrated = Array{Any}(undef, 2, n_chains)
     avg_ece_mce_test_calibrated = Array{Any}(undef, 2, n_chains)
     for i = 1:n_chains
-        a = readdlm("./experiments/$(name)/post_calibration/convergence_statistics_chain_$(i).csv", ',')
-        c = readdlm("./experiments/$(name)/post_calibration/performance_statistics_test_chain_$(i).csv", ',')
+        a = readdlm("./$(experiment_name)/$(name)/post_calibration/convergence_statistics_chain_$(i).csv", ',')
+        c = readdlm("./$(experiment_name)/$(name)/post_calibration/performance_statistics_test_chain_$(i).csv", ',')
         avg_convergence_stats[:, i] = a[:, 2]
         avg_perf_stats_test[:, i] = c[:, 2]
-        f = readdlm("./experiments/$(name)/post_calibration/Test/Uncalibrated/ece_mce_$(i).txt", ',')
-        g = readdlm("./experiments/$(name)/post_calibration/Test/Calibrated/ece_mce_$(i).txt", ',')
+        f = readdlm("./$(experiment_name)/$(name)/post_calibration/Test/Uncalibrated/ece_mce_$(i).txt", ',')
+        g = readdlm("./$(experiment_name)/$(name)/post_calibration/Test/Calibrated/ece_mce_$(i).txt", ',')
         avg_ece_mce_test_uncalibrated[:, i] = f[:, 2]
         avg_ece_mce_test_calibrated[:, i] = g[:, 2]
     end
@@ -407,10 +407,10 @@ begin
     _c = mean(avg_perf_stats_test, dims=2)
     _f = mean(avg_ece_mce_test_uncalibrated, dims=2)
     _g = mean(avg_ece_mce_test_calibrated, dims=2)
-	mkpath("./experiments/$(name)/post_calibration/means")
-    writedlm("./experiments/$(name)/post_calibration/means/convergence_statistics.txt", _a)
-    writedlm("./experiments/$(name)/post_calibration/means/performance_statistics_test.txt", _c)
-    writedlm("./experiments/$(name)/post_calibration/means/ece_mce_test_uncalibrated.txt", _f)
-    writedlm("./experiments/$(name)/post_calibration/means/ece_mce_test_calibrated.txt", _g)
+	mkpath("./$(experiment_name)/$(name)/post_calibration/means")
+    writedlm("./$(experiment_name)/$(name)/post_calibration/means/convergence_statistics.txt", _a)
+    writedlm("./$(experiment_name)/$(name)/post_calibration/means/performance_statistics_test.txt", _c)
+    writedlm("./$(experiment_name)/$(name)/post_calibration/means/ece_mce_test_uncalibrated.txt", _f)
+    writedlm("./$(experiment_name)/$(name)/post_calibration/means/ece_mce_test_calibrated.txt", _g)
 end
 

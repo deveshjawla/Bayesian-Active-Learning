@@ -23,17 +23,17 @@ function diversity_sampling(pool, input_size, n_output, al_step, test_data, name
 	
 	test_x, test_y = copy(transpose(test_data[1])), vec(copy(transpose(test_data[2])))
 	ŷ_test = XGBoost.predict(xgb, test_x)
-    writedlm("./experiments/$(name_exp)/predictions/$al_step.csv", ŷ_test, ',')
+    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", ŷ_test, ',')
 	# println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
 	# pŷ_test = predictions[:,2]
 	if n_output == 2
 		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
-		writedlm("./experiments/random_sampling_$(acquisition_size)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./$(experiment_name)/random_sampling_$(acquisition_size)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
 	else
 		acc = mean(test_y.==ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]], ',')
-		writedlm("./experiments/random_sampling_$(acquisition_size)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]], ',')
+		writedlm("./$(experiment_name)/random_sampling_$(acquisition_size)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]], ',')
 	end
 
 	return new_pool, xgb, xgb_random, training_data
@@ -66,13 +66,13 @@ function uncertainty_sampling(xgb::Booster, pool, previous_training_data, input_
 	
 	test_x, test_y = copy(transpose(test_data[1])), vec(copy(transpose(test_data[2])))
 	ŷ_test = XGBoost.predict(xgb, test_x)
-    writedlm("./experiments/$(name_exp)/predictions/$al_step.csv", ŷ_test, ',')
+    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", ŷ_test, ',')
 	if n_output == 2
 		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
 	else
 		acc = mean(test_y.==ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size,balance_of_acquired_batch, acc]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size,balance_of_acquired_batch, acc]], ',')
 	end
 
 	println("size of training data is: ",size(training_data))
@@ -101,16 +101,16 @@ function random_sampling(xgb::Booster, pool, previous_training_data, input_size,
 	
 	test_x, test_y = copy(transpose(test_data[1])), vec(copy(transpose(test_data[2])))
 	ŷ_test = XGBoost.predict(xgb, test_x)
-    writedlm("./experiments/$(name_exp)/predictions/$al_step.csv", ŷ_test, ',')
+    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", ŷ_test, ',')
 	# println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
 	# pŷ_test = predictions[:,2]
 	if n_output == 2
 		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
 	else
 		acc = mean(test_y.==ŷ_test)
-		writedlm("./experiments/$(name_exp)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size,balance_of_acquired_batch, acc]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Acquired Batch class distribution", "Accuracy"] [acquisition_size,balance_of_acquired_batch, acc]], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]])
 	end
 

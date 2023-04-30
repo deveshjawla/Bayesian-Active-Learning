@@ -123,7 +123,7 @@ function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, nam
 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
 	chain = chain_timed.value
 	elapsed = chain_timed.time
-	# writedlm("./experiments/$(name_exp)/elapsed.txt", elapsed)
+	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	θ = MCMCChains.group(chain, :θ).value
 
 	burn_in = Int(0.6*nsteps)
@@ -142,12 +142,12 @@ function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, nam
 
 		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed)
 
-    	writedlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+    	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 		# println(oob_rhat)
 
 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
     end
-    writedlm("./experiments/$(name_exp)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+    writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 	return param_matrices_accumulated
 end
 
@@ -159,7 +159,7 @@ function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, 
 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
 	chain = chain_timed.value
 	elapsed = chain_timed.time
-	# writedlm("./experiments/$(name_exp)/elapsed.txt", elapsed)
+	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	θ = MCMCChains.group(chain, :θ).value
 
 	burn_in = Int(0.6*nsteps)
@@ -178,11 +178,11 @@ function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, 
 
 		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed)
 
-    	writedlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+    	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 		# println(oob_rhat)
 
 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
     end
-    writedlm("./experiments/$(name_exp)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+    writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 	return param_matrices_accumulated
 end

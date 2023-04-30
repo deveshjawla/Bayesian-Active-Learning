@@ -91,12 +91,12 @@ begin
     for acquisition_size in [10]
         for acq_func in ["PowerBALD", "Random"]
             name_exp = "$(acq_func)_$(acquisition_size)_with_$(num_mcsteps)_MCsteps"
-            mkpath("./experiments/$(name_exp)/predictions")
-            mkpath("./experiments/$(name_exp)/classification_performance")
-            mkpath("./experiments/$(name_exp)/convergence_statistics")
-            mkpath("./experiments/$(name_exp)/independent_param_matrix_all_chains")
-            mkpath("./experiments/$(name_exp)/log_distribution_changes")
-            mkpath("./experiments/$(name_exp)/query_batch_class_distributions")
+            mkpath("./$(experiment_name)/$(pipeline_name)/predictions")
+            mkpath("./$(experiment_name)/$(pipeline_name)/classification_performance")
+            mkpath("./$(experiment_name)/$(pipeline_name)/convergence_statistics")
+            mkpath("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains")
+            mkpath("./$(experiment_name)/$(pipeline_name)/log_distribution_changes")
+            mkpath("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions")
 
 
             AL_iteration = 1
@@ -126,27 +126,27 @@ begin
             for al_step = 1:n_acq_steps
                 data = Array{Any}(undef, 5, num_chains)
                 for i = 1:num_chains
-                    m = readdlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain_$i.csv", ',')
+                    m = readdlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", ',')
                     data[:, i] = m[:, 2]
-                    rm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain_$i.csv")
+                    rm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv")
                 end
                 d = mean(data, dims=2)
-                writedlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain.csv", d)
+                writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", d)
             end
 
             performance_data = Array{Any}(undef, 4, n_acq_steps) #dims=(features, samples(i))
             for al_step = 1:n_acq_steps
-                m = readdlm("./experiments/$(name_exp)/classification_performance/$(al_step).csv", ',')
+                m = readdlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
                 performance_data[1, al_step] = m[2, 2]#AcquisitionSize
-                cd = readdlm("./experiments/$(name_exp)/query_batch_class_distributions/$(al_step).csv", ',')
+                cd = readdlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                 performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
                 performance_data[3, al_step] = m[3, 2] #Accuracy
-                c = readdlm("./experiments/$(name_exp)/convergence_statistics/$(al_step)_chain.csv", ',')
+                c = readdlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", ',')
                 performance_data[4, al_step] = c[1] #Elapsed
             end
-            writedlm("./experiments/$(name_exp)/kpi.csv", performance_data, ',')
+            writedlm("./$(experiment_name)/$(pipeline_name)/kpi.csv", performance_data, ',')
 
-			# kpi = readdlm("./experiments/$(name_exp)/kpi.csv", ',')
+			# kpi = readdlm("./$(experiment_name)/$(pipeline_name)/kpi.csv", ',')
 			kpi = copy(performance_data)
 			temporary_vector = Array{Int}(undef, n_acq_steps)
 			for i = 1:n_acq_steps
@@ -159,7 +159,7 @@ begin
         end
     end
 	df = DataFrame(kpi_df, [:AcquisitionFunction, :AcquisitionSize, :CumTrainedSize, :ClassDistEntropy, :Accuracy, :Elapsed])
-    CSV.write("./experiments/df.csv", df)
+    CSV.write("./$(experiment_name)/df.csv", df)
 end
 
 # sum([idx * i for (i, idx) in enumerate(summaries[:, :mean])])
@@ -174,10 +174,10 @@ PATH = @__DIR__
 cd(PATH)
 using Gadfly, Cairo, Fontconfig, DataFrames, CSV
 set_default_plot_size(6inch, 12inch)
-df = CSV.read("./experiments/df.csv", DataFrame, header=1)
+df = CSV.read("./$(experiment_name)/df.csv", DataFrame, header=1)
 for (j, i) in enumerate(groupby(df, :AcquisitionSize))
     fig1a = plot(i, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]))
     fig1b = plot(i, x=:CumTrainedSize, y=:ClassDistEntropy, color=:AcquisitionFunction, Geom.step)
     fig1c = plot(i, x=:CumTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.step, Guide.ylabel("Time Elapsed Training (seconds)"))
-    vstack(fig1a, fig1b, fig1c) |> PNG("./experiments/$(j).png")
+    vstack(fig1a, fig1b, fig1c) |> PNG("./$(experiment_name)/$(j).png")
 end

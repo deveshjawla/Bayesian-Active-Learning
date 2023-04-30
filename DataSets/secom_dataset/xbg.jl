@@ -60,11 +60,11 @@ let
     for acquisition_size in [10]
         name_exp = "maxentropy_$(acquisition_size)"
         name_exp_random = "random_sampling_$(acquisition_size)"
-        mkpath("./$(experiments)/$(name_exp)/predictions")
-        mkpath("./$(experiments)/$(name_exp)/classification_performance")
-        mkpath("./$(experiments)/$(name_exp)/convergence_statistics")
-        mkpath("./$(experiments)/$(name_exp)/independent_param_matrix_all_chains")
-        mkpath("./$(experiments)/$(name_exp)/log_distribution_changes")
+        mkpath("./$(experiments)/$(pipeline_name)/predictions")
+        mkpath("./$(experiments)/$(pipeline_name)/classification_performance")
+        mkpath("./$(experiments)/$(pipeline_name)/convergence_statistics")
+        mkpath("./$(experiments)/$(pipeline_name)/independent_param_matrix_all_chains")
+        mkpath("./$(experiments)/$(pipeline_name)/log_distribution_changes")
 
         mkpath("./$(experiments)/$(name_exp_random)/predictions")
         mkpath("./$(experiments)/$(name_exp_random)/classification_performance")
@@ -102,17 +102,17 @@ let
             n_acq_steps = round(Int, total_pool_samples / acquisition_size, RoundUp)
             performance_data = Array{Any}(undef, 4, n_acq_steps) #dims=(features, samples(i))
             for al_step = 1:n_acq_steps
-                m = readdlm("./$(experiments)/$(name_exp)/classification_performance/$(al_step).csv", ',')
+                m = readdlm("./$(experiments)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
                 performance_data[1, al_step] = m[1, 2]
                 cl_dist_string = m[2, 2] * "," * m[2, 3]
                 class_dict = eval(Meta.parse(cl_dist_string))
                 class_dist_ent = normalized_entropy(softmax(collect(values(class_dict))), n_output)
                 performance_data[2, al_step] = class_dist_ent
                 performance_data[3, al_step] = m[3, 2]
-                # c = readdlm("./$(experiments)/$(name_exp)/convergence_statistics/$(al_step)_chain.csv", ',')
+                # c = readdlm("./$(experiments)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", ',')
                 performance_data[4, al_step] = 0
             end
-            writedlm("./$(experiments)/$(name_exp)/kpi.csv", performance_data)
+            writedlm("./$(experiments)/$(pipeline_name)/kpi.csv", performance_data)
         end
     end
 end
@@ -125,7 +125,7 @@ let
 		name_exp = "maxentropy_$(acquisition_size)"
 		name_exp_random = "random_sampling_$(acquisition_size)"
 		n_acq_steps = round(Int, total_pool_samples/acquisition_size, RoundUp)
-		kpi = readdlm("./$(experiments)/$(name_exp)/kpi.csv", '\t')
+		kpi = readdlm("./$(experiments)/$(pipeline_name)/kpi.csv", '\t')
 		kpi_random = readdlm("./$(experiments)/$(name_exp_random)/kpi.csv", '\t')
 		temporary_vector = Array{Int}(undef, n_acq_steps)
 		for i=1:n_acq_steps

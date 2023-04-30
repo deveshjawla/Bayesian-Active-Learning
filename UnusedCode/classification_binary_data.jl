@@ -81,27 +81,27 @@ validate_x = standardize(validate_x, train_mean, train_std)
 
 name = "generative_calibration"
 
-mkpath("./experiments/$(name)")
-# mkpath("./experiments/$(name)/DATA")
-# writedlm("./experiments/$(name)/DATA/train_y.csv", train_y, ',')
-# writedlm("./experiments/$(name)/DATA/train_x.csv", train_x, ',')
-# writedlm("./experiments/$(name)/DATA/validate_y.csv", validate_y, ',')
-# writedlm("./experiments/$(name)/DATA/validate_x.csv", validate_x, ',')
-# writedlm("./experiments/$(name)/DATA/test_y.csv", test_y, ',')
-# writedlm("./experiments/$(name)/DATA/test_x.csv", test_x, ',')
+mkpath("./$(experiment_name)/$(name)")
+# mkpath("./$(experiment_name)/$(name)/DATA")
+# writedlm("./$(experiment_name)/$(name)/DATA/train_y.csv", train_y, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/train_x.csv", train_x, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/validate_y.csv", validate_y, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/validate_x.csv", validate_x, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/test_y.csv", test_y, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/test_x.csv", test_x, ',')
 
 #reading back data
 # name = "test_unbalanced"
 # using DelimitedFiles
-# train_y = vec(readdlm("./experiments/$(name)/DATA/train_y.csv", ',', Int))
-# train_x = readdlm("./experiments/$(name)/DATA/train_x.csv", ',')
-# validate_y = vec(readdlm("./experiments/$(name)/DATA/validate_y.csv", ',', Int))
-# validate_x = readdlm("./experiments/$(name)/DATA/validate_x.csv", ',')
+# train_y = vec(readdlm("./$(experiment_name)/$(name)/DATA/train_y.csv", ',', Int))
+# train_x = readdlm("./$(experiment_name)/$(name)/DATA/train_x.csv", ',')
+# validate_y = vec(readdlm("./$(experiment_name)/$(name)/DATA/validate_y.csv", ',', Int))
+# validate_x = readdlm("./$(experiment_name)/$(name)/DATA/validate_x.csv", ',')
 # using MLJ
-# test_y = vec(readdlm("./experiments/$(name)/DATA/test_y.csv", ',', Int))
-# test_x = readdlm("./experiments/$(name)/DATA/test_x.csv", ',')
+# test_y = vec(readdlm("./$(experiment_name)/$(name)/DATA/test_y.csv", ',', Int))
+# test_x = readdlm("./$(experiment_name)/$(name)/DATA/test_x.csv", ',')
 # name = "test_uznbalanced_relu"
-# mkpath("./experiments/$(name)")
+# mkpath("./$(experiment_name)/$(name)")
 
 
 ###
@@ -189,8 +189,8 @@ end;
 params_set = collect.(eachrow(θ[:, :, 1]))
 
 param_matrix = mapreduce(permutedims, vcat, params_set)
-mkpath("./experiments/$(name)")
-writedlm("./experiments/$(name)/param_matrix.csv", param_matrix, ',')
+mkpath("./$(experiment_name)/$(name)")
+writedlm("./$(experiment_name)/$(name)/param_matrix.csv", param_matrix, ',')
 
 
 """
@@ -249,18 +249,18 @@ threshold = 0.5
 
 predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = pred_analyzer(test_x, test_y, params_set, threshold)
 
-writedlm("./experiments/$(name)/predcitions_std.csv", predcitions_std, ',')
-writedlm("./experiments/$(name)/predictions_mean.csv", predictions_mean, ',')
-writedlm("./experiments/$(name)/classifications.csv", classifications, ',')
-writedlm("./experiments/$(name)/majority_vote.csv", majority_vote, ',')
-writedlm("./experiments/$(name)/majority_conf.csv", majority_conf, ',')
+writedlm("./$(experiment_name)/$(name)/predcitions_std.csv", predcitions_std, ',')
+writedlm("./$(experiment_name)/$(name)/predictions_mean.csv", predictions_mean, ',')
+writedlm("./$(experiment_name)/$(name)/classifications.csv", classifications, ',')
+writedlm("./$(experiment_name)/$(name)/majority_vote.csv", majority_vote, ',')
+writedlm("./$(experiment_name)/$(name)/majority_conf.csv", majority_conf, ',')
 
 # # Reading back results
-# predcitions_std = vec(readdlm("./experiments/$(name)/predcitions_std.csv", ','))
-# predictions_mean = vec(readdlm("./experiments/$(name)/predictions_mean.csv", ','))
-# classifications = vec(readdlm("./experiments/$(name)/classifications.csv", ',', Int))
-# majority_vote = vec(readdlm("./experiments/$(name)/majority_vote.csv", ',', Int))
-# majority_conf = vec(readdlm("./experiments/$(name)/majority_conf.csv", ','))
+# predcitions_std = vec(readdlm("./$(experiment_name)/$(name)/predcitions_std.csv", ','))
+# predictions_mean = vec(readdlm("./$(experiment_name)/$(name)/predictions_mean.csv", ','))
+# classifications = vec(readdlm("./$(experiment_name)/$(name)/classifications.csv", ',', Int))
+# majority_vote = vec(readdlm("./$(experiment_name)/$(name)/majority_vote.csv", ',', Int))
+# majority_conf = vec(readdlm("./$(experiment_name)/$(name)/majority_conf.csv", ','))
 
 ŷ = classifications
 predicted_probs = predictions_mean
@@ -276,7 +276,7 @@ prplot(test_y, predicted_probs)
 no_skill(x) = count(==(1), test_y) / length(test_y)
 no_skill_score = no_skill(0)
 plot!(no_skill, 0, 1, label="No Skill Classifier:$no_skill_score")
-savefig("./experiments/$(name)/PRCurve.png")
+savefig("./$(experiment_name)/$(name)/PRCurve.png")
 # mcc = matthews_correlation_coefficient(test_y, ŷ)
 # acc = accuracy(ŷ, test_y)
 fpr = false_positive_rate(test_y, ŷ)
@@ -287,7 +287,7 @@ prec = precision(test_y, ŷ)
 # recall = true_positive_rate(ŷ, test_y)
 prauc = au_prcurve(test_y, predicted_probs[:, 1])
 
-writedlm("./experiments/$(name)/results.txt", [["elapsed", "threshold", "brier", "f1", "fpr", "precision", "PRAUC"] [elapsed, threshold, brier, f1, fpr, prec, prauc]], ',')
+writedlm("./$(experiment_name)/$(name)/results.txt", [["elapsed", "threshold", "brier", "f1", "fpr", "precision", "PRAUC"] [elapsed, threshold, brier, f1, fpr, prec, prauc]], ',')
 
 ####
 #### Calibration
@@ -371,7 +371,7 @@ total_samples = lastindex(calibrated_pred_prob)
 
 ECE, MCE = ece_mce(bins, calibration_gaps, total_samples)
 
-writedlm("./experiments/$(name)/validate_ece_mce.txt", [ECE, MCE])
+writedlm("./$(experiment_name)/$(name)/validate_ece_mce.txt", [ECE, MCE])
 
 f(x) = x
 using Plots
@@ -379,7 +379,7 @@ reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!is
     xlabel="Confidence",
     ylabel="# Class labels in Target", size=(800, 600))
 plot!(f, 0, 1, label="Perfect Calibration")
-savefig(reliability_diagram, "./experiments/$(name)/reliability_diagram.png")
+savefig(reliability_diagram, "./$(experiment_name)/$(name)/reliability_diagram.png")
 
 
 
@@ -415,14 +415,14 @@ savefig(reliability_diagram, "./experiments/$(name)/reliability_diagram.png")
 # bins, mean_conf, bin_acc, calibration_gaps = conf_bin_indices(number_of_bins, predictions_mean, test_y, classifications)
 
 # reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false)
-# savefig(reliability_diagram, "./experiments/$(name)/test_reliability_diagram.png")
+# savefig(reliability_diagram, "./$(experiment_name)/$(name)/test_reliability_diagram.png")
 
 # total_samples = lastindex(predictions_mean)
 
 # ECE = ece(bins, calibration_gaps, total_samples)
 # MCE = mce(calibration_gaps)
 
-# writedlm("./experiments/$(name)/test_ece_mce.txt", [ECE, MCE])
+# writedlm("./$(experiment_name)/$(name)/test_ece_mce.txt", [ECE, MCE])
 
 # calibrated_pred_prob = platt(predictions_mean .* -a .- b)
 # classifications = round.(Int, calibrated_pred_prob)
@@ -430,11 +430,11 @@ savefig(reliability_diagram, "./experiments/$(name)/reliability_diagram.png")
 # bins, mean_conf, bin_acc, calibration_gaps = conf_bin_indices(number_of_bins, calibrated_pred_prob, test_y, classifications)
 
 # reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false)
-# savefig(reliability_diagram, "./experiments/$(name)/calibrated_test_reliability_diagram.png")
+# savefig(reliability_diagram, "./$(experiment_name)/$(name)/calibrated_test_reliability_diagram.png")
 
 # total_samples = lastindex(calibrated_pred_prob)
 
 # ECE = ece(bins, calibration_gaps, total_samples)
 # MCE = mce(calibration_gaps)
 
-# writedlm("./experiments/$(name)/calibrated_test_ece_mce.txt", [ECE, MCE])
+# writedlm("./$(experiment_name)/$(name)/calibrated_test_ece_mce.txt", [ECE, MCE])

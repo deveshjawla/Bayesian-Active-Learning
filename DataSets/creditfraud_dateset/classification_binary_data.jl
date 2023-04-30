@@ -76,27 +76,27 @@
 
 # name = "data_unbalanced"
 
-# mkdir("./experiments/$(name)")
-# mkdir("./experiments/$(name)/DATA")
-# writedlm("./experiments/$(name)/DATA/train_y.csv", train_y, ',')
-# writedlm("./experiments/$(name)/DATA/train_x.csv", train_x, ',')
-# writedlm("./experiments/$(name)/DATA/validate_y.csv", validate_y, ',')
-# writedlm("./experiments/$(name)/DATA/validate_x.csv", validate_x, ',')
-# writedlm("./experiments/$(name)/DATA/test_y.csv", test_y, ',')
-# writedlm("./experiments/$(name)/DATA/test_x.csv", test_x, ',')
+# mkdir("./$(experiment_name)/$(name)")
+# mkdir("./$(experiment_name)/$(name)/DATA")
+# writedlm("./$(experiment_name)/$(name)/DATA/train_y.csv", train_y, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/train_x.csv", train_x, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/validate_y.csv", validate_y, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/validate_x.csv", validate_x, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/test_y.csv", test_y, ',')
+# writedlm("./$(experiment_name)/$(name)/DATA/test_x.csv", test_x, ',')
 
 #reading back data
 name = "test_unbalanced"
 using DelimitedFiles
-train_y = vec(readdlm("./experiments/$(name)/DATA/train_y.csv", ',', Int))
-train_x = readdlm("./experiments/$(name)/DATA/train_x.csv", ',')
-validate_y = vec(readdlm("./experiments/$(name)/DATA/validate_y.csv", ',', Int))
-validate_x = readdlm("./experiments/$(name)/DATA/validate_x.csv", ',')
+train_y = vec(readdlm("./$(experiment_name)/$(name)/DATA/train_y.csv", ',', Int))
+train_x = readdlm("./$(experiment_name)/$(name)/DATA/train_x.csv", ',')
+validate_y = vec(readdlm("./$(experiment_name)/$(name)/DATA/validate_y.csv", ',', Int))
+validate_x = readdlm("./$(experiment_name)/$(name)/DATA/validate_x.csv", ',')
 using MLJ
-test_y = vec(readdlm("./experiments/$(name)/DATA/test_y.csv", ',', Int))
-test_x = readdlm("./experiments/$(name)/DATA/test_x.csv", ',')
+test_y = vec(readdlm("./$(experiment_name)/$(name)/DATA/test_y.csv", ',', Int))
+test_x = readdlm("./$(experiment_name)/$(name)/DATA/test_x.csv", ',')
 name = "test_unbalanced_relu"
-mkdir("./experiments/$(name)")
+mkdir("./$(experiment_name)/$(name)")
 
 
 ###
@@ -196,8 +196,8 @@ elapsed = chain_timed.time
 params_set = collect.(eachrow(θ[:, :, 1]))
 
 param_matrix = mapreduce(permutedims, vcat, params_set)
-mkdir("./experiments/$(name)/BNN")
-writedlm("./experiments/$(name)/BNN/param_matrix.csv", param_matrix, ',')
+mkdir("./$(experiment_name)/$(name)/BNN")
+writedlm("./$(experiment_name)/$(name)/BNN/param_matrix.csv", param_matrix, ',')
 
 function pred_analyzer(test_xs, test_ys, params_set)::Tuple{Array{Float32},Array{Float32},Array{Int},Array{Int},Array{Float32}}
     means = []
@@ -237,18 +237,18 @@ validate_y = test_y
 
 predictions_mean, predcitions_std, classifications, majority_vote, majority_conf = pred_analyzer(validate_x, validate_y, params_set)
 
-writedlm("./experiments/$(name)/BNN/predcitions_std.csv", predcitions_std, ',')
-writedlm("./experiments/$(name)/BNN/predictions_mean.csv", predictions_mean, ',')
-writedlm("./experiments/$(name)/BNN/classifications.csv", classifications, ',')
-writedlm("./experiments/$(name)/BNN/majority_vote.csv", majority_vote, ',')
-writedlm("./experiments/$(name)/BNN/majority_conf.csv", majority_conf, ',')
+writedlm("./$(experiment_name)/$(name)/BNN/predcitions_std.csv", predcitions_std, ',')
+writedlm("./$(experiment_name)/$(name)/BNN/predictions_mean.csv", predictions_mean, ',')
+writedlm("./$(experiment_name)/$(name)/BNN/classifications.csv", classifications, ',')
+writedlm("./$(experiment_name)/$(name)/BNN/majority_vote.csv", majority_vote, ',')
+writedlm("./$(experiment_name)/$(name)/BNN/majority_conf.csv", majority_conf, ',')
 
 # Reading back results
-predcitions_std = vec(readdlm("./experiments/$(name)/BNN/predcitions_std.csv", ','))
-predictions_mean = vec(readdlm("./experiments/$(name)/BNN/predictions_mean.csv", ','))
-classifications = coerce(vec(readdlm("./experiments/$(name)/BNN/classifications.csv", ',', Int)), OrderedFactor)
-majority_vote = coerce(vec(readdlm("./experiments/$(name)/BNN/majority_vote.csv", ',', Int)), OrderedFactor)
-majority_conf = vec(readdlm("./experiments/$(name)/BNN/majority_conf.csv", ','))
+predcitions_std = vec(readdlm("./$(experiment_name)/$(name)/BNN/predcitions_std.csv", ','))
+predictions_mean = vec(readdlm("./$(experiment_name)/$(name)/BNN/predictions_mean.csv", ','))
+classifications = coerce(vec(readdlm("./$(experiment_name)/$(name)/BNN/classifications.csv", ',', Int)), OrderedFactor)
+majority_vote = coerce(vec(readdlm("./$(experiment_name)/$(name)/BNN/majority_vote.csv", ',', Int)), OrderedFactor)
+majority_conf = vec(readdlm("./$(experiment_name)/$(name)/BNN/majority_conf.csv", ','))
 
 validate_y_labels = coerce(Int.(validate_y), OrderedFactor)
 levels!(validate_y_labels, [0, 1])
@@ -272,7 +272,7 @@ using MLJ
 #     prec = MLJ.precision(predictions, test_y')
 #     recall = MLJ.recall(predictions, test_y')
 
-#     writedlm("./experiments/$(name)/performance_net_$(i).txt", [0.0, mcc, f1, acc, fpr, fnr, tpr, tnr, prec, recall], ',')
+#     writedlm("./$(experiment_name)/$(name)/performance_net_$(i).txt", [0.0, mcc, f1, acc, fpr, fnr, tpr, tnr, prec, recall], ',')
 # end
 
 mcc = MLJ.mcc(validate_y_labels, classifications)
@@ -288,7 +288,7 @@ tnr = MLJ.tnr(classifications, validate_y_labels)
 prec = MLJ.precision(classifications, validate_y_labels)
 recall = MLJ.recall(classifications, validate_y_labels)
 
-writedlm("./experiments/$(name)/BNN/validate_results.txt", [["elapsed", "mcc", "brier", "f1", "f2", "acc", "fpr", "fnr", "tpr", "tnr", "prec", "recall"] [elapsed, mcc, brier, f1, f2, acc, fpr, fnr, tpr, tnr, prec, recall]], ',')
+writedlm("./$(experiment_name)/$(name)/BNN/validate_results.txt", [["elapsed", "mcc", "brier", "f1", "f2", "acc", "fpr", "fnr", "tpr", "tnr", "prec", "recall"] [elapsed, mcc, brier, f1, f2, acc, fpr, fnr, tpr, tnr, prec, recall]], ',')
 
 ####
 #### Calibration
@@ -341,13 +341,13 @@ total_samples = lastindex(predictions_mean)
 
 ECE, MCE = ece_mce(bins, calibration_gaps, total_samples)
 
-writedlm("./experiments/$(name)/BNN/validate_ece_mce.txt", [ECE, MCE])
+writedlm("./$(experiment_name)/$(name)/BNN/validate_ece_mce.txt", [ECE, MCE])
 
 using Plots
 reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false, title="Reliability diagram with \n ECE:$(ECE), MCE:$(MCE) \n MCC:$(mcc) and BrierScore:$(brier)",
     xlabel="Confidence",
     ylabel="Accuracy", size=(800, 800))
-savefig(reliability_diagram, "./experiments/$(name)/BNN/validate_reliability_diagram.png")
+savefig(reliability_diagram, "./$(experiment_name)/$(name)/BNN/validate_reliability_diagram.png")
 
 
 # using Distributions
@@ -382,14 +382,14 @@ savefig(reliability_diagram, "./experiments/$(name)/BNN/validate_reliability_dia
 # bins, mean_conf, bin_acc, calibration_gaps = conf_bin_indices(number_of_bins, predictions_mean, test_y, classifications)
 
 # reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false)
-# savefig(reliability_diagram, "./experiments/$(name)/BNN/test_reliability_diagram.png")
+# savefig(reliability_diagram, "./$(experiment_name)/$(name)/BNN/test_reliability_diagram.png")
 
 # total_samples = lastindex(predictions_mean)
 
 # ECE = ece(bins, calibration_gaps, total_samples)
 # MCE = mce(calibration_gaps)
 
-# writedlm("./experiments/$(name)/BNN/test_ece_mce.txt", [ECE, MCE])
+# writedlm("./$(experiment_name)/$(name)/BNN/test_ece_mce.txt", [ECE, MCE])
 
 # calibrated_pred_prob = platt(predictions_mean .* -a .- b)
 # classifications = round.(Int, calibrated_pred_prob)
@@ -397,11 +397,11 @@ savefig(reliability_diagram, "./experiments/$(name)/BNN/validate_reliability_dia
 # bins, mean_conf, bin_acc, calibration_gaps = conf_bin_indices(number_of_bins, calibrated_pred_prob, test_y, classifications)
 
 # reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false)
-# savefig(reliability_diagram, "./experiments/$(name)/BNN/calibrated_test_reliability_diagram.png")
+# savefig(reliability_diagram, "./$(experiment_name)/$(name)/BNN/calibrated_test_reliability_diagram.png")
 
 # total_samples = lastindex(calibrated_pred_prob)
 
 # ECE = ece(bins, calibration_gaps, total_samples)
 # MCE = mce(calibration_gaps)
 
-# writedlm("./experiments/$(name)/BNN/calibrated_test_ece_mce.txt", [ECE, MCE])
+# writedlm("./$(experiment_name)/$(name)/BNN/calibrated_test_ece_mce.txt", [ECE, MCE])
