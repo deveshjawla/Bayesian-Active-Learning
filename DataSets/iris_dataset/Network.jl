@@ -2,6 +2,16 @@
 ### Dense Network specifications(Functional Model)
 ###
 
+# input_size = $input_size
+#     n_output = $n_output
+    l1, l2, l3, l4 = 5, 5, 5, 5
+    nl1 = input_size * l1 + l1
+    nl2 = l1 * l2 + l2
+    nl3 = l2 * l3 + l3
+    nl4 = l3 * l4 + l4
+    n_output_layer = l4 * n_output + n_output
+
+    total_num_params = nl1 + nl2 + nl3 + nl4 + n_output_layer
 
 function feedforward(θ::AbstractVector)
 	W0 = reshape(θ[1:20], 5, 4)

@@ -1,8 +1,8 @@
 """
-Returns new_pool, new_prior, independent_param_matrix
+Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function query_function(prior, pool, previous_training_data, input_size, n_output, param_matrix, al_step, test_data, name_exp, acquisition_size, nsteps, n_chains, al_sampling)
-	println("$(al_sampling) with acquisition step no. ", al_step)
+function bnn_query(prior, pool, previous_training_data, input_size, n_output, param_matrix, al_step, test_data, experiment_name, pipeline_name, acquisition_size, nsteps, n_chains, al_sampling)
+	println("$(al_sampling) with query no. ", al_step)
 
 	pool_x, pool_y = pool
 	pool = vcat(pool_x, pool_y)
@@ -17,6 +17,11 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 		sampled_indices = power_acquisition(bald_scores, acquisition_size)
 		# softmax_entropy = softmax_acquisition(entropy_scores, acquisition_size)
 		# var_ratio_scores = 1 .- pŷ_test
+	elseif al_sampling == "PowerEntropy"
+		pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
+		pool_scores = mapslices(x->bald(x,n_output), pool_prediction_matrix, dims=[1,2])
+		entropy_scores = map(x->x[1], pool_scores[1,1,:])
+		sampled_indices = power_acquisition(entropy_scores, acquisition_size)
 	elseif al_sampling == "Diversity"
 		sampled_indices = initial_random_acquisition(pool_size, acquisition_size)
 	end
@@ -31,17 +36,20 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 	for i in 1:n_output
 		try 
 			class_dist[i,1]= i
-			class_dist[i,1] = balance_of_acquired_batch[i]
+			class_dist[i,2] = balance_of_acquired_batch[i]
 		catch
 			class_dist[i,1]= i
-			class_dist[i,1] = 0
+			class_dist[i,2] = 0
 		end
 	end
 
 	class_dist_ent = normalized_entropy(softmax(class_dist[:,2]), n_output)
 
-	training_data = new_training_data
-	# training_data = hcat(previous_training_data, new_training_data)
+	if al_step == 1
+		training_data = copy(new_training_data)
+	else
+		training_data = hcat(previous_training_data, new_training_data)
+	end
 
 	training_data_x, training_data_y = training_data[1:input_size, :], training_data[end, :]
 	# println("The acquired Batch has the follwing class distribution: $balance_of_acquired_batch")
@@ -49,7 +57,7 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 	# println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
 	#Training on Acquired Samples and logging classification_performance
-	independent_param_matrix = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, name_exp)
+	independent_param_matrix = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name)
 	
 	test_x, test_y = test_data
 	predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
@@ -64,7 +72,7 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acquisition_size, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
 	else
 		acc = accuracy_multiclass(test_y, ŷ_test)
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"] [acquisition_size, acc]], ',')
 		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]])
 	end
@@ -82,5 +90,6 @@ function query_function(prior, pool, previous_training_data, input_size, n_outpu
 
 	# println("size of training data is: ",size(training_data))
 	# println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
-	return new_pool, new_prior, independent_param_matrix, training_data
+	new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
+	return new_pool_tuple, new_prior, independent_param_matrix, training_data
 end

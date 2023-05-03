@@ -21,7 +21,7 @@ using Statistics, Random
 
 
 include("../../BNNUtils.jl")
-include("../../ALUtils.jl")
+include("../../BNN_Query.jl")
 include("../../Calibration.jl")
 include("../../DataUtils.jl")
 include("../../ScoringFunctions.jl")
@@ -79,11 +79,11 @@ end
 include("../../bayesianmodel.jl")
 
 train_x, train_y = Float32.(train_x), Int.(train_y)
-μ_prior, σ_prior = zeros(Float32, total_num_params), ones(Float32, total_num_params) .* Float32.(1.0)
+location_prior, scale_prior = zeros(Float32, total_num_params), ones(Float32, total_num_params) .* Float32.(1.0)
 
 @everywhere begin
-location_prior = $μ_prior
-scale_prior = $σ_prior
+location_prior = $location_prior
+scale_prior = $scale_prior
 train_x = $train_x
 train_y = $train_y
 reconstruct = $reconstruct

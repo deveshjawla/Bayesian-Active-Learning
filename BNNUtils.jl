@@ -111,7 +111,7 @@ function pool_predictions(test_xs, params_set, n_output)::Array{Float32, 3}
 end
 
 
-function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, name_exp)
+function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, experiment_name, pipeline_name)
 	location_prior, scale_prior = prior
 	@everywhere location_prior = $location_prior
 	@everywhere scale_prior = $scale_prior
@@ -151,7 +151,7 @@ function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, nam
 	return param_matrices_accumulated
 end
 
-function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, al_step, name_exp)
+function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, al_step, pipeline_name)
 	location_prior, scale_prior = prior
 	train_x, train_y = training_data
 	# println("Checking dimensions of train_x and train_y just before training:", train_x[1,1], " & ", train_y[1,1])
