@@ -186,3 +186,13 @@ function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, 
     writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 	return param_matrices_accumulated
 end
+
+
+# Tools to Examine Chains
+# summaries, quantiles = describe(chain);
+# sum([idx * i for (i, idx) in enumerate(summaries[:, :mean])])
+# _, i = findmax(chain[:lp])
+# i = i.I[1]
+# θ[i, :]
+# elapsed = chain_timed.time
+# θ = MCMCChains.group(chain, :θ).value

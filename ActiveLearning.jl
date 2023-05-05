@@ -33,7 +33,6 @@ using Distances
 
 include("./BNNUtils.jl")
 include("./BNN_Query.jl")
-include("./Calibration.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")

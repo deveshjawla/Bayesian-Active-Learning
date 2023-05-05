@@ -179,3 +179,15 @@ end
 # Parse Dictionary from a String
 cl_dist_string = m[2, 2] * "," * m[2, 3]
 class_dict = eval(Meta.parse(cl_dist_string))
+
+
+# using MultivariateStats
+
+# M = fit(PCA, train_x', maxoutdim=150)
+# train_x_transformed = MultivariateStats.transform(M, train_x')
+
+# # M = fit(PCA, test_x', maxoutdim = 150)
+# test_x_transformed = MultivariateStats.transform(M, test_x')
+
+# train_x = train_x_transformed'
+# test_x = test_x_transformed'

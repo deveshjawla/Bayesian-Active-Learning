@@ -84,3 +84,37 @@ function _loss_binary(a, b, pred_conf, labels_)
 	end
     return -sum(labels .* log.(platt.(pred_conf .* a .+ b)) + (1.0 .- labels) .* log.(1.0 .- platt.(pred_conf .* a .+ b)))
 end
+
+
+function calibration_plot_maker(i, number_of_bins, confidence, ground_truth_, stepname::String, name)
+    ground_truth = deepcopy(ground_truth_)
+    ground_truth[ground_truth.==2] .= 0
+    bins, mean_conf, bin_acc, calibration_gaps = conf_bin_indices(number_of_bins, confidence, ground_truth)
+
+    total_samples = lastindex(confidence)
+
+    ECE, MCE = ece_mce(bins, calibration_gaps, total_samples)
+
+    writedlm("./$(experiment_name)/$(name)/" * stepname * "/ece_mce_$(i).txt", [["ECE", "MCE"] [ECE, MCE]], ',')
+
+    f(x) = x
+    reliability_diagram = bar(filter(!isnan, collect(values(mean_conf))), filter(!isnan, collect(values(bin_acc))), legend=false, title="Reliability diagram with \n ECE:$(ECE), MCE:$(MCE)",
+        xlabel="Confidence",
+        ylabel="# Class labels in Target", size=(800, 600))
+    plot!(f, 0, 1, label="Perfect Calibration")
+    savefig(reliability_diagram, "./$(experiment_name)/$(name)/" * stepname * "/reliability_diagram_$(i).png")
+end
+
+# Step to Calibration
+# 1. Split Data into Train and Test
+# 2. Plot Calibration on Train/Test Data and then Calibrate on Train Data
+# 3. Plot Calibration on Test Data after calibration
+
+# loss((a, b)) = _loss_binary(a, b, pŷ_validate, validate_y)
+# @time result = optimize(loss, [1.0, 1.0], LBFGS())
+# a, b = result.minimizer
+# calibrated_pŷ_test = platt(pŷ_test .* a .+ b)
+# println(calibrated_pŷ_test[1:5])
+# writedlm("./$(experiment_name)/$(name)/calibration_step/calibration_fit_params.csv", [a, b], ',')
+
+# calibration_plot_maker(i, number_of_bins, calibrated_pŷ_test, test_y, "calibration_step/Test/Calibrated", name)
