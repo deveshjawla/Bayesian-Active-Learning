@@ -155,7 +155,7 @@ function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, 
 	location_prior, scale_prior = prior
 	train_x, train_y = training_data
 	# println("Checking dimensions of train_x and train_y just before training:", train_x[1,1], " & ", train_y[1,1])
-	model = bayesnnMVG(train_x, train_y, location_prior, scale_prior)
+	model = bayesnnMVG(train_x, train_y, total_num_params)
 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
 	chain = chain_timed.value
 	elapsed = chain_timed.time

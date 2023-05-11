@@ -7,6 +7,9 @@
 *.txt
 *.png
 *.pptx
+*.xlsx
+*.xls
+*.arff
 
 #Storage
 *.bin

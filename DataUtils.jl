@@ -77,17 +77,17 @@ function performance_stats(ground_truth_, predictions_)
     predictions = deepcopy(Int.(vec(predictions_)))
     ground_truth[ground_truth.==2] .= 0
     predictions[predictions.==2] .= 0
-    f1 = f1_score(ground_truth, predictions)
-    mcc = matthews_correlation_coefficient(ground_truth, predictions)
-    acc = accuracy(ground_truth, predictions)
-    fpr = false_positive_rate(ground_truth, predictions)
-    # fnr = fnr(ground_truth, predictions)
-    # tpr = tpr(ground_truth, predictions)
-    # tnr = tnr(ground_truth, predictions)
-    prec = precision(ground_truth, predictions)
-    recall = true_positive_rate(ground_truth, predictions)
-	threat_score = EvalMetrics.threat_score(ground_truth, predictions)
 	cm = ConfusionMatrix(ground_truth, predictions)
+    f1 = f1_score(cm)
+    mcc = matthews_correlation_coefficient(cm)
+    acc = accuracy(cm)
+    fpr = false_positive_rate(cm)
+    # fnr = fnr(cm)
+    # tpr = tpr(cm)
+    # tnr = tnr(cm)
+    prec = precision(cm)
+    recall = true_positive_rate(cm)
+	threat_score = EvalMetrics.threat_score(cm)
     return acc, mcc, f1, fpr, prec, recall, threat_score, cm
 end
 

@@ -47,6 +47,7 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
 	if al_step == 1
 		training_data = copy(new_training_data)
 	else
+		# training_data = copy(new_training_data)
 		training_data = hcat(previous_training_data, new_training_data)
 	end
 
