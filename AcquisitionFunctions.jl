@@ -32,6 +32,7 @@ function power_acquisition(pool_scores::Vector, acquisition_size; β=1.0)
     scores = log.(pool_scores) .+ rand(gumbel_dist, lastindex(pool_scores))
     df = DataFrame(Scores=scores, Sample_indices=collect(1:lastindex(scores)))
 	# println(log.(pool_scores))
-    sorted_df = sort(df, :Scores)
+    sorted_df = sort(df, :Scores, rev=true)
+	# println(sorted_df)
     return sorted_df[1:acquisition_size, :Sample_indices]
 end

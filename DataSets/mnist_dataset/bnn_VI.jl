@@ -130,8 +130,8 @@ end
 
 include("../../BayesianModelMultiProc.jl")
 
-train_x, train_y = Float32.(train_x), Int.(train_y)
-location_prior, scale_prior = zeros(Float32, total_num_params), ones(Float32, total_num_params)
+train_x, train_y = Float64.(train_x), Int.(train_y)
+location_prior, scale_prior = zeros(Float64, total_num_params), ones(Float64, total_num_params)
 
 @everywhere begin
 location_prior = $location_prior

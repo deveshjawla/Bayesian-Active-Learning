@@ -28,7 +28,7 @@ end
 
 # A handy helper function to normalize our dataset.
 function standardize(x, mean_, std_)
-    return (x .- mean_) ./ (std_ .+ 0.000001)
+    return (x .- mean_) ./ (std_ .+ convert(eltype(std_), 0.000001))
 end
 
 # A handy helper function to normalize our dataset.
@@ -37,8 +37,8 @@ function scaling(x, max_, min_)
 end
 
 function pool_test_maker(pool, test, n_input)
-    pool = Matrix(permutedims(pool))
-    test = Matrix(permutedims(test))
+    pool = Matrix{Float64}(permutedims(pool))
+    test = Matrix{Float64}(permutedims(test))
     pool_x = pool[1:n_input, :]
     pool_y = pool[end, :]
     # pool_max = maximum(pool_x, dims=1)

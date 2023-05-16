@@ -3,12 +3,14 @@ Returns new_pool, new_prior, independent_param_matrix, training_data
 """
 function bnn_query(prior, pool, previous_training_data, input_size, n_output, param_matrix, al_step, test_data, experiment_name, pipeline_name, acquisition_size, nsteps, n_chains, al_sampling)
 	println("$(al_sampling) with query no. ", al_step)
-
+	network_shape, num_params = prior
 	pool_x, pool_y = pool
 	pool = vcat(pool_x, pool_y)
 	pool_size = lastindex(pool_y)
 	sampled_indices = 0
-	if al_sampling == "Random"
+	if al_step == 1
+		sampled_indices = 1:acquisition_size
+	elseif al_sampling == "Random"
 		sampled_indices = initial_random_acquisition(pool_size, acquisition_size)
 	elseif al_sampling == "PowerBALD"
 		pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
@@ -23,7 +25,13 @@ function bnn_query(prior, pool, previous_training_data, input_size, n_output, pa
 		entropy_scores = map(x->x[1], pool_scores[1,1,:])
 		sampled_indices = power_acquisition(entropy_scores, acquisition_size)
 	elseif al_sampling == "Diversity"
-		sampled_indices = initial_random_acquisition(pool_size, acquisition_size)
+		error("Diversity Sampling NOT IMPLEMENTED YET")
+	elseif al_sampling == "PowerBayesian"
+		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
+		sampled_indices = power_acquisition(bayesian_scores[2, :], acquisition_size)
+	elseif al_sampling == "TopKBayesian"
+		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
+		sampled_indices =top_k_acquisition(bayesian_scores[2, :], acquisition_size)
 	end
 
 	new_training_data = pool[:, sampled_indices]
@@ -77,19 +85,19 @@ function bnn_query(prior, pool, previous_training_data, input_size, n_output, pa
 		# println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acquisition_size, balance_of_acquired_batch, acc]])
 	end
 	#Turning the posterior obtained after training on new samples into the new prior for the next iteration
-    param_matrix_mean = vec(mean(independent_param_matrix, dims=1))
-    param_matrix_std = vec(std(independent_param_matrix, dims=1))
+    # param_matrix_mean = vec(mean(independent_param_matrix, dims=1))
+    # param_matrix_std = vec(std(independent_param_matrix, dims=1))
     # println("Euclidean distance between Prior and Posterior distribution's means is  ", euclidean(param_matrix_mean, prior[1]))
     # println("Euclidean distance between Prior and Posterior distribution's stds is ", euclidean(param_matrix_std, prior[2]))
 	# println("Means of Prior and Posterior distribution's Means are  ", mean(prior[1]), " & ", mean(param_matrix_mean))	
 	# println("Means of Prior and Posterior distribution's stds are  ", mean(prior[2]), " & ", mean(param_matrix_std))
 
-	writedlm("./$(experiment_name)/$(pipeline_name)/log_distribution_changes/$al_step.csv", [["Euclidean distance between Prior and Posterior distribution's means is  ","Euclidean distance between Prior and Posterior distribution's stds is ", "Means of Prior", "and Posterior distribution's Means are  ", "Means of Prior", "and Posterior distribution's stds are  "] [euclidean(param_matrix_mean, prior[1]), euclidean(param_matrix_std, prior[2]), mean(prior[1]), mean(param_matrix_mean), mean(prior[2]), mean(param_matrix_std)]], ',')
+	# writedlm("./$(experiment_name)/$(pipeline_name)/log_distribution_changes/$al_step.csv", [["Euclidean distance between Prior and Posterior distribution's means is  ","Euclidean distance between Prior and Posterior distribution's stds is ", "Prior Mean", "Posterior distribution's Mean", "Priot StD", "Posterior distribution's std"] [euclidean(param_matrix_mean, prior[1]), euclidean(param_matrix_std, prior[2]), mean(prior[1]), mean(param_matrix_mean), mean(prior[2]), mean(param_matrix_std)]], ',')
 
-	new_prior = (param_matrix_mean, param_matrix_std)
+	# new_prior = (param_matrix_mean, param_matrix_std)
 
 	# println("size of training data is: ",size(training_data))
 	# println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
 	new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
-	return new_pool_tuple, new_prior, independent_param_matrix, training_data
+	return new_pool_tuple, independent_param_matrix, training_data
 end
