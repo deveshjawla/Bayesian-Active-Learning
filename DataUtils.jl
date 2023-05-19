@@ -1,6 +1,6 @@
 using Random
 
-function data_balancing(data_xy; balancing::String, positive_class_label=1, negative_class_label=2)
+function data_balancing(data_xy::DataFrame; balancing::String, positive_class_label=1, negative_class_label=2)::DataFrame
     negative_class = data_xy[data_xy[:, end].==negative_class_label, :]
     positive_class = data_xy[data_xy[:, end].==positive_class_label, :]
     size_positive_class = size(positive_class)[1]
@@ -12,8 +12,8 @@ function data_balancing(data_xy; balancing::String, positive_class_label=1, nega
         data_xy = data_xy[shuffle(axes(data_xy, 1)), :]
     elseif balancing == "generative"
         new_positive_class = vcat(repeat(positive_class, outer=multiplier - 1), positive_class[1:leftover, :], positive_class)
-        data_x = select(new_positive_class, Not([:target]))
-        data_y = select(new_positive_class, [:target])
+        data_x = select(new_positive_class, Not([:label]))
+        data_y = select(new_positive_class, [:label])
         new_positive_class = mapcols(x -> x + x * rand(collect(-0.05:0.01:0.05)), data_x)
         new_positive_class = hcat(data_x, data_y)
         data_xy = vcat(negative_class, new_positive_class)
@@ -36,9 +36,9 @@ function scaling(x, max_, min_)
     return (x .- min_) ./ (max_ - min_)
 end
 
-function pool_test_maker(pool, test, n_input)
-    pool = Matrix{Float64}(permutedims(pool))
-    test = Matrix{Float64}(permutedims(test))
+function pool_test_maker(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{Tuple{Array{Float32, 2}, Array{Int, 2}}, Tuple{Array{Float32, 2}, Array{Int, 2}}}
+    pool = Matrix{Float32}(permutedims(pool))
+    test = Matrix{Float32}(permutedims(test))
     pool_x = pool[1:n_input, :]
     pool_y = pool[end, :]
     # pool_max = maximum(pool_x, dims=1)

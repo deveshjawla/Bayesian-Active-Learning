@@ -1,9 +1,9 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior, pool, previous_training_data, input_size, n_output, param_matrix, al_step, test_data, experiment_name, pipeline_name, acquisition_size, nsteps, n_chains, al_sampling)
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acquisition_size::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}}
 	println("$(al_sampling) with query no. ", al_step)
-	network_shape, num_params = prior
+	# sigma, num_params = prior
 	pool_x, pool_y = pool
 	pool = vcat(pool_x, pool_y)
 	pool_size = lastindex(pool_y)

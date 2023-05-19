@@ -42,7 +42,7 @@ function pred_analyzer(test_xs, intercepts, thetas, threshold)
     # Retrieve the number of rows.
     n, _ = size(test_xs)
 
-    predictions = Array{Float64,2}(undef, n, l)
+    predictions = Array{Float32,2}(undef, n, l)
     for j in 1:l
 
         # Generate a vector to store our predictions.

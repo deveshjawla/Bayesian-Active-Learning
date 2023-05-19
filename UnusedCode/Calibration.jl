@@ -2,9 +2,9 @@
 
 function conf_bin_indices(n, conf, test, predictions)
     bins = Dict{Int,Vector}()
-    mean_conf = Dict{Int,Float64}()
-    bin_acc = Dict{Int,Float64}()
-    calibration_gaps = Dict{Int,Float64}()
+    mean_conf = Dict{Int,Float32}()
+    bin_acc = Dict{Int,Float32}()
+    calibration_gaps = Dict{Int,Float32}()
     for i in 1:n
         lower = (i - 1) / n
         upper = i / n
@@ -29,9 +29,9 @@ end
 #input is the number of bins, confidence scores of the predictions, true labels
 function conf_bin_indices(n, conf, test)
     bins = Dict{Int,Vector}()
-    mean_conf = Dict{Int,Float64}()
-    bin_acc = Dict{Int,Float64}()
-    calibration_gaps = Dict{Int,Float64}()
+    mean_conf = Dict{Int,Float32}()
+    bin_acc = Dict{Int,Float32}()
+    calibration_gaps = Dict{Int,Float32}()
     for i in 1:n
         lower = (i - 1) / n
         upper = i / n
@@ -68,7 +68,7 @@ function ece_mce(bins, calibration_gaps, total_samples)
 end
 
 # Logistic function for a scalar input:
-function platt(conf::Float64)
+function platt(conf::Float32)
     1.0 / (1.0 + exp(-conf))
 end
 

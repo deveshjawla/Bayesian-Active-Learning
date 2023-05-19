@@ -40,8 +40,18 @@
 # end
 
 # using InteractiveUtils
-@model function bayesnnMVG(x, y, num_params)
-	θ ~ MvNormal(zeros(num_params), ones(num_params))
+# @model function bayesnnMVG(x, y, num_params, warn=true)
+# 	θ ~ MvNormal(zeros(num_params), ones(num_params))
+# 	# @code_warntype feedforward(θ)
+# 	nn = feedforward(θ)
+# 	preds = nn(x)
+# 	for i = 1:lastindex(y)
+# 		y[i] ~ Categorical(preds[:, i])
+# 	end
+# end
+
+@model function bayesnnMVG(x, y, sigma, num_params, warn=true)
+	θ ~ MvNormal(zeros(num_params), sigma)
 	# @code_warntype feedforward(θ)
 	nn = feedforward(θ)
 	preds = nn(x)
@@ -49,6 +59,7 @@
 		y[i] ~ Categorical(preds[:, i])
 	end
 end
+
 
 # @model function bayesnnMVG(x, y, num_params, warn = true)
 #     θ ~ MvNormal(zeros(num_params), ones(num_params))

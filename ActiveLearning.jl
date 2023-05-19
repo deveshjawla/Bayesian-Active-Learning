@@ -16,9 +16,9 @@
 
 using Distributed
 using Turing
-num_chains = 2
-num_mcsteps = 100
-datasets = ["coalminequakes", "secom", "stroke", "banknote", "creditfraud", "creditdefault"]
+num_chains = 8
+num_mcsteps = 1000
+datasets = ["stroke", "coalminequakes", "secom", "banknote", "creditfraud", "creditdefault"]
 acq_functions = ["Random", "PowerBALD", "TopKBayesian"]
 acquisition_sizes = [20]
 # Add four processes to use for sampling.
@@ -30,8 +30,8 @@ using DelimitedFiles
 using Random
 using StatsBase
 using Distances
-@everywhere using LazyArrays
-@everywhere using DistributionsAD
+# @everywhere using LazyArrays
+# @everywhere using DistributionsAD
 
 include("./BNNUtils.jl")
 include("./BNN_Query.jl")
@@ -116,7 +116,8 @@ for dataset in datasets
 
         #Here we define the layer by layer initialisation
         # sigma = vcat(sqrt(2 / (input_size + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
-        # sigma = ones(total_num_params)
+        sigma = vcat(sqrt(2 / (input_size + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer))
+        # sigma = ones(num_params)
 
     end
 
@@ -134,7 +135,7 @@ for dataset in datasets
                 mkpath("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions")
 
                 n_acq_steps = round(Int, total_pool_samples / acquisition_size, RoundUp)
-                prior = (network_shape, num_params)
+                prior = (sigma, num_params)
                 param_matrix, new_training_data = 0, 0
 				new_pool= 0 
                 for AL_iteration = 1:n_acq_steps

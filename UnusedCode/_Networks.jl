@@ -10,7 +10,7 @@ using Flux, Parameters:@with_kw
     indim::Int = 128
     outdim::Int = 128
     activation_fn = relu
-    bnmom::Union{Float64,Nothing} = nothing
+    bnmom::Union{Float32,Nothing} = nothing
     bias::Bool = false
 end
 
@@ -37,7 +37,7 @@ end
     pad::Int = 1
     pool_window::Tuple{Int,Int} = (2, 2)
     pool_stride::Int = 1
-    bnmom::Union{Float64,Nothing} = nothing
+    bnmom::Union{Float32,Nothing} = nothing
 end
 
 """
@@ -73,9 +73,9 @@ using Printf, BSON
 # Function to make a custom dense layer
 """
 function dense_layer(indim::Int, outdim::Int,
-    bnmom::Float64, activation_fn)
+    bnmom::Float32, activation_fn)
 
-    if typeof(bnmom) == Float64
+    if typeof(bnmom) == Float32
         Chain(
             Dense(indim, outdim),
             BatchNorm(outdim, activation_fn, momentum=bnmom)
@@ -94,7 +94,7 @@ function conv_layer(input_dims, filter_size::Tuple{Int,Int},
     stride_length=1, pool_stride=1, bnmom=0.5)
 
     pad = filter_size .÷ 2
-    if typeof(bnmom) == Float64
+    if typeof(bnmom) == Float32
         layer = Chain(
             Conv(filter_size, i => o, activation_fn, pad=pad),
             x -> meanpool(x, pool_window),

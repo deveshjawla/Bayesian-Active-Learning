@@ -9,7 +9,7 @@ classifications are obtained using threshold
 
 majority_voting, majority_conf are averaged classifications of each chain, if the majority i.e more than 0.5 chains voted in favor then we have a vote in favor of 1. the conf here means how many chains on average voted in favor of 1. majority vote is just rounding of majority conf.
 """
-function pred_analyzer(test_xs, test_ys, params_set, threshold)::Tuple{Array{Float64},Array{Float64},Array{Int},Array{Int},Array{Float64}}
+function pred_analyzer(test_xs, test_ys, params_set, threshold)::Tuple{Array{Float32},Array{Float32},Array{Int},Array{Int},Array{Float32}}
     means = []
     stds = []
     classifications = []
@@ -50,10 +50,10 @@ Returns a tuple of {Prediction, Prediction probability}
 
 Uses a simple argmax and percentage of samples in the ensemble respectively
 """
-function pred_analyzer_multiclass(test_xs, params_set)::Array{Float64, 2}
+function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Array{Float32, 2}
     n_samples = size(test_xs)[2]
 	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float64}(undef, 2, n_samples)
+	pred_matrix = Array{Float32}(undef, 2, n_samples)
     for i = 1:n_samples
 		predictions = []
 		for j = 1:ensemble_size
@@ -78,7 +78,7 @@ function pred_analyzer_multiclass(test_xs, params_set)::Array{Float64, 2}
 end
 
 
-function convergence_stats(i, chain, elapsed)
+function convergence_stats(i::Int, chain, elapsed::Float32)::Tuple{Float32, Float32, Float32, Float32, Float32}
     ch = chain[:, :, i]
     summaries, quantiles = describe(ch)
     large_rhat = count(>=(1.01), sort(summaries[:, :rhat]))
@@ -94,10 +94,10 @@ end
 """
 Returns a matrix of dims (n_output, ensemble_size, n_samples)
 """
-function pool_predictions(test_xs, params_set, n_output)::Array{Float64, 3}
+function pool_predictions(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2}, n_output::Int)::Array{Float32, 3}
 	n_samples = size(test_xs)[2]
 	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float64}(undef, n_output, ensemble_size, n_samples)
+	pred_matrix = Array{Float32}(undef, n_output, ensemble_size, n_samples)
 
     for i = 1:n_samples, j = 1:ensemble_size
             model = feedforward(params_set[j,:])
@@ -114,8 +114,8 @@ end
 
 
 
-function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, experiment_name, pipeline_name)
-	network_shape, nparameters = prior
+function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Array{Float32, 2}
+	sigma, nparameters = prior
 	@everywhere network_shape = $network_shape
 	@everywhere nparameters = $nparameters
 	train_x, train_y = training_data
@@ -123,21 +123,21 @@ function bayesian_inference(prior, training_data, nsteps, n_chains, al_step, exp
 	@everywhere train_y = $train_y
 	println("Checking dimensions of train_x and train_y just before training:", size(train_x), " & ", size(train_y))
 	# println(eltype(train_x), eltype(train_y))
-	@everywhere model = bayesnnMVG(train_x, train_y, nparameters)
+	@everywhere model = bayesnnMVG(train_x, train_y, sigma, nparameters)
 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
 	chain = chain_timed.value
-	elapsed = chain_timed.time
+	elapsed = Float32(chain_timed.time)
 	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	θ = MCMCChains.group(chain, :θ).value
 
 	burn_in = Int(0.6*nsteps)
 	n_indep_samples = Int((nsteps-burn_in) / 10)
-	param_matrices_accumulated = Array{Float64}(undef, n_chains*n_indep_samples, nparameters)
+	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters)
     for i in 1:n_chains
 		params_set = collect.(eachrow(θ[:, :, i]))
     	param_matrix = mapreduce(permutedims, vcat, params_set)
 
-		independent_param_matrix = Array{Float64}(undef, n_indep_samples, nparameters)
+		independent_param_matrix = Array{Float32}(undef, n_indep_samples, nparameters)
 		for i in 1:nsteps-burn_in
 			if i % 10 == 0
 				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
@@ -168,12 +168,12 @@ end
 
 # 	burn_in = Int(0.6*nsteps)
 # 	n_indep_samples = Int((nsteps-burn_in) / 10)
-# 	param_matrices_accumulated = Array{Float64}(undef, n_chains*n_indep_samples, total_num_params)
+# 	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, total_num_params)
 #     for i in 1:n_chains
 # 		params_set = collect.(eachrow(θ[:, :, i]))
 #     	param_matrix = mapreduce(permutedims, vcat, params_set)
 
-# 		independent_param_matrix = Array{Float64}(undef, n_indep_samples, total_num_params)
+# 		independent_param_matrix = Array{Float32}(undef, n_indep_samples, total_num_params)
 # 		for i in 1:nsteps-burn_in
 # 			if i % 10 == 0
 # 				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
