@@ -1,6 +1,6 @@
 # Import libraries.
 using Turing, Flux, Random
-using LazyArrays, DistributionsAD
+# using LazyArrays, DistributionsAD
 
 
 # Number of points to generate.
@@ -76,28 +76,28 @@ parameters_initial, destructured = Flux.destructure(nn_initial)
 feedforward(x, theta) = destructured(theta)(x)
 
 # General Turing specification for a BNN model.
-@model bayes_nn_general(xs, y, network_shape, num_params) = begin
-    # θ ~ MvNormal(zeros(num_params), ones(num_params))
-    θ ~ filldist(Normal(), num_params)
+@model bayes_nn_general(xs, y, network_shape, num_params, warn=true) = begin
+    θ ~ MvNormal(zeros(num_params), ones(num_params))
+    # θ ~ filldist(Normal(), num_params)
     # preds = nn_forward(xs, θ, network_shape)
     preds = feedforward(xs, θ)
-	# preds = deepcopy(vec(permutedims(preds)))
-    # for i = 1:lastindex(y)
-	# 	y[i] ~ Bernoulli(preds[i])
-	# end
-	y ~ Product(Bernoulli.(preds))
+	preds = deepcopy(vec(permutedims(preds)))
+    for i = 1:lastindex(y)
+		y[i] ~ Bernoulli(preds[i])
+	end
+	# y ~ Product(Bernoulli.(preds))
 	# y ~ arraydist(BroadcastArray(Bernoulli, preds))
 end
 
-# using ReverseDiff
-# # Set the backend.
-# Turing.setadbackend(:reversediff)
-using Zygote
+using ReverseDiff
 # Set the backend.
-Turing.setadbackend(:zygote)
+Turing.setadbackend(:reversediff)
+# using Zygote
+# # Set the backend.
+# Turing.setadbackend(:zygote)
 
 # Perform inference.
-num_samples = 50
+num_samples = 1000
 chain_timed = @timed sample(bayes_nn_general(xs, ts, network_shape, num_params), NUTS(), num_samples, progress=true)
 
 chain_timed.time
