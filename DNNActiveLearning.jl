@@ -18,9 +18,9 @@ using Distributed
 using Turing
 num_chains = 8
 num_mcsteps = 1000
-datasets = ["stroke", "coalminequakes", "secom", "banknote", "creditfraud", "creditdefault"]
+datasets = ["creditdefault"]
 acq_functions = ["Random", "PowerBALD", "TopKBayesian"]
-acquisition_sizes = [20]
+acquisition_sizes = [50]
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
@@ -137,17 +137,48 @@ for dataset in datasets
                 n_acq_steps = round(Int, total_pool_samples / acquisition_size, RoundUp)
                 prior = (sigma, num_params)
                 param_matrix, new_training_data = 0, 0
+				last_acc = 0
+				best_acc = 0.5
+    			last_improvement = 0
+				last_elapsed = 0
+				benchmark_elapsed = 100.0
 				new_pool= 0 
                 for AL_iteration = 1:n_acq_steps
+					if last_elapsed >= 2*benchmark_elapsed
+						@warn(" -> Inference is taking a long time in proportion to Query Size, Increasing Query Size!")
+						acquisition_size = deepcopy(2*acquisition_size)
+						benchmark_elapsed = deepcopy(last_elapsed)
+					end
+					if last_acc >= 0.999
+						@info(" -> Early-exiting: We reached our target accuracy of 99.9%")
+						acquisition_size = lastindex(new_pool[2])
+					end
+					# If this is the best accuracy we've seen so far, save the model out
+					if last_acc >= best_acc
+						@info(" -> New best accuracy! Logging improvement")
+						best_acc = last_acc
+						last_improvement = AL_iteration
+					end
+					 # If we haven't seen improvement in 5 epochs, drop our learning rate:
+					 
+					if AL_iteration - last_improvement >= 3 && lastindex(new_pool[2]) > 0
+						@warn(" -> Haven't improved in a while, Increasing Query Size!")
+						acquisition_size = deepcopy(3*acquisition_size)
+						benchmark_elapsed = deepcopy(last_elapsed)
+						# After dropping learning rate, give it a few epochs to improve
+						last_improvement = AL_iteration
+					end
 					if AL_iteration == 1
-						new_pool, param_matrix, new_training_data = bnn_query(prior, pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
-					elseif lastindex(new_pool[2]) >= acquisition_size
+						new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(prior, pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
+					elseif lastindex(new_pool[2]) > acquisition_size
                         # new_prior = (new_prior[1], sigma)
-                        new_pool, param_matrix, new_training_data = bnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
-                    elseif lastindex(new_pool[2]) < acquisition_size && lastindex(new_pool[2]) > 0
+                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
+						n_acq_steps = deepcopy(AL_iteration)
+                    elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
                         # new_prior = (new_prior[1], sigma)
-                        new_pool, param_matrix, new_training_data = bnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func)
-                        println("Pool exhausted")
+                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func)
+                        println("Trained on last few samples remaining in the Pool")
+						n_acq_steps = deepcopy(AL_iteration)
                     end
                 end
 

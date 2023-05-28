@@ -94,3 +94,20 @@ end
 function accuracy_multiclass(true_labels, predictions)
     return mean(true_labels .== predictions)
 end
+
+
+# function balanced_accuracy_score(y_pred, y_true)
+# 	C = confusion_matrix(y_true, y_pred, sample_weight=sample_weight)
+#     with np.errstate(divide="ignore", invalid="ignore"):
+#         per_class = np.diag(C) / C.sum(axis=1)
+#     if np.any(np.isnan(per_class)):
+#         warnings.warn("y_pred contains classes not in y_true")
+#         per_class = per_class[~np.isnan(per_class)]
+#     score = np.mean(per_class)
+#     if adjusted:
+#         n_classes = len(per_class)
+#         chance = 1 / n_classes
+#         score -= chance
+#         score /= 1 - chance
+#     return score
+# end

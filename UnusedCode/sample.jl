@@ -81,7 +81,7 @@ feedforward(x, theta) = destructured(theta)(x)
     # θ ~ filldist(Normal(), num_params)
     # preds = nn_forward(xs, θ, network_shape)
     preds = feedforward(xs, θ)
-	preds = deepcopy(vec(permutedims(preds)))
+	# preds = deepcopy(vec(permutedims(preds)))
     for i = 1:lastindex(y)
 		y[i] ~ Bernoulli(preds[i])
 	end
@@ -89,49 +89,43 @@ feedforward(x, theta) = destructured(theta)(x)
 	# y ~ arraydist(BroadcastArray(Bernoulli, preds))
 end
 
-using ReverseDiff
-# Set the backend.
-Turing.setadbackend(:reversediff)
-# using Zygote
+# using ReverseDiff
 # # Set the backend.
-# Turing.setadbackend(:zygote)
+# Turing.setadbackend(:reversediff)
+# # using Zygote
+# # # Set the backend.
+# # Turing.setadbackend(:zygote)
 
-# Perform inference.
-num_samples = 1000
-chain_timed = @timed sample(bayes_nn_general(xs, ts, network_shape, num_params), NUTS(), num_samples, progress=true)
+# # Perform inference.
+# num_samples = 1000
+# chain_timed = @timed sample(bayes_nn_general(xs, ts, network_shape, num_params), NUTS(), num_samples, progress=true)
 
-chain_timed.time
-
-
+# chain_timed.time
 
 
 
 using Bijectors
 using Turing: Variational
 
-m = bayes_nn(hcat(xs...), ts);
+m = bayes_nn_general(xs, ts, network_shape, num_params)
 
 q = Variational.meanfield(m)
 
 μ = randn(length(q))
-ω = -1 .* ones(length(q))
+ω = exp.(-1 .* ones(length(q)))
 
-q = Variational.update(q, μ, exp.(ω));
+using AdvancedVI
+q = AdvancedVI.update(q, μ, ω)
 
 advi = ADVI(10, 1000)
-q_hat = vi(m, advi, q);
+q_hat = vi(m, advi, q)
 
-samples = transpose(rand(q_hat, 5000))
-ch_vi = Chains(reshape(samples, size(samples)..., 1), ["nn_params[$$i]" for i = 1:20]);
+samples = rand(q_hat, 5000)
 
-# Extract all weight and bias parameters.
-theta = ch_vi[:nn_params].value.data;
 
-# Plot the average prediction.
-plot_data()
+elbo(advi, q, m, 1000)
 
-n_end = 1500
-x_range = collect(range(-6,stop=6,length=25))
-y_range = collect(range(-6,stop=6,length=25))
-Z = [nn_predict([x, y], theta, n_end)[1] for x=x_range, y=y_range]
-contour!(x_range, y_range, Z)
+avg = vec(mean(samples; dims=2))
+
+_, sym2range = bijector(m, Val(true))
+sym2range
