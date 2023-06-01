@@ -1,9 +1,17 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function dnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32}
+function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32}
+	nn = Chain(
+            Dense(input_size => input_size, relu; init=Flux.kaiming_normal()),
+            Dense(input_size => input_size, relu; init=Flux.kaiming_normal()),
+            Dense(input_size => n_output; init=Flux.kaiming_normal()),
+			softmax
+        )
+	init_params, re = Flux.destructure(nn)
+	num_params = lastindex(init_params)
+
 	println("$(al_sampling) with query no. ", al_step)
-	# sigma, num_params = prior
 	pool_x, pool_y = pool
 	pool = vcat(pool_x, pool_y)
 	pool_size = lastindex(pool_y)
@@ -13,24 +21,24 @@ function dnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	elseif al_sampling == "Random"
 		sampled_indices = initial_random_acquisition(pool_size, acq_size_)
 	elseif al_sampling == "PowerBALD"
-		pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
+		pool_prediction_matrix = pool_predictions(re, pool_x, param_matrix, n_output)
 		pool_scores = mapslices(x->bald(x,n_output), pool_prediction_matrix, dims=[1,2])
 		bald_scores = map(x->x[2], pool_scores[1,1,:])
 		sampled_indices = power_acquisition(bald_scores, acq_size_)
 		# softmax_entropy = softmax_acquisition(entropy_scores, acq_size_)
 		# var_ratio_scores = 1 .- pŷ_test
 	elseif al_sampling == "PowerEntropy"
-		pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
+		pool_prediction_matrix = pool_predictions(re, pool_x, param_matrix, n_output)
 		pool_scores = mapslices(x->bald(x,n_output), pool_prediction_matrix, dims=[1,2])
 		entropy_scores = map(x->x[1], pool_scores[1,1,:])
 		sampled_indices = power_acquisition(entropy_scores, acq_size_)
 	elseif al_sampling == "Diversity"
 		error("Diversity Sampling NOT IMPLEMENTED YET")
 	elseif al_sampling == "PowerBayesian"
-		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
+		bayesian_scores = pred_analyzer_multiclass(re, pool_x, param_matrix)
 		sampled_indices = power_acquisition(bayesian_scores[2, :], acq_size_)
 	elseif al_sampling == "TopKBayesian"
-		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
+		bayesian_scores = pred_analyzer_multiclass(re, pool_x, param_matrix)
 		sampled_indices =top_k_acquisition(bayesian_scores[2, :], acq_size_)
 	end
 
@@ -65,10 +73,12 @@ function dnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	# println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
 	#Training on Acquired Samples and logging classification_performance
-	independent_param_matrix, elapsed = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name)
+	independent_param_matrix, elapsed = ensemble_training(num_params, input_size, n_output, acq_size_, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name)
+
+	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", elapsed, ',')
 	
 	test_x, test_y = test_data
-	predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
+	predictions = pred_analyzer_multiclass(re, test_x, independent_param_matrix)
     writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
 	ŷ_test = permutedims(Int.(predictions[1,:]))
 	# println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))

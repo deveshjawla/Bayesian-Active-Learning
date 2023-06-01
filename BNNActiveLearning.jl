@@ -20,7 +20,6 @@ num_chains = 8
 num_mcsteps = 1000
 datasets = ["creditdefault"]
 acq_functions = ["Random", "PowerBALD", "TopKBayesian"]
-acquisition_sizes = [50]
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
@@ -40,6 +39,8 @@ include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
 
 for dataset in datasets
+acquisition_sizes = [50]
+
     experiment_name = "001_comparing_different_acq_funcs"
     PATH = @__DIR__
     cd(PATH * "/DataSets/$(dataset)_dataset")
@@ -124,8 +125,8 @@ for dataset in datasets
 
     let
         kpi_df = Array{Any}(missing, 0, 6 + n_output)
-        for acquisition_size in acquisition_sizes
-            for acq_func in acq_functions
+		for acq_func in acq_functions
+        	for acquisition_size in acquisition_sizes
                 pipeline_name = "$(acq_func)_$(acquisition_size)_with_$(num_mcsteps)_MCsteps"
                 mkpath("./$(experiment_name)/$(pipeline_name)/predictions")
                 mkpath("./$(experiment_name)/$(pipeline_name)/classification_performance")

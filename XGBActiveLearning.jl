@@ -3,7 +3,6 @@ using Turing
 num_rounds = 100
 datasets = ["secom", "iris", "stroke"]
 acq_functions = ["PowerEntropy", "Random"]
-acquisition_sizes = [10]
 # Add four processes to use for sampling.
 addprocs(8; exeflags=`--project`)
 
@@ -21,6 +20,8 @@ include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
 
 for dataset in datasets
+acquisition_sizes = [10]
+
     experiment_name = "9_xgb_$(dataset)_powerentropy_non_informative_new_batch"
 
     PATH = @__DIR__
@@ -43,8 +44,8 @@ for dataset in datasets
         # 	class_names[i] = "Class$(i)"
         # end
         kpi_df = Array{Any}(missing, 0, 6 + n_output)
-        for acquisition_size in acquisition_sizes
-            for acq_func in acq_functions
+		for acq_func in acq_functions
+			for acquisition_size in acquisition_sizes
                 pipeline_name = "$(acq_func)_$(acquisition_size)_with_$(num_rounds)_rounds"
                 mkpath("./$(experiment_name)/$(pipeline_name)/predictions")
                 mkpath("./$(experiment_name)/$(pipeline_name)/classification_performance")

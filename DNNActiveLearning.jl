@@ -18,9 +18,9 @@ using Distributed
 using Turing
 num_chains = 8
 num_mcsteps = 1000
-datasets = ["creditdefault"]
+datasets = ["creditdefault", "secom"]
 acq_functions = ["Random", "PowerBALD", "TopKBayesian"]
-acquisition_sizes = [50]
+
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
@@ -33,14 +33,15 @@ using Distances
 # @everywhere using LazyArrays
 # @everywhere using DistributionsAD
 
-include("./BNNUtils.jl")
-include("./BNN_Query.jl")
+include("./DNNUtils.jl")
+include("./DNN_Query.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
 
 for dataset in datasets
-    experiment_name = "001_comparing_different_acq_funcs"
+	acquisition_sizes = [20]
+    experiment_name = "001_DNN_different_acq_funcs"
     PATH = @__DIR__
     cd(PATH * "/DataSets/$(dataset)_dataset")
 
@@ -124,8 +125,8 @@ for dataset in datasets
 
     let
         kpi_df = Array{Any}(missing, 0, 6 + n_output)
-        for acquisition_size in acquisition_sizes
-            for acq_func in acq_functions
+		for acq_func in acq_functions
+        	for acquisition_size in acquisition_sizes
                 pipeline_name = "$(acq_func)_$(acquisition_size)_with_$(num_mcsteps)_MCsteps"
                 mkpath("./$(experiment_name)/$(pipeline_name)/predictions")
                 mkpath("./$(experiment_name)/$(pipeline_name)/classification_performance")
@@ -169,31 +170,20 @@ for dataset in datasets
 						last_improvement = AL_iteration
 					end
 					if AL_iteration == 1
-						new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(prior, pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
+						new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
 					elseif lastindex(new_pool[2]) > acquisition_size
                         # new_prior = (new_prior[1], sigma)
-                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
+                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func)
 						n_acq_steps = deepcopy(AL_iteration)
                     elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
                         # new_prior = (new_prior[1], sigma)
-                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func)
+                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func)
                         println("Trained on last few samples remaining in the Pool")
 						n_acq_steps = deepcopy(AL_iteration)
                     end
                 end
 
                 class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
-
-                for al_step = 1:n_acq_steps
-                    data = Array{Any}(undef, 5, num_chains)
-                    for i = 1:num_chains
-                        m = readdlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", ',')
-                        data[:, i] = m[:, 2]
-                        rm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv")
-                    end
-                    d = mean(data, dims=2)
-                    writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", d)
-                end
 
                 performance_data = Array{Any}(undef, 4, n_acq_steps) #dims=(features, samples(i))
                 for al_step = 1:n_acq_steps
@@ -202,7 +192,7 @@ for dataset in datasets
                     cd = readdlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                     performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
                     performance_data[3, al_step] = m[2, 2] #Accuracy
-                    c = readdlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", ',')
+                    c = readdlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", ',')
                     performance_data[4, al_step] = c[1] #Elapsed
 
                     for i = 1:n_output

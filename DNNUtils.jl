@@ -18,7 +18,7 @@ function pred_analyzer(test_xs, test_ys, params_set, threshold)::Tuple{Array{Flo
     for (test_x, test_y) in zip(eachrow(test_xs), test_ys)
         predictions = []
         for theta in params_set
-            model = feedforward(theta)
+            model = reconstruct(theta)
             # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
             ŷ = model(collect(test_x))
             append!(predictions, ŷ)
@@ -50,153 +50,168 @@ Returns a tuple of {Prediction, Prediction probability}
 
 Uses a simple argmax and percentage of samples in the ensemble respectively
 """
-function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Array{Float32, 2}
+function pred_analyzer_multiclass(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
     n_samples = size(test_xs)[2]
-	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float32}(undef, 2, n_samples)
+    ensemble_size = size(params_set)[1]
+    pred_matrix = Array{Float32}(undef, 2, n_samples)
     for i = 1:n_samples
-		predictions = []
-		for j = 1:ensemble_size
-			model = feedforward(params_set[j,:])
-				# make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
-			ŷ = model(test_xs[:,i])
-			# ŷ = feedforward(test_xs[:,i], params_set[j,:])#for the one with destructure
-			# ŷ = feedforward(test_xs[:,i], params_set[j,:], network_shape)#for the one with unpack
-			predicted_label = argmax(ŷ)
-			append!(predictions, predicted_label)
-		end
-		count_map = countmap(predictions)
-		# println(count_map)
-		uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
-		index_max = argmax(nUniques)
-		prediction = uniques[index_max]
-		pred_probability = maximum(nUniques) / sum(nUniques)
-		# println(prediction, "\t", pred_probability)
-		pred_matrix[:, i] = [prediction, pred_probability]
+        predictions = []
+        for j = 1:ensemble_size
+            model = reconstruct(params_set[j, :])
+            # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
+            ŷ = model(test_xs[:, i])
+            # ŷ = reconstruct(test_xs[:,i], params_set[j,:])#for the one with destructure
+            # ŷ = reconstruct(test_xs[:,i], params_set[j,:], network_shape)#for the one with unpack
+            predicted_label = argmax(ŷ)
+            append!(predictions, predicted_label)
+        end
+        count_map = countmap(predictions)
+        # println(count_map)
+        uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
+        index_max = argmax(nUniques)
+        prediction = uniques[index_max]
+        pred_probability = maximum(nUniques) / sum(nUniques)
+        # println(prediction, "\t", pred_probability)
+        pred_matrix[:, i] = [prediction, pred_probability]
     end
     return pred_matrix
 end
 
 
-function convergence_stats(i::Int, chain, elapsed::Float32)::Tuple{Float32, Float32, Float32, Float32, Float32}
-    ch = chain[:, :, i]
-    summaries, quantiles = describe(ch)
-    large_rhat = count(>=(1.01), sort(summaries[:, :rhat]))
-    small_rhat = count(<=(0.99), sort(summaries[:, :rhat]))
-    oob_rhat = large_rhat + small_rhat
-    avg_acceptance_rate = mean(ch[:acceptance_rate])
-    total_numerical_error = sum(ch[:numerical_error])
-    avg_ess = mean(summaries[:, :ess_per_sec])
-    # println(describe(summaries[:, :mean]))
-    return elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess
-end
-
 """
 Returns a matrix of dims (n_output, ensemble_size, n_samples)
 """
-function pool_predictions(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2}, n_output::Int)::Array{Float32, 3}
-	n_samples = size(test_xs)[2]
-	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float32}(undef, n_output, ensemble_size, n_samples)
+function pool_predictions(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2}, n_output::Int)::Array{Float32,3}
+    n_samples = size(test_xs)[2]
+    ensemble_size = size(params_set)[1]
+    pred_matrix = Array{Float32}(undef, n_output, ensemble_size, n_samples)
 
     for i = 1:n_samples, j = 1:ensemble_size
-            model = feedforward(params_set[j,:])
-            # # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
-            ŷ = model(test_xs[:,i])
-            pred_matrix[:, j, i] = ŷ
-			# if i==100 && j==100
-			# 	println(ŷ)
-			# end
+        model = reconstruct(params_set[j, :])
+        # # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
+        ŷ = model(test_xs[:, i])
+        pred_matrix[:, j, i] = ŷ
+        # if i==100 && j==100
+        # 	println(ŷ)
+        # end
     end
-	# println(pred_matrix[:,100,100])
-	return pred_matrix
+    # println(pred_matrix[:,100,100])
+    return pred_matrix
 end
 
+using Distributed
 
-
-function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32}
-	sigma, nparameters = prior
-	# @everywhere network_shape = $network_shape
-	@everywhere nparameters = $nparameters
-	train_x, train_y = training_data
-	@everywhere train_x = $train_x
-	@everywhere train_y = $train_y
-	println("Checking dimensions of train_x and train_y just before training:", size(train_x), " & ", size(train_y))
-	# println(eltype(train_x), eltype(train_y))
-	@everywhere model = bayesnnMVG(train_x, train_y, sigma, nparameters)
-	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
-	chain = chain_timed.value
-	elapsed = Float32(chain_timed.time)
-	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
-	θ = MCMCChains.group(chain, :θ).value
-
-	burn_in = Int(0.6*nsteps)
-	n_indep_samples = Int((nsteps-burn_in) / 10)
-	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters)
-    for i in 1:n_chains
-		params_set = collect.(eachrow(θ[:, :, i]))
-    	param_matrix = mapreduce(permutedims, vcat, params_set)
-
-		independent_param_matrix = Array{Float32}(undef, n_indep_samples, nparameters)
-		for i in 1:nsteps-burn_in
-			if i % 10 == 0
-				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
-			end
-		end
-
-		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed)
-
-    	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
-		# println(oob_rhat)
-
-		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
-    end
-    writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
-	return param_matrices_accumulated, elapsed
-end
-
-# function bayesian_inference_single_core(prior, training_data, nsteps, n_chains, al_step, pipeline_name)
-# 	location_prior, scale_prior = prior
-# 	train_x, train_y = training_data
-# 	# println("Checking dimensions of train_x and train_y just before training:", train_x[1,1], " & ", train_y[1,1])
-# 	model = bayesnnMVG(train_x, train_y, total_num_params)
-# 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
-# 	chain = chain_timed.value
-# 	elapsed = chain_timed.time
-# 	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
-# 	θ = MCMCChains.group(chain, :θ).value
-
-# 	burn_in = Int(0.6*nsteps)
-# 	n_indep_samples = Int((nsteps-burn_in) / 10)
-# 	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, total_num_params)
-#     for i in 1:n_chains
-# 		params_set = collect.(eachrow(θ[:, :, i]))
-#     	param_matrix = mapreduce(permutedims, vcat, params_set)
-
-# 		independent_param_matrix = Array{Float32}(undef, n_indep_samples, total_num_params)
-# 		for i in 1:nsteps-burn_in
-# 			if i % 10 == 0
-# 				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
-# 			end
-# 		end
-
-# 		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chain, elapsed)
-
-#     	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
-# 		# println(oob_rhat)
-
-# 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
-#     end
-#     writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
-# 	return param_matrices_accumulated
+# # instantiate and precompile environment in all processes
+# @everywhere begin
+#     using Pkg
+#     Pkg.activate(@__DIR__)
+#     Pkg.instantiate()
+#     Pkg.precompile()
 # end
 
+@everywhere begin
+    # load dependencies
+    using ProgressMeter
+    using CSV
 
-# Tools to Examine Chains
-# summaries, quantiles = describe(chain);
-# sum([idx * i for (i, idx) in enumerate(summaries[:, :mean])])
-# _, i = findmax(chain[:lp])
-# i = i.I[1]
-# θ[i, :]
-# elapsed = chain_timed.time
-# θ = MCMCChains.group(chain, :θ).value
+
+    multiclass_dnn_accuracy(x, y) = mean(onecold(softmax(model(x))) .== onecold(y))
+    using Flux
+
+    function network_training(n_epochs, input_size, output_size, train_loader; lr=1e-3, dropout_rate=0.2)::Vector{Float32}
+        model = Chain(
+            Dense(input_size => input_size, relu; init=Flux.kaiming_normal()),
+            Dropout(dropout_rate),
+            Dense(input_size => input_size, relu; init=Flux.kaiming_normal()),
+            Dropout(dropout_rate),
+            Dense(input_size => output_size; init=Flux.kaiming_normal()),
+        )
+        opt_state = Flux.setup(Adam(lr), model)
+
+        # @info("Beginning training loop...")
+        least_loss = Inf32
+        last_improvement = 0
+        optim_params = 0
+
+        for epoch_idx in 1:n_epochs
+            # global best_acc, last_improvement
+            loss = 0.0
+            for (x, y) in train_loader
+                # Compute the loss and the gradients:
+                l, gs = Flux.withgradient(m -> Flux.logitcrossentropy(m(x), y), model)
+
+                if !isfinite(l)
+                    # @warn "loss is $l" epoch_idx
+                    continue
+                end
+                begin
+                    # Update the model parameters (and the Adam momenta):
+                    Flux.update!(opt_state, model, gs[1])
+                    # Accumulate the mean loss, just for logging:
+                    loss += l / length(train_loader)
+                end
+            end
+
+            if mod(epoch_idx, 2) == 1
+                # Report on train and test, only every 2nd epoch_idx:
+                # @info "After epoch_idx = $epoch_idx" loss
+            end
+
+            # If this is the minimum loss we've seen so far, save the model out
+            if abs(loss) < abs(least_loss)
+                # @info(" -> New minimum loss! Saving model weights")
+                optim_params, re = Flux.destructure(model)
+                least_loss = loss
+                last_improvement = epoch_idx
+            end
+
+            # If we haven't seen improvement in 5 epochs, drop our learning rate:
+            if epoch_idx - last_improvement >= 10 && opt_state.layers[1].weight.rule.eta > 1e-6
+                new_eta = opt_state.layers[1].weight.rule.eta / 10.0
+                # @warn(" -> Haven't improved in a while, dropping learning rate to $(new_eta)!")
+                Flux.adjust!(opt_state; eta=new_eta)
+                # After dropping learning rate, give it a few epochs to improve
+                last_improvement = epoch_idx
+            end
+
+            if epoch_idx - last_improvement >= 30
+                # @warn(" -> We're calling this converged.")
+                break
+            end
+        end
+
+        return optim_params
+    end
+
+end
+
+using SharedArrays
+function parallel_network_training(n_networks, nparameters, n_epochs, input_size, output_size, train_loader)::Matrix{Float32}
+    param_matrices_accumulated = SharedMatrix{Float32}(n_networks, nparameters)
+    pmap(1:n_networks) do i #@showprogress
+        network_weights = network_training(n_epochs, input_size, output_size, train_loader)
+        param_matrices_accumulated[i, :] = network_weights
+    end
+	return convert(Matrix{Float32}, param_matrices_accumulated)
+end
+
+function ensemble_training(num_params::Int, input_size::Int, output_size::Int, acq_size::Int, training_data::Tuple{Array{Float32,2},Array{Int,2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String; n_epochs=1000)::Tuple{Array{Float32,2},Float32}
+    train_x, train_y = training_data
+
+    train_y = Flux.onehotbatch(vec(train_y), 1:output_size)
+    println("Checking dimensions of train_x and train_y just before training:", size(train_x), " & ", size(train_y))
+    # println(eltype(train_x), eltype(train_y))
+    train_loader = Flux.DataLoader((train_x, train_y), batchsize=acq_size)
+
+    burn_in = Int(0.6 * nsteps)
+    n_indep_samples = Int((nsteps - burn_in) / 10)
+    ensemble_size = n_chains * n_indep_samples
+
+    chain_timed = @timed parallel_network_training(ensemble_size, num_params, n_epochs, input_size, output_size, train_loader)
+
+    param_matrices_accumulated = convert(Array{Float32,2}, chain_timed.value)
+    elapsed = Float32(chain_timed.time)
+
+    writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+    return param_matrices_accumulated, elapsed
+end
