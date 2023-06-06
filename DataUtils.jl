@@ -61,6 +61,33 @@ function pool_test_maker(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{
     return pool, test
 end
 
+function pool_test_maker_xgb(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{Tuple{Array{Float32, 2}, Array{Int, 2}}, Tuple{Array{Float32, 2}, Array{Int, 2}}}
+    pool = Matrix{Float32}(permutedims(pool))
+    test = Matrix{Float32}(permutedims(test))
+    pool_x = pool[1:n_input, :]
+    pool_y = pool[end, :]
+	pool_y = Int.(pool_y) .- 1
+    # pool_max = maximum(pool_x, dims=1)
+    # pool_mini = minimum(pool_x, dims=1)
+    # pool_x = scaling(pool_x, pool_max, pool_mini)
+    pool_mean = mean(pool_x, dims=2)
+    pool_std = std(pool_x, dims=2)
+    pool_x = standardize(pool_x, pool_mean, pool_std)
+
+    test_x = test[1:n_input, :]
+    test_y = test[end, :]
+	test_y = Int.(test_y) .- 1
+    # test_x = scaling(test_x, pool_max, pool_mini)
+    test_x = standardize(test_x, pool_mean, pool_std)
+
+
+    pool_y = permutedims(pool_y)
+    test_y = permutedims(test_y)
+    pool = (pool_x, pool_y)
+    test = (test_x, test_y)
+    return pool, test
+end
+
 
 # Function to split samples.
 function split_data(df; at=0.70)
