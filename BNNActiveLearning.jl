@@ -18,8 +18,8 @@ using Distributed
 using Turing
 num_chains = 8
 num_mcsteps = 1000
-datasets = ["iris", "stroke", "banknote", "coalmine"]
-acq_functions = ["Random", "PowerBALD", "TopKBayesian"]
+datasets = ["creditfraud"]
+acq_functions = ["Random", "TopKBayesian"]
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
@@ -39,7 +39,8 @@ include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
 
 for dataset in datasets
-    acquisition_sizes = [20]
+	aocs = []
+    acquisition_sizes = [50]
 
     experiment_name = "001_comparing_different_acq_funcs"
     PATH = @__DIR__
@@ -212,6 +213,9 @@ for dataset in datasets
                 end
                 kpi = vcat(performance_data, class_dist_data)
                 writedlm("./$(experiment_name)/$(pipeline_name)/kpi.csv", kpi, ',')
+	acc_ = kpi[3, :]
+				kind_of_aoc = mean(acc_ .- 0.5)
+				append!(aocs, kind_of_aoc)
 
                 # kpi = readdlm("./$(experiment_name)/$(pipeline_name)/kpi.csv", ',')
                 # kpi = copy(performance_data)
@@ -239,6 +243,8 @@ for dataset in datasets
 
         df = DataFrame(kpi_df, kpi_names)
         CSV.write("./$(experiment_name)/df.csv", df)
+	writedlm("./$(experiment_name)/auc_acq.txt", aocs, ',')
+
     end
 
     # sum([idx * i for (i, idx) in enumerate(summaries[:, :mean])])
@@ -257,7 +263,7 @@ for dataset in datasets
     set_default_plot_size(width, height)
 
     theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:right)
-    # df = CSV.read("./$(experiment_name)/df.csv", DataFrame, header=1)
+    df = CSV.read("./$(experiment_name)/df.csv", DataFrame, header=1)
     Gadfly.push_theme(theme)
     # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
     fig1a = plot(df, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
@@ -276,5 +282,6 @@ for dataset in datasets
     fig1a |> PNG("./$(experiment_name)/$(experiment_name).png")
     fig1aa |> PNG("./$(experiment_name)/$(experiment_name)_confidence.png")
     fig1b |> PNG("./$(experiment_name)/$(experiment_name)_time.png")
-    # end
+    # # end
+
 end
