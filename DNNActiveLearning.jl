@@ -125,7 +125,7 @@ for dataset in datasets
 
 
     let
-        kpi_df = Array{Any}(missing, 0, 6 + n_output)
+        kpi_df = Array{Any}(missing, 0, 7 + n_output)
         for acq_func in acq_functions
             for acquisition_size in acquisition_sizes
                 pipeline_name = "$(acq_func)_$(acquisition_size)_with_$(num_mcsteps)_MCsteps"

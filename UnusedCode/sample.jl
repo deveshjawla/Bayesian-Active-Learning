@@ -122,6 +122,10 @@ q_hat = vi(m, advi, q)
 
 samples = rand(q_hat, 5000)
 
+q_hat.dist
+q_hat.dist.m
+q_hat.dist.σ
+cov(q_hat.dist)
 
 elbo(advi, q, m, 1000)
 
