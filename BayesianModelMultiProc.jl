@@ -50,10 +50,16 @@
 # 	end
 # end
 
-@model function bayesnnMVG(x, y, sigma, num_params, warn=true)
-	θ ~ MvNormal(zeros(num_params), sigma)
+@model function bayesnnMVG(x, y, init_params, num_params)
+	# # Hyper priors
+	# n_weights_input = num_params - lastindex(init_params)
+    # input_hyperprior ~ filldist(Exponential(0.2), n_weights_input)
+    # θ_input ~ MvNormal(zeros(n_weights_input), input_hyperprior)
+    # θ_hidden ~ MvNormal(0 .* init_params, init_params)
+
+	θ ~ MvNormal(zeros(num_params), init_params)
 	# @code_warntype feedforward(θ)
-	nn = feedforward(θ)
+	nn = feedforward(θ_input, θ_hidden)
 	preds = nn(x)
 	for i = 1:lastindex(y)
 		y[i] ~ Categorical(preds[:, i])
@@ -78,8 +84,8 @@ end
 # end
 
 
-# @model function bayesnnMVG(x, y, sigma, num_params)
-#     θ ~ MvNormal(zeros(num_params), sigma)
+# @model function bayesnnMVG(x, y, init_params, num_params)
+#     θ ~ MvNormal(zeros(num_params), init_params)
 #     nn = feedforward(θ)(x)
 # 	preds = deepcopy(collect.(eachcol(nn)))
 # 	labels = deepcopy(vec(permutedims(y)))

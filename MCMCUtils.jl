@@ -116,6 +116,7 @@ end
 
 function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32}
 	sigma, nparameters = prior
+	@everywhere sigma = $sigma
 	# @everywhere network_shape = $network_shape
 	@everywhere nparameters = $nparameters
 	train_x, train_y = training_data
@@ -130,16 +131,30 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	θ = MCMCChains.group(chain, :θ).value
 
+	# hyperprior = MCMCChains.group(chain, :input_hyperprior).value
+	# θ_input = MCMCChains.group(chain, :θ_input).value
+	# θ_hidden = MCMCChains.group(chain, :θ_hidden).value
+
 	burn_in = Int(0.6*nsteps)
 	n_indep_samples = Int((nsteps-burn_in) / 10)
+	# hyperpriors_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters - lastindex(sigma))
 	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters)
     for i in 1:n_chains
 		params_set = collect.(eachrow(θ[:, :, i]))
+		# hyperprior_set = collect.(eachrow(hyperprior[:, :, i]))
+		# params_set_input = collect.(eachrow(θ_input[:, :, i]))
+		# params_set_hidden = collect.(eachrow(θ_hidden[:, :, i]))
     	param_matrix = mapreduce(permutedims, vcat, params_set)
+    	# hyperprior_matrix = mapreduce(permutedims, vcat, hyperprior_set)
+    	# param_matrix_input = mapreduce(permutedims, vcat, params_set_input)
+    	# param_matrix_hidden = mapreduce(permutedims, vcat, params_set_hidden)
+		# param_matrix = hcat(param_matrix_input, param_matrix_hidden)
 
+		# independent_hyperprior_matrix = Array{Float32}(undef, n_indep_samples, nparameters - lastindex(sigma))
 		independent_param_matrix = Array{Float32}(undef, n_indep_samples, nparameters)
 		for i in 1:nsteps-burn_in
 			if i % 10 == 0
+				# independent_hyperprior_matrix[Int((i) / 10), :] = hyperprior_matrix[i+burn_in, :]
 				independent_param_matrix[Int((i) / 10), :] = param_matrix[i+burn_in, :]
 			end
 		end
@@ -149,8 +164,11 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
     	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 		# println(oob_rhat)
 
+		# hyperpriors_accumulated[(i-1)*size(independent_hyperprior_matrix)[1]+1:i*size(independent_hyperprior_matrix)[1],:] = independent_hyperprior_matrix
 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
     end
+	# hyperpriors_mean = mean(hyperpriors_accumulated, dims = 1)
+    # writedlm("./$(experiment_name)/$(pipeline_name)/hyperpriors/$al_step.csv", hyperpriors_mean, ',')
     writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 	return param_matrices_accumulated, elapsed
 end

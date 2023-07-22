@@ -1,5 +1,6 @@
-using DataFrames, DelimitedFiles, CSV, ARFFFiles
+using ARFFFiles
 using StatsBase
+using DataFrames, DelimitedFiles, CSV
 PATH = @__DIR__
 cd(PATH)
 
@@ -44,4 +45,25 @@ validate = data_balancing(validate, balancing="undersampling", positive_class_la
 	CSV.write("./train.csv", train)
 	CSV.write("./test.csv", test)
 	CSV.write("./validate.csv", validate)
-	
+
+
+using DataFrames, DelimitedFiles, CSV
+
+PATH = @__DIR__
+cd(PATH)
+
+train= CSV.read("train.csv", DataFrame, header=1)
+test= CSV.read("test.csv", DataFrame, header=1)
+validate= CSV.read("validate.csv", DataFrame, header=1)
+train = vcat(train, validate)
+
+using MultivariateStats
+
+M = fit(KernelPCA, permutedims(Matrix(select(train, Not([:label])))), maxoutdim = 2)
+train_x_transformed = MultivariateStats.transform(M, permutedims(Matrix(select(train, Not([:label])))))
+
+# M = fit(PCA, test_x', maxoutdim = 150)
+test_x_transformed = MultivariateStats.transform(M, permutedims(Matrix(select(test, Not([:label])))))
+
+CSV.write("../coalmineKernelPCA_dataset/train.csv", DataFrame(hcat(permutedims(train_x_transformed), train.label), :auto))
+CSV.write("../coalmineKernelPCA_dataset/test.csv", DataFrame(hcat(permutedims(test_x_transformed), test.label), :auto))
