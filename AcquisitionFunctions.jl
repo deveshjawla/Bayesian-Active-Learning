@@ -13,9 +13,9 @@ function initial_random_acquisition(initial_pool_size, acquisition_size)
     return shuffled[1:acquisition_size]
 end
 
-function top_k_acquisition(pool_scores::Vector, acquisition_size)
+function top_k_acquisition(pool_scores::Vector, acquisition_size; descending=true)
     df = DataFrame(Scores=pool_scores, Sample_indices=collect(1:lastindex(pool_scores)))
-    sorted_df = sort(df, :Scores)
+    sorted_df = sort(df, :Scores, rev = descending)
     return sorted_df[1:acquisition_size, :Sample_indices]
 end
 

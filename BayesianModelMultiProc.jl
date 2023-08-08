@@ -59,7 +59,8 @@
 
 	θ ~ MvNormal(zeros(num_params), init_params)
 	# @code_warntype feedforward(θ)
-	nn = feedforward(θ_input, θ_hidden)
+	nn = feedforward(θ)
+	# nn = feedforward(θ_input, θ_hidden)
 	preds = nn(x)
 	for i = 1:lastindex(y)
 		y[i] ~ Categorical(preds[:, i])

@@ -25,3 +25,30 @@ function var_ratio(predictions::Vector)
     pred_probability = maximum(nUniques) / sum(nUniques)
 	return 1-pred_probability
 end
+
+"""
+Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
+
+
+Returns : H(normalized_entropy)
+"""
+function predictive_uncertainty(prob_matrix::Matrix, n_output)
+	# println(size(prob_matrix))
+	mean_prob_per_class = vec(mean(prob_matrix, dims = 2))
+	H = normalized_entropy(mean_prob_per_class, n_output)
+	return H
+end
+
+"""
+Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
+
+
+Returns : predictive_uncertainty, aleatoric_uncertainty, epistemic_uncertainty
+"""
+function uncertainties(prob_matrix::Matrix, n_output)
+	# println(size(prob_matrix))
+	mean_prob_per_class = vec(mean(prob_matrix, dims = 2))
+	H = normalized_entropy(mean_prob_per_class, n_output)
+	E_H = mean(mapslices(x->normalized_entropy(x, n_output), prob_matrix, dims=1))
+	return H, -E_H, H + E_H
+end
