@@ -1,5 +1,3 @@
-using Random
-
 function data_balancing(data_xy::DataFrame; balancing::String, positive_class_label=1, negative_class_label=2)::DataFrame
     negative_class = data_xy[data_xy[:, end].==negative_class_label, :]
     positive_class = data_xy[data_xy[:, end].==positive_class_label, :]

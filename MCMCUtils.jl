@@ -115,19 +115,23 @@ end
 
 
 function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32, Array{Float32, 2}}
-	sigma, nparameters = prior
-	@everywhere sigma = $sigma
+	location, scale = prior
+	@everywhere location = $location
+	@everywhere scale = $scale
 	# @everywhere network_shape = $network_shape
+	nparameters = lastindex(location)
 	@everywhere nparameters = $nparameters
 	train_x, train_y = training_data
 	@everywhere train_x = $train_x
 	@everywhere train_y = $train_y
 	println("Checking dimensions of train_x and train_y just before training:", size(train_x), " & ", size(train_y))
 	# println(eltype(train_x), eltype(train_y))
-	@everywhere model = bayesnnMVG(train_x, train_y, sigma, nparameters)
-	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = true)
+	# println(mean(location), mean(scale))
+	@everywhere model = bayesnnMVG(train_x, train_y, location, scale)
+	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
 	chains = chain_timed.value
 	elapsed = Float32(chain_timed.time)
+	println("It took $(elapsed) seconds to complete the $(nsteps) iterations")
 	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	θ = MCMCChains.group(chains, :θ).value
 
@@ -142,7 +146,7 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 
 	burn_in = Int(0.6*nsteps)
 	n_indep_samples = Int((nsteps-burn_in) / 10)
-	# hyperpriors_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters - lastindex(sigma))
+	# hyperpriors_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters - lastindex(location))
 	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters)
 	map_params_accumulated = Array{Float32}(undef, n_chains, nparameters)
 
@@ -157,7 +161,7 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
     	# param_matrix_hidden = mapreduce(permutedims, vcat, params_set_hidden)
 		# param_matrix = hcat(param_matrix_input, param_matrix_hidden)
 
-		# independent_hyperprior_matrix = Array{Float32}(undef, n_indep_samples, nparameters - lastindex(sigma))
+		# independent_hyperprior_matrix = Array{Float32}(undef, n_indep_samples, nparameters - lastindex(location))
 		independent_param_matrix = Array{Float32}(undef, n_indep_samples, nparameters)
 		for i in 1:nsteps-burn_in
 			if i % 10 == 0

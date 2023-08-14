@@ -50,14 +50,14 @@
 # 	end
 # end
 
-@model function bayesnnMVG(x, y, init_params, num_params)
+@model function bayesnnMVG(x, y, location, scale)
 	# # Hyper priors
 	# n_weights_input = num_params - lastindex(init_params)
     # input_hyperprior ~ filldist(Exponential(0.2), n_weights_input)
     # θ_input ~ MvNormal(zeros(n_weights_input), input_hyperprior)
     # θ_hidden ~ MvNormal(0 .* init_params, init_params)
 
-	θ ~ MvNormal(zeros(num_params), init_params)
+	θ ~ MvNormal(location, scale)
 	# @code_warntype feedforward(θ)
 	nn = feedforward(θ)
 	# nn = feedforward(θ_input, θ_hidden)

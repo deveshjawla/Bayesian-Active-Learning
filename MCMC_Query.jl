@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32, Vector}
 	println("$(al_sampling) with query no. ", al_step)
 	# sigma, num_params = prior
 	pool_x, pool_y = pool
@@ -19,6 +19,14 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 		sampled_indices = power_acquisition(bald_scores, acq_size_)
 		# softmax_entropy = softmax_acquisition(entropy_scores, acq_size_)
 		# var_ratio_scores = 1 .- pŷ_test
+	elseif al_sampling == "BayesianUncertainty"
+		pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
+		pool_scores = mapslices(x->uncertainties(x,n_output), pool_prediction_matrix, dims=[1,2])
+		aleatoric_uncertainties = map(x->x[2], pool_scores[1,1,:])
+		epistemic_uncertainties = map(x->x[3], pool_scores[1,1,:])
+		most_unambiguous_samples = top_k_acquisition(aleatoric_uncertainties, round(Int,acq_size_*0.2))
+		most_uncertain_samples = top_k_acquisition(epistemic_uncertainties, round(Int,acq_size_*0.8); descending = true, remove_zeros=true)
+		sampled_indices = union(most_unambiguous_samples, most_uncertain_samples)
 	elseif al_sampling == "PowerEntropy"
 		pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
 		pool_scores = mapslices(x->bald(x,n_output), pool_prediction_matrix, dims=[1,2])
@@ -31,7 +39,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 		sampled_indices = power_acquisition(bayesian_scores[2, :], acq_size_)
 	elseif al_sampling == "TopKBayesian"
 		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
-		sampled_indices =top_k_acquisition(bayesian_scores[2, :], acq_size_)
+		sampled_indices = top_k_acquisition(bayesian_scores[2, :], acq_size_; descending = false)
 	end
 
 	new_training_data = pool[:, sampled_indices]
@@ -79,20 +87,21 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	if n_output == 2
 		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
 		acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map = performance_stats(test_y, ŷ_test_map)
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [lastindex(sampled_indices), acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [lastindex(sampled_indices), acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map]], ',')
 		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
 	else
 		acc = accuracy_multiclass(test_y, ŷ_test)
 		acc_map = accuracy_multiclass(test_y, ŷ_test_map)
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"] [acq_size_, acc]], ',')
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size","Accuracy"] [acq_size_, acc_map]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"] [lastindex(sampled_indices), acc]], ',')
+		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size","Accuracy"] [lastindex(sampled_indices), acc_map]], ',')
 		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acq_size_, balance_of_acquired_batch, acc]])
 	end
+
 	#Turning the posterior obtained after training on new samples into the new prior for the next iteration
-    # param_matrix_mean = vec(mean(independent_param_matrix, dims=1))
+    param_matrix_mean = vec(mean(independent_param_matrix, dims=1))
     # param_matrix_std = vec(std(independent_param_matrix, dims=1))
     # println("Euclidean distance between Prior and Posterior distribution's means is  ", euclidean(param_matrix_mean, prior[1]))
     # println("Euclidean distance between Prior and Posterior distribution's stds is ", euclidean(param_matrix_std, prior[2]))
@@ -106,5 +115,5 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	# println("size of training data is: ",size(training_data))
 	# println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
 	new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
-	return new_pool_tuple, independent_param_matrix, training_data, acc, elapsed
+	return new_pool_tuple, independent_param_matrix, training_data, acc, elapsed, param_matrix_mean
 end
