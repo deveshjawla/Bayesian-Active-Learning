@@ -16,7 +16,7 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
 	pool = vcat(pool_x, pool_y)
 	pool_size = lastindex(pool_y)
 	sampled_indices = 0
-	if al_step == 1
+	if al_sampling == "Initial"
 		sampled_indices = 1:acq_size_
 	elseif al_sampling == "Random"
 		sampled_indices = initial_random_acquisition(pool_size, acq_size_)

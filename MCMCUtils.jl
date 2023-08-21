@@ -114,10 +114,11 @@ end
 
 
 
-function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32, Array{Float32, 2}}
+function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String, mcmc_init_params)::Tuple{Array{Float32, 2}, Float32, Array{Float32, 2}}
 	location, scale = prior
 	@everywhere location = $location
 	@everywhere scale = $scale
+	@everywhere mcmc_init_params = $mcmc_init_params
 	# @everywhere network_shape = $network_shape
 	nparameters = lastindex(location)
 	@everywhere nparameters = $nparameters
@@ -128,7 +129,11 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	# println(eltype(train_x), eltype(train_y))
 	# println(mean(location), mean(scale))
 	@everywhere model = bayesnnMVG(train_x, train_y, location, scale)
-	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
+	if al_step==1
+		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
+	else
+		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, init_params=[mcmc_init_params, mcmc_init_params], progress = false)
+	end
 	chains = chain_timed.value
 	elapsed = Float32(chain_timed.time)
 	println("It took $(elapsed) seconds to complete the $(nsteps) iterations")

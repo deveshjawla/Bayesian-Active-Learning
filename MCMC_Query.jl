@@ -1,14 +1,14 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32, Vector}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32, Vector}
 	println("$(al_sampling) with query no. ", al_step)
 	# sigma, num_params = prior
 	pool_x, pool_y = pool
 	pool = vcat(pool_x, pool_y)
 	pool_size = lastindex(pool_y)
 	sampled_indices = 0
-	if al_step == 1
+	if al_sampling == "Initial"
 		sampled_indices = 1:acq_size_
 	elseif al_sampling == "Random"
 		sampled_indices = initial_random_acquisition(pool_size, acq_size_)
@@ -73,7 +73,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	# println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
 	#Training on Acquired Samples and logging classification_performance
-	independent_param_matrix, elapsed, independent_map_params = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name)
+	independent_param_matrix, elapsed, independent_map_params = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name, mcmc_init_params)
 	
 	test_x, test_y = test_data
 	predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
