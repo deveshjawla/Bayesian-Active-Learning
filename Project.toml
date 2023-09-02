@@ -1,5 +1,6 @@
 [deps]
 AdvancedVI = "b5ca4192-6429-45e5-a2d9-87aec30a685c"
+BayesNets = "ba4760a4-c768-5bed-964b-cf806dc591cb"
 Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"

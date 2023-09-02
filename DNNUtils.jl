@@ -120,9 +120,9 @@ using Distributed
 
     function network_training(n_epochs, input_size, output_size, train_loader; lr=1e-3, dropout_rate=0.2)::Vector{Float32}
         model = Chain(
-            Dense(input_size => input_size, relu; init=Flux.kaiming_normal()),
+            Dense(input_size => input_size, mish; init=Flux.kaiming_normal()),
             Dropout(dropout_rate),
-            Dense(input_size => input_size, relu; init=Flux.kaiming_normal()),
+            Dense(input_size => input_size, mish; init=Flux.kaiming_normal()),
             Dropout(dropout_rate),
             Dense(input_size => output_size; init=Flux.kaiming_normal()),
         )

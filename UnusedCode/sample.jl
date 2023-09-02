@@ -26,8 +26,8 @@ xs = hcat(xs...)
 
 # Specify the network architecture.
 network_shape = [
-    (3,2, :relu),
-    (2,3, :relu), 
+    (3,2, :mish),
+    (2,3, :mish), 
     (1,2, :σ)]
 
 # Regularization, parameter variance, and total number of
@@ -68,7 +68,7 @@ num_params = sum([i * o + i for (i, o, _) in network_shape])
 #     return nn(x)
 # end
 
-nn_initial = Chain(Dense(2, 3, relu), Dense(3, 2, relu), Dense(2, 1, sigmoid))
+nn_initial = Chain(Dense(2, 3, mish), Dense(3, 2, mish), Dense(2, 1, sigmoid))
 
 # Extract weights and a helper function to reconstruct NN from weights
 parameters_initial, destructured = Flux.destructure(nn_initial)

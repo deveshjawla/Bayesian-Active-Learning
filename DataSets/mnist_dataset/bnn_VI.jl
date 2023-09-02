@@ -70,7 +70,7 @@ n_output = lastindex(unique(train_y))
 @everywhere begin
 input_size = $input_size
 n_output = $n_output
-# neural_network = Chain(Conv((3,3), 1 =>8, relu), Conv((3,3), 8=>8, relu),  Conv((5,5), 8=>8, relu),Conv((5,5), 8=>8, relu), Conv((7,7), 8=>8, relu), Conv((7,7), 8=>8, relu), Flux.flatten, Dense(128 => 10, relu), Dense(10 => 10), softmax)
+# neural_network = Chain(Conv((3,3), 1 =>8, mish), Conv((3,3), 8=>8, mish),  Conv((5,5), 8=>8, mish),Conv((5,5), 8=>8, mish), Conv((7,7), 8=>8, mish), Conv((7,7), 8=>8, mish), Flux.flatten, Dense(128 => 10, mish), Dense(10 => 10), softmax)
 
 # function feedforward(θ::AbstractVector)
 #     W0 = reshape(θ[1:72], 3,3,1,8)
@@ -91,14 +91,14 @@ n_output = $n_output
 # 	W7 = reshape(θ[11459:11558], 10, 10)
 #     b7 = θ[11559:11568]
 #     model = Chain(
-#         Conv(W0, b0, relu),
-#         Conv(W1, b1, relu),
-#         Conv(W2, b2, relu),
-#         Conv(W3, b3, relu),
-#         Conv(W4, b4, relu),
-# 		Conv(W5, b5, relu),
+#         Conv(W0, b0, mish),
+#         Conv(W1, b1, mish),
+#         Conv(W2, b2, mish),
+#         Conv(W3, b3, mish),
+#         Conv(W4, b4, mish),
+# 		Conv(W5, b5, mish),
 # 		Flux.flatten,
-# 		Dense(W6, b6, relu),
+# 		Dense(W6, b6, mish),
 # 		Dense(W7, b7),
 # 		softmax
 #     )
@@ -113,8 +113,8 @@ function feedforward(θ::AbstractVector)
 	W2 = reshape(θ[25451:25550], 10, 10)
 	b2 = θ[25551:25560]
 	model = Chain(
-		Dense(W0, b0, relu),
-		Dense(W1, b1, relu),
+		Dense(W0, b0, mish),
+		Dense(W1, b1, mish),
 		Dense(W2, b2),
 		softmax
 	)

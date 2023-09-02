@@ -14,8 +14,8 @@ function feedforward(θ::AbstractVector)
 	b2 = θ[49:50]
 
 	model = Chain(
-		Dense(W0, b0, relu),
-		Dense(W1, b1, relu),
+		Dense(W0, b0, mish),
+		Dense(W1, b1, mish),
 		Dense(W2, b2),
 		softmax
 	)
@@ -31,7 +31,7 @@ num_params = 50
 # From worker 2:    │   %4  = (485:506)::Core.Const(485:506)
 # From worker 2:    │         (b0 = Base.getindex(θ, %4))
 # From worker 2:    │   %6  = (507:990)::Core.Const(507:990)
-# From worker 3:    │   %19 = Main.Chain(%16, %17, %18, Main.softmax)::Chain{Tuple{Dense{typeof(relu), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(relu), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(identity), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, typeof(softmax)}}
+# From worker 3:    │   %19 = Main.Chain(%16, %17, %18, Main.softmax)::Chain{Tuple{Dense{typeof(mish), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(mish), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(identity), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, typeof(softmax)}}
 # From worker 2:    │   %7  = Base.getindex(θ, %6)::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}}
 # From worker 3:    └──       return %19
 # From worker 3:
@@ -49,16 +49,16 @@ num_params = 50
 # From worker 3:      #self#::Core.Const(feedforward)
 # From worker 3:      θ::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}}
 # From worker 3:    Locals
-# From worker 2:    │   %16 = Main.Dense(W0, b0, Main.relu)::Dense{typeof(relu), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}
+# From worker 2:    │   %16 = Main.Dense(W0, b0, Main.mish)::Dense{typeof(mish), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}
 # From worker 3:      b2::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}}
 # From worker 3:      W2::ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}
 # From worker 3:      b1::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}}
-# From worker 2:    │   %17 = Main.Dense(W1, b1, Main.relu)::Dense{typeof(relu), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}
+# From worker 2:    │   %17 = Main.Dense(W1, b1, Main.mish)::Dense{typeof(mish), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}
 # From worker 3:      W1::ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}
 # From worker 3:      b0::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}}
 # From worker 3:      W0::ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}
 # From worker 2:    │   %18 = Main.Dense(W2, b2)::Dense{typeof(identity), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}
-# From worker 3:    Body::Chain{Tuple{Dense{typeof(relu), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(relu), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(identity), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, typeof(softmax)}}
+# From worker 3:    Body::Chain{Tuple{Dense{typeof(mish), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(mish), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, Dense{typeof(identity), ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}, Vector{ReverseDiff.TrackedReal{Float32, Float32, ReverseDiff.TrackedArray{Float32, Float32, 2, Matrix{Float32}, Matrix{Float32}}}}}, typeof(softmax)}}
 
 
 
@@ -89,7 +89,7 @@ num_params = 50
 
 
 # From worker 3:    │   %3 = Base.getproperty(re, :length)::Int64
-# From worker 2:    1 ─ %1 = Base.getproperty(re, :model)::Chain{Tuple{Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}
+# From worker 2:    1 ─ %1 = Base.getproperty(re, :model)::Chain{Tuple{Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}
 # From worker 3:    │   %4 = Optimisers._rebuild(%1, %2, flat, %3)::Chain
 # From worker 3:    └──      return %4
 # From worker 3:
@@ -98,11 +98,11 @@ num_params = 50
 # From worker 2:    │   %4 = Optimisers._rebuild(%1, %2, flat, %3)::Chain
 # From worker 2:    └──      return %4
 # From worker 2:
-# From worker 3:    MethodInstance for (::Optimisers.Restructure{Chain{Tuple{Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}, NamedTuple{(:layers,), Tuple{Tuple{NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, Tuple{}}}}})(::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}})
+# From worker 3:    MethodInstance for (::Optimisers.Restructure{Chain{Tuple{Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}, NamedTuple{(:layers,), Tuple{Tuple{NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, Tuple{}}}}})(::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}})
 # From worker 3:      from (re::Optimisers.Restructure)(flat::AbstractVector) in Optimisers at /Users/456828/.julia/packages/Optimisers/1x8gl/src/destructure.jl:59
 # From worker 3:    Arguments
-# From worker 3:      re::Optimisers.Restructure{Chain{Tuple{Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}, NamedTuple{(:layers,), Tuple{Tuple{NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, Tuple{}}}}}
-# From worker 2:    MethodInstance for (::Optimisers.Restructure{Chain{Tuple{Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(relu), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}, NamedTuple{(:layers,), Tuple{Tuple{NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, Tuple{}}}}})(::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}})
+# From worker 3:      re::Optimisers.Restructure{Chain{Tuple{Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}, NamedTuple{(:layers,), Tuple{Tuple{NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, Tuple{}}}}}
+# From worker 2:    MethodInstance for (::Optimisers.Restructure{Chain{Tuple{Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(mish), Matrix{Float32}, Vector{Float32}}, Dense{typeof(identity), Matrix{Float32}, Vector{Float32}}, typeof(softmax)}}, NamedTuple{(:layers,), Tuple{Tuple{NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, NamedTuple{(:weight, :bias, :σ), Tuple{Int64, Int64, Tuple{}}}, Tuple{}}}}})(::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}})
 # From worker 3:      flat::ReverseDiff.TrackedArray{Float32, Float32, 1, Vector{Float32}, Vector{Float32}}
 # From worker 3:    Body::Chain
 # From worker 2:      from (re::Optimisers.Restructure)(flat::AbstractVector) in Optimisers at /Users/456828/.julia/packages/Optimisers/1x8gl/src/destructure.jl:59

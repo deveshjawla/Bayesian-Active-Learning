@@ -149,7 +149,7 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	# θ_input = MCMCChains.group(chains, :θ_input).value
 	# θ_hidden = MCMCChains.group(chains, :θ_hidden).value
 
-	burn_in = Int(0.6*nsteps)
+	burn_in = 0#Int(0.6*nsteps)
 	n_indep_samples = Int((nsteps-burn_in) / 10)
 	# hyperpriors_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters - lastindex(location))
 	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters)

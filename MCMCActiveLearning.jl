@@ -17,7 +17,7 @@
 using Distributed
 using Turing
 num_chains = 2
-datasets = ["iris", "banknote"]
+datasets = ["secom"]
 acq_functions = ["BayesianUncertainty"]
 experiments = ["Informed"]
 # Add four processes to use for sampling.
@@ -50,10 +50,10 @@ include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
 
 for dataset in datasets
-    experiment_name = "NonCumulative"
+    experiment_name = "BayesianUncertainty"
     PATH = @__DIR__
     cd(PATH * "/DataSets/$(dataset)_dataset")
-    acquisition_sizes = [20]
+    acquisition_sizes = [10]
     for experiment in experiments
         @everywhere experiment = $experiment
         aocs = []
@@ -104,7 +104,7 @@ for dataset in datasets
 
             # n_hidden = input_size > 30 ? 30 : input_size
 
-            # nn_initial = Chain(Dense(input_size, n_hidden, relu), Dense(n_hidden, n_hidden, relu), Dense(n_hidden, n_output), softmax)
+            # nn_initial = Chain(Dense(input_size, n_hidden, mish), Dense(n_hidden, n_hidden, mish), Dense(n_hidden, n_output), softmax)
 
             # # Extract weights and a helper function to reconstruct NN from weights
             # parameters_initial, destructured = Flux.destructure(nn_initial)
@@ -114,8 +114,8 @@ for dataset in datasets
             # num_params = length(parameters_initial) # number of paraemters in NN
 
             # network_shape = []
-            #     (n_hidden, input_size, :relu),
-            #     (n_hidden, n_hidden, :relu),
+            #     (n_hidden, input_size, :mish),
+            #     (n_hidden, n_hidden, :mish),
             #     (n_output, n_hidden, :identity)]
 
             # # Regularization, parameter variance, and total number of
@@ -220,7 +220,7 @@ for dataset in datasets
                             println("Trained on last few samples remaining in the Pool")
                             n_acq_steps = deepcopy(AL_iteration)
                         end
-                        num_mcsteps += 500
+                        #num_mcsteps += 500
                     end
 
 

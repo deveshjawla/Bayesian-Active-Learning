@@ -15,8 +15,8 @@ function feedforward(θ::AbstractVector)
 
 
 	return Chain(
-		Dense(W0, b0, relu),
-		Dense(W1, b1, relu),
+		Dense(W0, b0, mish),
+		Dense(W1, b1, mish),
 		Dense(W2, b2),
 		softmax
 	)
@@ -46,10 +46,10 @@ num_params = 1058
 # 	b4 = θ[2069:2070]
 
 # 	return Chain(
-# 		Dense(W0, b0, relu),
-# 		Dense(W1, b1, relu),
-# 		Dense(W2, b2, relu),
-# 		Dense(W3, b3, relu),
+# 		Dense(W0, b0, mish),
+# 		Dense(W1, b1, mish),
+# 		Dense(W2, b2, mish),
+# 		Dense(W3, b3, mish),
 # 		Dense(W4, b4),
 # 		softmax
 # 	)
