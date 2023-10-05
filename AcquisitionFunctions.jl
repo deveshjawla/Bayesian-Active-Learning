@@ -16,7 +16,7 @@ function top_k_acquisition(pool_scores::Vector, acquisition_size; descending=fal
     df = DataFrame(Scores=pool_scores, Sample_indices=collect(1:lastindex(pool_scores)))
     sorted_df = sort(df, :Scores, rev = descending)
 	if remove_zeros
-		n_non_zero_scores = count(x->x!=0, sorted_df.Scores)
+		n_non_zero_scores = count(x->x>0.0001, sorted_df.Scores)
 		if n_non_zero_scores >= acquisition_size
 			top_k = sorted_df[1:acquisition_size, :Sample_indices]
 		else

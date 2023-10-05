@@ -145,11 +145,11 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 			break
 		end
 	end
-	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
+	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	
-	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", [["elapsed", "ELBO"] [elapsed, best_elbo]], ',')
+	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", [["elapsed", "ELBO"] [elapsed, best_elbo]], ',')
 		# println(oob_rhat)
 
-    writedlm("./$(experiment_name)/$(pipeline_name)/posterior_dist/$al_step.csv", [q̂.dist.m q̂.dist.σ], ',')
+    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/posterior_dist/$al_step.csv", [q̂.dist.m q̂.dist.σ], ',')
 	return param_matrices_accumulated, elapsed
 end

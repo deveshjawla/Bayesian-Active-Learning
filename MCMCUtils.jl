@@ -132,18 +132,18 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	if al_step==1
 		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
 	else
-		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, init_params=[mcmc_init_params, mcmc_init_params], progress = false)
+		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, init_params=repeat([mcmc_init_params], n_chains), progress = false)
 	end
 	chains = chain_timed.value
 	elapsed = Float32(chain_timed.time)
 	println("It took $(elapsed) seconds to complete the $(nsteps) iterations")
-	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
+	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 	θ = MCMCChains.group(chains, :θ).value
 
 	gelman = gelmandiag(chains)
 	psrf_psrfci =convert(Array, gelman)
 	max_psrf = maximum(psrf_psrfci[:,1])
-	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_max_psrf.csv", max_psrf)
+	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_max_psrf.csv", max_psrf)
 
 	# hyperprior = MCMCChains.group(chains, :input_hyperprior).value
 	# θ_input = MCMCChains.group(chains, :θ_input).value
@@ -177,15 +177,15 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 
 		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chains, elapsed)
 
-    	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+    	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 
 		# lPlot = Plots.plot(chains[:lp], title="Log Posterior", label=:none)
 		df = DataFrame(chains)
 		df[!, :chain] = categorical(df.chain)
 		lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps))
 		# plt= Plots.plot(lPlot, size=(1600, 600))
-		# Plots.savefig(plt, "./$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).png")
-		lPlot |> PNG("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.png", 800pt, 600pt)
+		# Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).png")
+		lPlot |> PNG("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.png", 800pt, 600pt)
 
 		lp, maxInd = findmax(chains[:lp])
 		params, internals = chains.name_map
@@ -197,9 +197,9 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
     end
 	# hyperpriors_mean = mean(hyperpriors_accumulated, dims = 1)
-    # writedlm("./$(experiment_name)/$(pipeline_name)/hyperpriors/$al_step.csv", hyperpriors_mean, ',')
-	writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$(al_step)_MAP.csv", mean(map_params_accumulated, dims=1), ',')
-    writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+    # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/hyperpriors/$al_step.csv", hyperpriors_mean, ',')
+	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$(al_step)_MAP.csv", mean(map_params_accumulated, dims=1), ',')
+    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 	return param_matrices_accumulated, elapsed, map_params_accumulated
 end
 
@@ -211,7 +211,7 @@ end
 # 	chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains)
 # 	chains = chain_timed.value
 # 	elapsed = chain_timed.time
-# 	# writedlm("./$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
+# 	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
 # 	θ = MCMCChains.group(chains, :θ).value
 
 # 	burn_in = Int(0.6*nsteps)
@@ -230,12 +230,12 @@ end
 
 # 		elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess = convergence_stats(i, chains, elapsed)
 
-#     	writedlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
+#     	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 # 		# println(oob_rhat)
 
 # 		param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1],:] = independent_param_matrix
 #     end
-#     writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+#     writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 # 	return param_matrices_accumulated
 # end
 

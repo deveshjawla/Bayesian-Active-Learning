@@ -4,7 +4,7 @@
 Utility functions for the random forest
 =#
 
-using Random
+
 using DataFrames
 
 check_random_state(seed::Int) = MersenneTwister(seed)

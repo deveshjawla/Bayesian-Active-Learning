@@ -7,16 +7,16 @@ n_bins = 10
 using DataFrames
 using CSV
 using DelimitedFiles
-using Random
+
 using StatsBase
 using Distances
 
 include("./CalibrationUtils.jl")
 
 for dataset in datasets
-    experiment_name = "001_comparing_different_acq_funcs"
+    experiment_name = "AcqFuncs"
     PATH = @__DIR__
-    cd(PATH * "/DataSets/$(dataset)_dataset")
+    cd(PATH * "/Data/Tabular/$(dataset)")
 
 	###
     ### Data
@@ -27,7 +27,7 @@ for dataset in datasets
 	for acquisition_size in acquisition_sizes
 		for acq_func in acq_functions
 			pipeline_name = "$(acq_func)_$(acquisition_size)_with_$(num_mcsteps)_MCsteps"
-			predictions = readdlm("./$(experiment_name)/$(pipeline_name)/predictions/14.csv", ',')
+			predictions = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/14.csv", ',')
 			target_set = CSV.read("test.csv", DataFrame, header=1)
 			target_labels = Int.(target_set.label)
 			labels = unique(target_labels)

@@ -56,10 +56,10 @@ function calibration_plot_maker(n_labels, label, n_bins, predicted_probs, true_l
     total_samples = lastindex(predicted_probs)
     ECE, MCE = ece_mce(df, total_samples)
 
-    writedlm("./$(experiment_name)/ece_mce_for_label_$(label)_later_stage.txt", [["ECE", "MCE"] [ECE, MCE]], ',')
+    writedlm("./Experiments/$(experiment_name)/ece_mce_for_label_$(label)_later_stage.txt", [["ECE", "MCE"] [ECE, MCE]], ',')
 
 	reliability_diagram = plot(df, layer(x=:BinConfidence, y=:BinAccuracy, color=[colorant"blue"],  Geom.point, Geom.line),  layer(x->x, 1/n_labels, 1, color=[colorant"red"]), Guide.xlabel("Confidence"), Guide.ylabel("Accuracy"), Guide.title("$(n_bins) bins, ECE:$(ECE), MCE:$(MCE)"), Coord.cartesian(xmin=1/n_labels, xmax=1.0, ymin=0.0, ymax=1.0))
-    reliability_diagram |> PNG("./$(experiment_name)/reliability_diagram_for_$(label)_later_stage.png")
+    reliability_diagram |> PNG("./Experiments/$(experiment_name)/reliability_diagram_for_$(label)_later_stage.png")
 end
 
 
@@ -91,6 +91,6 @@ end
 # a, b = result.minimizer
 # calibrated_pŷ_test = platt(pŷ_test .* a .+ b)
 # println(calibrated_pŷ_test[1:5])
-# writedlm("./$(experiment_name)/$(pipeline_name)/calibration_step/calibration_fit_params.csv", [a, b], ',')
+# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/calibration_step/calibration_fit_params.csv", [a, b], ',')
 
 # calibration_plot_maker(label, n_bins, calibrated_pŷ_test, test_y, "calibration_step/Test/Calibrated", pipeline_name)

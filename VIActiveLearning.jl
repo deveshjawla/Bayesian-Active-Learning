@@ -26,7 +26,7 @@ addprocs(2; exeflags=`--project`)
 using DataFrames
 using CSV
 using DelimitedFiles
-using Random
+
 using StatsBase
 using Distances
 # @everywhere using LazyArrays
@@ -44,7 +44,7 @@ for dataset in datasets
 
     experiment_name = "001_VI"
     PATH = @__DIR__
-    cd(PATH * "/DataSets/$(dataset)_dataset")
+    cd(PATH * "/Data/Tabular/$(dataset)")
 
     ###
     ### Data
@@ -129,12 +129,12 @@ for dataset in datasets
         for acq_func in acq_functions
             for acquisition_size in acquisition_sizes
                 pipeline_name = "$(acq_func)_$(acquisition_size)_with_$(num_mcsteps)_MCsteps"
-                mkpath("./$(experiment_name)/$(pipeline_name)/predictions")
-                mkpath("./$(experiment_name)/$(pipeline_name)/classification_performance")
-                mkpath("./$(experiment_name)/$(pipeline_name)/convergence_statistics")
-                mkpath("./$(experiment_name)/$(pipeline_name)/posterior_dist")
-                mkpath("./$(experiment_name)/$(pipeline_name)/log_distribution_changes")
-                mkpath("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions")
+                mkpath("./Experiments/$(experiment_name)/$(pipeline_name)/predictions")
+                mkpath("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance")
+                mkpath("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics")
+                mkpath("./Experiments/$(experiment_name)/$(pipeline_name)/posterior_dist")
+                mkpath("./Experiments/$(experiment_name)/$(pipeline_name)/log_distribution_changes")
+                mkpath("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions")
 
                 n_acq_steps = round(Int, total_pool_samples / acquisition_size, RoundUp)
                 prior = (sigma, num_params)
@@ -188,12 +188,12 @@ for dataset in datasets
 
                 performance_data = Array{Any}(undef, 4, n_acq_steps) #dims=(features, samples(i))
                 for al_step = 1:n_acq_steps
-                    m = readdlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
+                    m = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
                     performance_data[1, al_step] = m[1, 2]#AcquisitionSize
-                    cd = readdlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
+                    cd = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                     performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
                     performance_data[3, al_step] = m[2, 2] #Accuracy
-                    c = readdlm("./$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", ',')
+                    c = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", ',')
                     performance_data[4, al_step] = c[1, 2] #Elapsed
 
                     for i = 1:n_output
@@ -201,12 +201,12 @@ for dataset in datasets
                     end
                 end
                 kpi = vcat(performance_data, class_dist_data)
-                writedlm("./$(experiment_name)/$(pipeline_name)/kpi.csv", kpi, ',')
+                writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/kpi.csv", kpi, ',')
 				acc_ = kpi[3, :]
 				kind_of_aoc = mean(acc_[1:round(Int, 0.2*lastindex(acc_))] .- 0.5)
 				append!(aocs, kind_of_aoc)
 
-                # kpi = readdlm("./$(experiment_name)/$(pipeline_name)/kpi.csv", ',')
+                # kpi = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/kpi.csv", ',')
                 # kpi = copy(performance_data)
                 cum_acq_train_vector = Array{Int}(undef, 1, n_acq_steps)
                 for i = 1:n_acq_steps
@@ -214,7 +214,7 @@ for dataset in datasets
                 end
                 confidences_list = Array{Float32}(undef, 1, n_acq_steps)
                 for i = 1:n_acq_steps
-                    confidence_avg_ = readdlm("./$(experiment_name)/$(pipeline_name)/predictions/$i.csv", ',')
+                    confidence_avg_ = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/$i.csv", ',')
                     confidence_avg = mean(confidence_avg_[2, :])
                     confidences_list[1, i] = confidence_avg
                 end
@@ -231,8 +231,8 @@ for dataset in datasets
         kpi_names = vcat([:AcquisitionFunction, :Confidence, :CumTrainedSize, :AcquisitionSize, :ClassDistEntropy, :Accuracy, :Elapsed], Symbol.(class_names))
 
         df = DataFrame(kpi_df, kpi_names)
-        CSV.write("./$(experiment_name)/df.csv", df)
-		writedlm("./$(experiment_name)/auc_acq.txt", aocs, ',')
+        CSV.write("./Experiments/$(experiment_name)/df.csv", df)
+		writedlm("./Experiments/$(experiment_name)/auc_acq.txt", aocs, ',')
 
     end
 
@@ -242,7 +242,7 @@ for dataset in datasets
     set_default_plot_size(width, height)
 
     theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:right)
-    df = CSV.read("./$(experiment_name)/df.csv", DataFrame, header=1)
+    df = CSV.read("./Experiments/$(experiment_name)/df.csv", DataFrame, header=1)
     Gadfly.push_theme(theme)
     # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
     fig1a = plot(df, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
@@ -257,10 +257,10 @@ for dataset in datasets
 
     #     fig1e = plot(DataFrames.stack(filter(:AcquisitionFunction => ==(acq_functions[2]), i), Symbol.(class_names)), x=:CumTrainedSize, y=:value, color=:variable, Geom.point, Geom.line, Guide.ylabel(acq_functions[2]), Guide.colorkey(title="Class", labels=class_names), Guide.xlabel("Cumulative Training Size"), Scale.color_discrete_manual("red", "purple", "green"), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
 
-    #     vstack(fig1a, fig1b, fig1c, fig1d, fig1e) |> PNG("./$(experiment_name)/$(experiment_name).png")
-    fig1a |> PNG("./$(experiment_name)/$(experiment_name).png")
-    fig1aa |> PNG("./$(experiment_name)/$(experiment_name)_confidence.png")
-    fig1b |> PNG("./$(experiment_name)/$(experiment_name)_time.png")
+    #     vstack(fig1a, fig1b, fig1c, fig1d, fig1e) |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name).png")
+    fig1a |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name).png")
+    fig1aa |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name)_confidence.png")
+    fig1b |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name)_time.png")
     # # end
 
 end

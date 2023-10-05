@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32, Vector}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, map_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params)::Tuple{Tuple{Array{Float32, 2}, Array{Float32, 2}}, Array{Float32, 2}, Array{Float32, 2}, Array{Float32, 2}, Float32, Float32, Vector}
 	println("$(al_sampling) with query no. ", al_step)
 	# sigma, num_params = prior
 	pool_x, pool_y = pool
@@ -37,13 +37,20 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	elseif al_sampling == "PowerBayesian"
 		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
 		sampled_indices = power_acquisition(bayesian_scores[2, :], acq_size_)
-	elseif al_sampling == "TopKBayesian"
+	elseif al_sampling == "QBC"
 		bayesian_scores = pred_analyzer_multiclass(pool_x, param_matrix)
 		sampled_indices = top_k_acquisition(bayesian_scores[2, :], acq_size_; descending = false)
 	end
-
+	acq_size_ = lastindex(sampled_indices)
 	new_training_data = pool[:, sampled_indices]
 	new_pool = pool[:, Not(sampled_indices)]
+	if n_output == 2
+		new_training_data, leftovers = undersampling(new_training_data, positive_class_label=1, negative_class_label=2)
+		if leftovers !== nothing
+			new_pool = hcat(new_pool, leftovers)
+			acq_size_ = acq_size_ - size(leftovers)[2]
+		end
+	end
 
 	new_training_data_y = new_training_data[end, :]
 	balance_of_acquired_batch = countmap(Int.(new_training_data_y))
@@ -72,14 +79,20 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	training_data_xy = (training_data_x, Int.(permutedims(training_data_y)))
 	# println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
-	#Training on Acquired Samples and logging classification_performance
-	independent_param_matrix, elapsed, independent_map_params = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name, mcmc_init_params)
-	
+	if acq_size_ !== 0
+		#Training on Acquired Samples and logging classification_performance
+		independent_param_matrix, elapsed, independent_map_params = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name, mcmc_init_params)
+	elseif acq_size_ == 0
+		for i in 1:n_chains
+			writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [0, 0, 0, 0, 0]], ',')
+		end
+		independent_param_matrix, elapsed, independent_map_params = param_matrix, 0, map_matrix
+	end
 	test_x, test_y = test_data
 	predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
 	predictions_map = pred_analyzer_multiclass(test_x, independent_map_params)
-    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
-    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$(al_step)_map.csv", predictions_map, ',')
+    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
+    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/$(al_step)_map.csv", predictions_map, ',')
 	ŷ_test = permutedims(Int.(predictions[1,:]))
 	ŷ_test_map = permutedims(Int.(predictions_map[1,:]))
 	# println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
@@ -87,16 +100,16 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	if n_output == 2
 		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
 		acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map = performance_stats(test_y, ŷ_test_map)
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [lastindex(sampled_indices), acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [lastindex(sampled_indices), acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map]], ',')
-		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map]], ',')
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
 	else
 		acc = accuracy_multiclass(test_y, ŷ_test)
 		acc_map = accuracy_multiclass(test_y, ŷ_test_map)
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"] [lastindex(sampled_indices), acc]], ',')
-		writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size","Accuracy"] [lastindex(sampled_indices), acc_map]], ',')
-		writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"] [acq_size_, acc]], ',')
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size","Accuracy"] [acq_size_, acc_map]], ',')
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
 		# println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acq_size_, balance_of_acquired_batch, acc]])
 	end
 
@@ -108,12 +121,12 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	# println("Means of Prior and Posterior distribution's Means are  ", mean(prior[1]), " & ", mean(param_matrix_mean))	
 	# println("Means of Prior and Posterior distribution's stds are  ", mean(prior[2]), " & ", mean(param_matrix_std))
 
-	# writedlm("./$(experiment_name)/$(pipeline_name)/log_distribution_changes/$al_step.csv", [["Euclidean distance between Prior and Posterior distribution's means is  ","Euclidean distance between Prior and Posterior distribution's stds is ", "Prior Mean", "Posterior distribution's Mean", "Priot StD", "Posterior distribution's std"] [euclidean(param_matrix_mean, prior[1]), euclidean(param_matrix_std, prior[2]), mean(prior[1]), mean(param_matrix_mean), mean(prior[2]), mean(param_matrix_std)]], ',')
+	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/log_distribution_changes/$al_step.csv", [["Euclidean distance between Prior and Posterior distribution's means is  ","Euclidean distance between Prior and Posterior distribution's stds is ", "Prior Mean", "Posterior distribution's Mean", "Priot StD", "Posterior distribution's std"] [euclidean(param_matrix_mean, prior[1]), euclidean(param_matrix_std, prior[2]), mean(prior[1]), mean(param_matrix_mean), mean(prior[2]), mean(param_matrix_std)]], ',')
 
 	# new_prior = (param_matrix_mean, param_matrix_std)
 
 	# println("size of training data is: ",size(training_data))
 	# println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
 	new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
-	return new_pool_tuple, independent_param_matrix, training_data, acc, elapsed, param_matrix_mean
+	return new_pool_tuple, independent_param_matrix, independent_map_params, training_data, acc, elapsed, param_matrix_mean
 end

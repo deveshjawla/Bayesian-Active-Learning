@@ -52,6 +52,15 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         training_data = hcat(previous_training_data, new_training_data)
     end
 
+	if n_output == 2
+		training_data, leftovers = undersampling(training_data, positive_class_label=0, negative_class_label=1)
+		if leftovers !== nothing
+			new_pool = hcat(new_pool, leftovers)
+			acq_size_ = acq_size_ - size(leftovers)[2]
+		end
+	end
+
+
     training_data_x, training_data_y = copy(transpose(training_data[1:input_size, :])), vec(copy(transpose(training_data[end, :])))
 
     #Training on Acquired Samples and logging classification_performance
@@ -70,17 +79,17 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
     ŷ_test_prob = XGBoost.predict(xgb, test_x, margin=true)
     ŷ_test = mapslices(x -> argmax(softmax(x)), ŷ_test_prob, dims=2) .- 1
     pred_prob = mapslices(x -> maximum(softmax(x)), ŷ_test_prob, dims=2)
-    writedlm("./$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", [ŷ_test pred_prob], ',')
+    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/$al_step.csv", [ŷ_test pred_prob], ',')
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
     if n_output == 2
         acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-        writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, elapsed, mcc, f1, fpr, prec, recall, threat, cm]], ',')
-        writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, elapsed, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     else
         acc = accuracy_multiclass(test_y, ŷ_test)
-        writedlm("./$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed"] [acq_size_, acc, elapsed]], ',')
-        writedlm("./$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed"] [acq_size_, acc, elapsed]], ',')
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     end
 
     println("size of training data is: ", size(training_data))

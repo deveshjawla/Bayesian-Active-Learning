@@ -77,6 +77,26 @@ function pred_analyzer_multiclass(reconstruct, test_xs::Array{Float32,2}, params
     return pred_matrix
 end
 
+"""
+Returns a matrix of size { 2 (mean, std), n_samples }
+"""
+function pred_regression(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
+    n_samples = size(test_xs)[2]
+    ensemble_size = size(params_set)[1]
+    pred_matrix = Array{Float32}(undef, 2, n_samples)
+    for i = 1:n_samples
+        predictions = []
+        for j = 1:ensemble_size
+            model = reconstruct(params_set[j, :])
+            ŷ = model(test_xs[:, i])
+            append!(predictions, ŷ)
+        end
+		mean_ = mean(predictions)
+		std_ = std(predictions)
+        pred_matrix[:, i] = [mean_, std_]
+    end
+    return pred_matrix
+end
 
 """
 Returns a matrix of dims (n_output, ensemble_size, n_samples)
@@ -119,14 +139,26 @@ using Distributed
     using Flux
 
     function network_training(n_epochs, input_size, output_size, train_loader; lr=1e-3, dropout_rate=0.2)::Vector{Float32}
-        model = Chain(
-            Dense(input_size => input_size, mish; init=Flux.kaiming_normal()),
-            Dropout(dropout_rate),
-            Dense(input_size => input_size, mish; init=Flux.kaiming_normal()),
-            Dropout(dropout_rate),
-            Dense(input_size => output_size; init=Flux.kaiming_normal()),
-        )
-        opt_state = Flux.setup(Adam(lr), model)
+        # model = Chain(
+        #     Dense(input_size => input_size, mish; init=Flux.glorot_uniform()),
+        #     Dropout(dropout_rate),
+        #     Dense(input_size => input_size, mish; init=Flux.glorot_uniform()),
+        #     Dropout(dropout_rate),
+        #     Dense(input_size => output_size; init=Flux.glorot_uniform()),
+        # )
+
+		model =	Chain(
+            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(input_size => input_size, sin; init=Flux.glorot_uniform())),
+			# Dropout(dropout_rate),
+			Parallel(vcat, Dense(4*input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4*input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4*input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4*input_size => input_size, sin; init=Flux.glorot_uniform())),
+			# Dropout(dropout_rate),
+			Parallel(vcat, Dense(4*input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4*input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4*input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4*input_size => input_size, sin; init=Flux.glorot_uniform())),
+			# Dropout(dropout_rate),
+			Dense(4*input_size => output_size),
+			softmax
+			)
+		opt = Adam(lr)
+        opt_state = Flux.setup(opt, model)
 
         # @info("Beginning training loop...")
         least_loss = Inf32
@@ -166,8 +198,8 @@ using Distributed
             end
 
             # If we haven't seen improvement in 5 epochs, drop our learning rate:
-            if epoch_idx - last_improvement >= 10 && opt_state.layers[1].weight.rule.eta > 1e-6
-                new_eta = opt_state.layers[1].weight.rule.eta / 10.0
+            if epoch_idx - last_improvement >= 10 && opt_state.layers[1].layers[1].weight.rule.eta > 1e-6
+                new_eta = opt_state.layers[1].layers[1].weight.rule.eta / 10.0
                 # @warn(" -> Haven't improved in a while, dropping learning rate to $(new_eta)!")
                 Flux.adjust!(opt_state; eta=new_eta)
                 # After dropping learning rate, give it a few epochs to improve
@@ -203,7 +235,7 @@ function ensemble_training(num_params::Int, input_size::Int, output_size::Int, a
     # println(eltype(train_x), eltype(train_y))
     train_loader = Flux.DataLoader((train_x, train_y), batchsize=acq_size)
 
-    burn_in = Int(0.6 * nsteps)
+    burn_in = 0#Int(0.6 * nsteps)
     n_indep_samples = Int((nsteps - burn_in) / 10)
     ensemble_size = n_chains * n_indep_samples
 
@@ -212,6 +244,6 @@ function ensemble_training(num_params::Int, input_size::Int, output_size::Int, a
     param_matrices_accumulated = convert(Array{Float32,2}, chain_timed.value)
     elapsed = Float32(chain_timed.time)
 
-    writedlm("./$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
     return param_matrices_accumulated, elapsed
 end
