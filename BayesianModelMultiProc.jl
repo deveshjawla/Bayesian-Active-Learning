@@ -50,7 +50,36 @@
 # 	end
 # end
 
-@model function bayesnnMVG(x, y, location, scale)
+@model function temperedBNN(x, y, location, scale, Temp)
+	θ ~ MvNormal(location, scale)
+	# @code_warntype feedforward(θ)
+	nn = feedforward(θ)
+	# nn = feedforward(θ_input, θ_hidden)
+	preds = nn(x)
+
+	for i = 1:lastindex(y)
+		loglik = loglikelihood(Categorical(preds[:, i]), y[i])/Temp
+		Turing.@addlogprob!(loglik)
+	end
+end
+
+"""
+weights is a vector of the sample weights according to their importance or proportion in the dataset
+"""
+@model function classweightedBNN(x, y, location, scale, weights_vector)
+	θ ~ MvNormal(location, scale)
+	# @code_warntype feedforward(θ)
+	nn = feedforward(θ)
+	# nn = feedforward(θ_input, θ_hidden)
+	preds = nn(x)
+
+	for i = 1:lastindex(y)
+		loglik = loglikelihood(Categorical(preds[:, i]), y[i]) * weights_vector[i]
+		Turing.@addlogprob!(loglik)
+	end
+end
+
+@model function BNN(x, y, location, scale)
 	# # Hyper priors
 	# n_weights_input = num_params - lastindex(init_params)
     # input_hyperprior ~ filldist(Exponential(0.2), n_weights_input)
@@ -62,11 +91,11 @@
 	nn = feedforward(θ)
 	# nn = feedforward(θ_input, θ_hidden)
 	preds = nn(x)
+
 	for i = 1:lastindex(y)
 		y[i] ~ Categorical(preds[:, i])
 	end
 end
-
 
 # @model function bayesnnMVG(x, y, num_params, warn = true)
 #     θ ~ MvNormal(zeros(num_params), ones(num_params))

@@ -49,12 +49,12 @@ test = select(empty_df, [:group_weight, :age, :avg_glucose_level,  :bmi, :label]
 test[test.label.==0, :label] .= 2
 
 
-train = data_balancing(train, balancing="undersampling", positive_class_label=1, negative_class_label=2)
-# test = data_balancing(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+# train = data_balancing(train, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+# # test = data_balancing(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
 
 
-CSV.write("./train.csv", train)
-CSV.write("./test.csv", test)
+# CSV.write("./train.csv", train)
+# CSV.write("./test.csv", test)
 
 
 # using MultivariateStats
@@ -68,3 +68,22 @@ CSV.write("./test.csv", test)
 
 # CSV.write("../strokePCA/train.csv", DataFrame(hcat(permutedims(train_x_transformed), train.label), :auto))
 # CSV.write("../strokePCA/test.csv", DataFrame(hcat(permutedims(test_x_transformed), test.label), :auto))
+
+df = vcat(train, test)
+Random.seed!(1234)
+df = df[shuffle(axes(df, 1)), :]
+train_size = 80
+n_folds = 4
+fold_size = div(size(df)[1], n_folds)
+
+mkpath("./FiveFolds")
+#generate five folds and save them as train/test split in the 5 Folds Folder
+for i in 1:n_folds
+	train = df[(fold_size*(i-1))+1:fold_size*i, :]
+	train, leftovers = balanced_binary_maker(train, positive_class_label=1, negative_class_label=2, maximum_per_class = Int(train_size/2))
+	test = df[Not((fold_size*(i-1))+1:fold_size*i), :]
+	test = vcat(test, leftovers)
+	CSV.write("./FiveFolds/train_$(i).csv", train)
+	CSV.write("./FiveFolds/test_$(i).csv", test)
+	# println((fold_size*(i-1))+1:fold_size*i)
+end

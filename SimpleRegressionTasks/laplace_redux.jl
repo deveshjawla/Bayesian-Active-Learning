@@ -202,7 +202,7 @@ for function_name in function_names
         postpred_full_sample = rand(Product(predictive_distribution))
         push!(posterior_predictive_mean_samples, mean.(predictive_distribution))
         push!(posterior_predictive_full_samples, postpred_full_sample)
-		plt = plot(Xline, means, ribbon=stds, fillalpha=0.7, ylim= [-2,2], legend=:none, label="Laplace Approximation", fmt=:png, size=(600, 400), dpi=600)
+		plt = plot(Xline, means, ribbon=stds, fillalpha=0.7, ylim= [-2,2], legend=:none, label="Laplace Approximation", fmt=:pdf, size=(600, 400), dpi=600)
     end
 
     # posterior_predictive_mean_samples = hcat(posterior_predictive_mean_samples...)
@@ -215,7 +215,7 @@ for function_name in function_names
     # pp_full_lower = mapslices(x -> quantile(x, 0.05), posterior_predictive_full_samples, dims=2)[:]
     # pp_full_upper = mapslices(x -> quantile(x, 0.95), posterior_predictive_full_samples, dims=2)[:]
 
-    # plt = plot(Xline[:], pp_mean, ribbon=(pp_mean .- pp_full_lower, pp_full_upper .- pp_mean), ylim=[-2, 2], legend=:none, label="Full posterior predictive distribution", fmt=:png, size=(600, 400), dpi=600)
+    # plt = plot(Xline[:], pp_mean, ribbon=(pp_mean .- pp_full_lower, pp_full_upper .- pp_mean), ylim=[-2, 2], legend=:none, label="Full posterior predictive distribution", fmt=:pdf, size=(600, 400), dpi=600)
     # plot!(Xline[:], pp_mean, ribbon=(pp_mean .- pp_mean_lower, pp_mean_upper .- pp_mean), label="Posterior predictive mean distribution (epistemic uncertainty)")
 
 # 	"""
@@ -244,7 +244,7 @@ for function_name in function_names
 #         means = vec(preds[1, :])
 #         variances = vec(preds[2, :])
 
-#         plt = plot(Xline[:], means, ribbon=variances, fillalpha=0.7, legend=:none, label="Deep Ensemble", fmt=:png, size=(600, 400), dpi=600)
+#         plt = plot(Xline[:], means, ribbon=variances, fillalpha=0.7, legend=:none, label="Deep Ensemble", fmt=:pdf, size=(600, 400), dpi=600)
 #     end
 
     plot!(Xline, map(x -> f(x, function_name), Xline), label="Truth", color=:green)
@@ -254,7 +254,7 @@ for function_name in function_names
     mkpath("./$(experiment)/$(function_name)")
     writedlm("./$(experiment)/$(function_name)/$(activation_function)_weights.csv", trained_params, ',')
     # writedlm("./$(experiment)/$(function_name)/$(activation_function)_sigmas.csv", sigmas, ',')
-    savefig(plt, "./$(experiment)/$(function_name)/$(activation_function).png")
+    savefig(plt, "./$(experiment)/$(function_name)/$(activation_function).pdf")
 
 end
 

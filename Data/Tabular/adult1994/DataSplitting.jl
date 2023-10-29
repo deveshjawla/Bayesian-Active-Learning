@@ -68,9 +68,28 @@ test = select(empty_df, [:group_weight, :age, :education_num, :hour_per_week, :l
 train.label = replace(train.label, false=>2)
 test.label = replace(test.label, false=>2)
 
-train = data_balancing(train, balancing="undersampling", positive_class_label=1, negative_class_label=2)
-# test = data_balancing(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
-CSV.write("./train.csv", train)
-CSV.write("./test.csv", test)
+# train = data_balancing(train, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+# # test = data_balancing(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+# CSV.write("./train.csv", train)
+# CSV.write("./test.csv", test)
 
+
+full_data = vcat(train, test)
+Random.seed!(1234)
+df = full_data[shuffle(axes(full_data, 1)), :]
+train_size = 120
+n_folds = 5
+fold_size = div(size(df)[1], n_folds)
+
+mkpath("./FiveFolds")
+#generate five folds and save them as train/test split in the 5 Folds Folder
+for i in 1:n_folds
+	train = df[(fold_size*(i-1))+1:fold_size*i, :]
+	train, leftovers = balanced_binary_maker(train, positive_class_label=1, negative_class_label=2, maximum_per_class = Int(train_size/2))
+	test = df[Not((fold_size*(i-1))+1:fold_size*i), :]
+	test = vcat(test, leftovers)
+	CSV.write("./FiveFolds/train_$(i).csv", train)
+	CSV.write("./FiveFolds/test_$(i).csv", test)
+	# println((fold_size*(i-1))+1:fold_size*i)
+end
 

@@ -25,6 +25,22 @@ function data_balancing(data_xy::DataFrame; balancing::String, positive_class_la
     return data_xy
 end
 
+function balanced_binary_maker(data_xy::DataFrame; positive_class_label=1, negative_class_label=2, maximum_per_class)
+    negative_class = data_xy[data_xy[:, end].==negative_class_label, :]
+    positive_class = data_xy[data_xy[:, end].==positive_class_label, :]
+    size_positive_class = size(positive_class)[1]
+    size_negative_class = size(negative_class)[1]
+    if maximum_per_class > minimum([size_negative_class, size_positive_class])
+		println(minimum([size_negative_class, size_positive_class]))
+        error("maximum_per_class is greater than no of samples in one of the classes")
+	else
+		data_xy = vcat(negative_class[1:maximum_per_class, :], positive_class[1:maximum_per_class, :])
+        data_xy = data_xy[shuffle(axes(data_xy, 1)), :]
+		leftover_samples = vcat(negative_class[Not(1:maximum_per_class), :], positive_class[Not(1:maximum_per_class), :])
+    end
+    return data_xy, leftover_samples
+end
+
 function undersampling(data_xy::Matrix; positive_class_label=1, negative_class_label=2)
     data_xy = data_xy[:, shuffle(axes(data_xy, 2))]
     negative_class = data_xy[:, data_xy[end, :].==negative_class_label]
@@ -179,3 +195,23 @@ end
 #         score /= 1 - chance
 #     return score
 # end
+
+function summary_stats(a::AbstractArray{T}) where T<:Real
+    m = mean(a)
+    qs = quantile(a, [0.00, 0.25, 0.50, 0.75, 1.00])
+    R = typeof(convert(AbstractFloat, zero(T)))
+    
+    stats = Array{R}([convert(R, m),
+        convert(R, qs[1]),
+        convert(R, qs[2]),
+        convert(R, qs[3]),
+        convert(R, qs[4]),
+        convert(R, qs[5])])
+	names_stats = ["Mean",        
+	"Minimum",     
+	"1st Quartile",
+	"Median",      
+	"3rd Quartile",
+	"Maximum"]
+	return [names_stats stats]
+end

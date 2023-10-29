@@ -212,14 +212,14 @@ for dataset in datasets
                 for i = 1:n_acq_steps
                     cum_acq_train_vector[1, i] = sum(kpi[1, 1:i])
                 end
-                confidences_list = Array{Float32}(undef, 1, n_acq_steps)
+                ensemble_majoritys_list = Array{Float32}(undef, 1, n_acq_steps)
                 for i = 1:n_acq_steps
-                    confidence_avg_ = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/$i.csv", ',')
-                    confidence_avg = mean(confidence_avg_[2, :])
-                    confidences_list[1, i] = confidence_avg
+                    ensemble_majority_avg_ = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/$i.csv", ',')
+                    ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
+                    ensemble_majoritys_list[1, i] = ensemble_majority_avg
                 end
 
-                kpi_2 = permutedims(reduce(vcat, [permutedims(repeat([acq_func], n_acq_steps)), confidences_list, cum_acq_train_vector, kpi]))
+                kpi_2 = permutedims(reduce(vcat, [permutedims(repeat([acq_func], n_acq_steps)), ensemble_majoritys_list, cum_acq_train_vector, kpi]))
                 kpi_df = vcat(kpi_df, kpi_2)
 
                 # println(collect(enumerate(temporary_vector)))
@@ -228,7 +228,7 @@ for dataset in datasets
                 # end
             end
         end
-        kpi_names = vcat([:AcquisitionFunction, :Confidence, :CumTrainedSize, :AcquisitionSize, :ClassDistEntropy, :Accuracy, :Elapsed], Symbol.(class_names))
+        kpi_names = vcat([:AcquisitionFunction, :EnsembleMajority, :CumTrainedSize, :AcquisitionSize, :ClassDistEntropy, :Accuracy, :Elapsed], Symbol.(class_names))
 
         df = DataFrame(kpi_df, kpi_names)
         CSV.write("./Experiments/$(experiment_name)/df.csv", df)
@@ -246,7 +246,7 @@ for dataset in datasets
     Gadfly.push_theme(theme)
     # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
     fig1a = plot(df, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
-    fig1aa = plot(df, x=:CumTrainedSize, y=:Confidence, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
+    fig1aa = plot(df, x=:CumTrainedSize, y=:EnsembleMajority, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
 
 
     fig1b = plot(df, x=:CumTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples))
@@ -259,7 +259,7 @@ for dataset in datasets
 
     #     vstack(fig1a, fig1b, fig1c, fig1d, fig1e) |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name).png")
     fig1a |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name).png")
-    fig1aa |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name)_confidence.png")
+    fig1aa |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name)_ensemble_majority.png")
     fig1b |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name)_time.png")
     # # end
 

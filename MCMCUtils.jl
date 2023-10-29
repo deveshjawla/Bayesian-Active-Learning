@@ -1,49 +1,12 @@
-"""
-Returns means, stds, classifications, majority_voting, majority_conf
-
-where
-
-means, stds are the average logits and std for all the chains
-
-classifications are obtained using threshold
-
-majority_voting, majority_conf are averaged classifications of each chains, if the majority i.e more than 0.5 chains voted in favor then we have a vote in favor of 1. the conf here means how many chains on average voted in favor of 1. majority vote is just rounding of majority conf.
-"""
-function pred_analyzer(test_xs, test_ys, params_set, threshold)::Tuple{Array{Float32},Array{Float32},Array{Int},Array{Int},Array{Float32}}
-    means = []
-    stds = []
-    classifications = []
-    majority_voting = []
-    majority_conf = []
-    for (test_x, test_y) in zip(eachrow(test_xs), test_ys)
-        predictions = []
-        for theta in params_set
-            model = feedforward(theta)
-            # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
-            ŷ = model(collect(test_x))
-            append!(predictions, ŷ)
-        end
-        individual_classifications = map(x -> ifelse(x > threshold, 1, 0), predictions)
-        majority_vote = ifelse(mean(individual_classifications) > 0.5, 1, 0)
-        majority_conf_ = mean(individual_classifications)
-        ensemble_pred_prob = mean(predictions) #average logit
-        std_pred_prob = std(predictions)
-        ensemble_class = ensemble_pred_prob > threshold ? 1 : 0
-        append!(means, ensemble_pred_prob)
-        append!(stds, std_pred_prob)
-        append!(classifications, ensemble_class)
-        append!(majority_voting, majority_vote)
-        append!(majority_conf, majority_conf_)
-    end
-
-    # for each samples mean, std in zip(means, stds)
-    # plot(histogram, mean, std)
-    # savefig(./plots of each sample)
-    # end
-    return means, stds, classifications, majority_voting, majority_conf
+function majority_voting(predictions::AbstractVector)::Vector{Float32}
+	count_map = countmap(predictions)
+	# println(count_map)
+	uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
+	index_max = argmax(nUniques)
+	prediction = uniques[index_max]
+	pred_probability = maximum(nUniques) / sum(nUniques)
+	return [prediction, pred_probability]
 end
-
-using StatsBase
 
 """
 Returns a tuple of {Prediction, Prediction probability}
@@ -51,29 +14,11 @@ Returns a tuple of {Prediction, Prediction probability}
 Uses a simple argmax and percentage of samples in the ensemble respectively
 """
 function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Array{Float32, 2}
-    n_samples = size(test_xs)[2]
-	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float32}(undef, 2, n_samples)
-    for i = 1:n_samples
-		predictions = []
-		for j = 1:ensemble_size
-			model = feedforward(params_set[j,:])
-				# make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
-			ŷ = model(test_xs[:,i])
-			# ŷ = feedforward(test_xs[:,i], params_set[j,:])#for the one with destructure
-			# ŷ = feedforward(test_xs[:,i], params_set[j,:], network_shape)#for the one with unpack
-			predicted_label = argmax(ŷ)
-			append!(predictions, predicted_label)
-		end
-		count_map = countmap(predictions)
-		# println(count_map)
-		uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
-		index_max = argmax(nUniques)
-		prediction = uniques[index_max]
-		pred_probability = maximum(nUniques) / sum(nUniques)
-		# println(prediction, "\t", pred_probability)
-		pred_matrix[:, i] = [prediction, pred_probability]
-    end
+	nets = map(feedforward, eachrow(params_set))
+	predictions_nets = map(x-> x(test_xs), nets)
+	ensembles = map(x-> map(argmax, eachcol(x)), predictions_nets)
+	predictions = permutedims(reduce(hcat, ensembles))
+	pred_matrix= mapslices(majority_voting, predictions, dims =1)
     return pred_matrix
 end
 
@@ -95,26 +40,15 @@ end
 Returns a matrix of dims (n_output, ensemble_size, n_samples)
 """
 function pool_predictions(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2}, n_output::Int)::Array{Float32, 3}
-	n_samples = size(test_xs)[2]
-	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float32}(undef, n_output, ensemble_size, n_samples)
-
-    for i = 1:n_samples, j = 1:ensemble_size
-            model = feedforward(params_set[j,:])
-            # # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
-            ŷ = model(test_xs[:,i])
-            pred_matrix[:, j, i] = ŷ
-			# if i==100 && j==100
-			# 	println(ŷ)
-			# end
-    end
-	# println(pred_matrix[:,100,100])
-	return pred_matrix
+	nets = map(feedforward, eachrow(params_set))
+	predictions_nets = map(x-> x(test_xs), nets)
+	pred_matrix = cat(predictions_nets..., dims=3)
+    return pred_matrix
 end
 
 
 
-function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String, mcmc_init_params)::Tuple{Array{Float32, 2}, Float32, Array{Float32, 2}}
+function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)::Tuple{Array{Float32, 2}, Float32, Array{Float32, 2}}
 	location, scale = prior
 	@everywhere location = $location
 	@everywhere scale = $scale
@@ -125,11 +59,19 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	train_x, train_y = training_data
 	@everywhere train_x = $train_x
 	@everywhere train_y = $train_y
+	@everywhere sample_weights = $sample_weights
 	println("Checking dimensions of train_x and train_y just before training:", size(train_x), " & ", size(train_y))
 	# println(eltype(train_x), eltype(train_y))
 	# println(mean(location), mean(scale))
-	@everywhere model = bayesnnMVG(train_x, train_y, location, scale)
-	if al_step==1
+	if temperature isa Number && likelihood_name == "UnWeightedLikelihood"
+		@everywhere model = temperedBNN(train_x, train_y, location, scale, temperature)
+	elseif likelihood_name == "WeightedLikelihood" && temperature === nothing
+		@everywhere model = classweightedBNN(train_x, train_y, location, scale, sample_weights)
+	else
+		@everywhere model = BNN(train_x, train_y, location, scale)
+	end
+
+	if al_step==1 || prior_informativeness == "NoInit"
 		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, progress = false)
 	else
 		chain_timed = @timed sample(model, NUTS(), MCMCDistributed(), nsteps, n_chains, init_params=repeat([mcmc_init_params], n_chains), progress = false)
@@ -184,8 +126,8 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 		df[!, :chain] = categorical(df.chain)
 		lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps))
 		# plt= Plots.plot(lPlot, size=(1600, 600))
-		# Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).png")
-		lPlot |> PNG("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.png", 800pt, 600pt)
+		# Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).pdf")
+		lPlot |> PDF("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.pdf", 800pt, 600pt)
 
 		lp, maxInd = findmax(chains[:lp])
 		params, internals = chains.name_map
@@ -198,8 +140,8 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
     end
 	# hyperpriors_mean = mean(hyperpriors_accumulated, dims = 1)
     # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/hyperpriors/$al_step.csv", hyperpriors_mean, ',')
-	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$(al_step)_MAP.csv", mean(map_params_accumulated, dims=1), ',')
-    writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
+	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$(al_step)_MAP.csv", mean(map_params_accumulated, dims=1), ',')
+    # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
 	return param_matrices_accumulated, elapsed, map_params_accumulated
 end
 

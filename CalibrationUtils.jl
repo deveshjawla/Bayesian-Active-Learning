@@ -3,7 +3,7 @@ For the binning we assume here that the range of values is 0.0-1.0, that each bi
 """
 function conf_bin_indices_bayesian(n_labels, n_bins, predicted_probs, true_labels, predictions)::DataFrame
     bins = Dict{Int,Vector}()
-    df = DataFrame(Bin=Int[], BinSize=Int[], BinAccuracy=Float32[], BinConfidence=Float32[], CalibrationGap=Float32[])
+    df = DataFrame(Bin=Int[], BinSize=Int[], BinAccuracy=Float32[], BinEnsembleMajority=Float32[], CalibrationGap=Float32[])
 
 	n = n_bins # Specify the number of bins
 	interval = (1/n_labels, 1) # Specify the interval
@@ -58,8 +58,8 @@ function calibration_plot_maker(n_labels, label, n_bins, predicted_probs, true_l
 
     writedlm("./Experiments/$(experiment_name)/ece_mce_for_label_$(label)_later_stage.txt", [["ECE", "MCE"] [ECE, MCE]], ',')
 
-	reliability_diagram = plot(df, layer(x=:BinConfidence, y=:BinAccuracy, color=[colorant"blue"],  Geom.point, Geom.line),  layer(x->x, 1/n_labels, 1, color=[colorant"red"]), Guide.xlabel("Confidence"), Guide.ylabel("Accuracy"), Guide.title("$(n_bins) bins, ECE:$(ECE), MCE:$(MCE)"), Coord.cartesian(xmin=1/n_labels, xmax=1.0, ymin=0.0, ymax=1.0))
-    reliability_diagram |> PNG("./Experiments/$(experiment_name)/reliability_diagram_for_$(label)_later_stage.png")
+	reliability_diagram = plot(df, layer(x=:BinEnsembleMajority, y=:BinAccuracy, color=[colorant"blue"],  Geom.point, Geom.line),  layer(x->x, 1/n_labels, 1, color=[colorant"red"]), Guide.xlabel("EnsembleMajority"), Guide.ylabel("Accuracy"), Guide.title("$(n_bins) bins, ECE:$(ECE), MCE:$(MCE)"), Coord.cartesian(xmin=1/n_labels, xmax=1.0, ymin=0.0, ymax=1.0))
+    reliability_diagram |> pdf("./Experiments/$(experiment_name)/reliability_diagram_for_$(label)_later_stage.pdf")
 end
 
 

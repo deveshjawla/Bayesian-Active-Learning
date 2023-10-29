@@ -1,7 +1,8 @@
 using Distributions
+using CategoricalArrays
 
-function random_acquisition(pool_scores::Vector, acquisition_size)
-    indices_list = collect(1:lastindex(pool_scores))
+function random_acquisition(pool_size::Int, acquisition_size)
+    indices_list = collect(1:pool_size)
     shuffled = shuffle(indices_list)
     return shuffled[1:acquisition_size]
 end
@@ -12,11 +13,21 @@ function initial_random_acquisition(initial_pool_size, acquisition_size)
     return shuffled[1:acquisition_size]
 end
 
-function top_k_acquisition(pool_scores::Vector, acquisition_size; descending=false, remove_zeros=false)
+function top_k_acquisition(pool_scores::Vector, acquisition_size; descending=false, remove_zeros=false, sensitivity = 0.0001)
     df = DataFrame(Scores=pool_scores, Sample_indices=collect(1:lastindex(pool_scores)))
-    sorted_df = sort(df, :Scores, rev = descending)
+	
+	#Binning so that similar samples are sampled only once, one sample per bin
+	max_ = maximum(df.Scores)
+	min_ = minimum(df.Scores)
+	bins = min_:sensitivity:max_
+	#using CategoricalArrays
+	df.scores_bins = cut(df.Scores, bins, extend=true)
+	cut_df = combine(groupby(df, :scores_bins), first)
+	
+    sorted_df = sort(cut_df, :Scores, rev = descending)
+	# CSV.write("./top_k_acquisition_$(descending).csv", sorted_df)
 	if remove_zeros
-		n_non_zero_scores = count(x->x>0.0001, sorted_df.Scores)
+		n_non_zero_scores = count(x->x>sensitivity, sorted_df.Scores)
 		if n_non_zero_scores >= acquisition_size
 			top_k = sorted_df[1:acquisition_size, :Sample_indices]
 		else

@@ -23,7 +23,7 @@ likelihood_conditional(rand(weight_prior), rand(sigma_prior))(Xline)
 
 # , Plots
 # Random.seed!(54321)
-# plot(Xline[:],mean.(likelihood_conditional(rand(weight_prior), rand(sigma_prior))(Xline)),color=:red, legend=:none, fmt=:png)
+# plot(Xline[:],mean.(likelihood_conditional(rand(weight_prior), rand(sigma_prior))(Xline)),color=:red, legend=:none, fmt=:pdf)
 # plot!(Xline[:],mean.(likelihood_conditional(rand(weight_prior), rand(sigma_prior))(Xline)),color=:red)
 # plot!(Xline[:],mean.(likelihood_conditional(rand(weight_prior), rand(sigma_prior))(Xline)),color=:red)
 # plot!(Xline[:],mean.(likelihood_conditional(rand(weight_prior), rand(sigma_prior))(Xline)),color=:red)
@@ -36,7 +36,7 @@ Random.seed!(54321)
 X = rand(1,50) .* 4 .- 2
 y = sin.(X) .+ randn(1,50).*0.25
 
-scatter(X[:], y[:],color=:green,legend=:none, fmt=:png)
+scatter(X[:], y[:],color=:green,legend=:none, fmt=:pdf)
 
 using Turing
 

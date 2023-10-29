@@ -15,7 +15,7 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         sampled_indices = initial_random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerEntropy"
         #Scoring the pool and acquiring new samples
-        pool_x = copy(transpose(pool_x))
+        pool_x = copy(permutedims(pool_x))
         pool_prediction_matrix = XGBoost.predict(xgb, pool_x, margin=true)
         entropy_scores = mapslices(x -> normalized_entropy(softmax(x), n_output), pool_prediction_matrix, dims=2)
         # var_ratio_scores = 1 .- pŷ_test
@@ -26,6 +26,7 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
     end
     #Using Diversity Sampling we acquire the initial set
 
+    acq_size_ = lastindex(sampled_indices)
     new_training_data = pool[:, sampled_indices]
     new_pool = pool[:, Not(sampled_indices)]
 
@@ -52,16 +53,16 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         training_data = hcat(previous_training_data, new_training_data)
     end
 
-	if n_output == 2
-		training_data, leftovers = undersampling(training_data, positive_class_label=0, negative_class_label=1)
-		if leftovers !== nothing
-			new_pool = hcat(new_pool, leftovers)
-			acq_size_ = acq_size_ - size(leftovers)[2]
-		end
-	end
 
+    training_data_x, training_data_y = copy(permutedims(training_data[1:input_size, :])), vec(copy(permutedims(training_data[end, :])))
 
-    training_data_x, training_data_y = copy(transpose(training_data[1:input_size, :])), vec(copy(transpose(training_data[end, :])))
+    #calculate the weights of the samples
+    balance_of_training_data = countmap(Int.(training_data_y))
+    sample_weights = similar(training_data_y, Float32)
+    nos_training = lastindex(training_data_y)
+    for i = 1:nos_training
+        sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
+    end
 
     #Training on Acquired Samples and logging classification_performance
     if al_step == 1
@@ -74,7 +75,7 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         elapsed = xgb_timed.time
     end
 
-    test_x, test_y = copy(transpose(test_data[1])), vec(copy(transpose(test_data[2])))
+    test_x, test_y = copy(permutedims(test_data[1])), vec(copy(permutedims(test_data[2])))
     # ŷ_test = XGBoost.predict(xgb, test_x, margin=false)
     ŷ_test_prob = XGBoost.predict(xgb, test_x, margin=true)
     ŷ_test = mapslices(x -> argmax(softmax(x)), ŷ_test_prob, dims=2) .- 1
