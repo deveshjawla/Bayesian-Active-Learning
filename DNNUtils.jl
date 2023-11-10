@@ -66,19 +66,17 @@ using Distributed
 
     function network_training(n_epochs, input_size, output_size, train_loader, sample_weights_loader; lr=1e-3, dropout_rate=0.2)::Vector{Float32}
         # model = Chain(
-        #     Dense(input_size => input_size, mish; init=Flux.glorot_uniform()),
+        #     Dense(input_size => input_size, mish; init=Flux.glorot_normal()),
         #     Dropout(dropout_rate),
-        #     Dense(input_size => input_size, mish; init=Flux.glorot_uniform()),
+        #     Dense(input_size => input_size, mish; init=Flux.glorot_normal()),
         #     Dropout(dropout_rate),
-        #     Dense(input_size => output_size; init=Flux.glorot_uniform()),
+        #     Dense(input_size => output_size; init=Flux.glorot_normal()),
         # )
 
         model = Chain(
-            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(input_size => input_size, sin; init=Flux.glorot_uniform())),
+            Parallel(vcat, Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
-            # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
+            Parallel(vcat, Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
             Dense(4 * input_size => output_size),
             softmax

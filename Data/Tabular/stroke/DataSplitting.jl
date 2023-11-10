@@ -72,8 +72,8 @@ test[test.label.==0, :label] .= 2
 df = vcat(train, test)
 Random.seed!(1234)
 df = df[shuffle(axes(df, 1)), :]
-train_size = 80
-n_folds = 4
+train_size = 40
+n_folds = 5
 fold_size = div(size(df)[1], n_folds)
 
 mkpath("./FiveFolds")

@@ -113,7 +113,8 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	for i = 1:nos_training
 		sample_weights[i] = nos_training/balance_of_training_data[training_data_y[i]]
 	end
-
+	sample_weights ./= n_output
+	
     # println("The acquired Batch has the follwing class distribution: $balance_of_acquired_batch")
     training_data_xy = (training_data_x, Int.(permutedims(training_data_y)))
     # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))

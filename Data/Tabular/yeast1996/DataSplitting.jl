@@ -19,8 +19,8 @@ df = select(df, Not(:Column1))
 # CSV.write("./test.csv", test)
 Random.seed!(1234)
 df = df[shuffle(axes(df, 1)), :]
-train_size = 494
-n_folds = 3
+train_size = 296
+n_folds = 5
 fold_size = div(size(df)[1], n_folds)
 
 mkpath("./FiveFolds")

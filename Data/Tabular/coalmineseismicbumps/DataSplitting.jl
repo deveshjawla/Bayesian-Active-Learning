@@ -41,8 +41,8 @@ include("../../../DataUtils.jl")
 
 Random.seed!(1234)
 df = float_features[shuffle(axes(float_features, 1)), :]
-train_size = 150
-n_folds = 2
+train_size = 100
+n_folds = 3
 fold_size = div(size(df)[1], n_folds)
 
 mkpath("./FiveFolds")

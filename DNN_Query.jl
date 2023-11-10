@@ -3,15 +3,14 @@ Returns new_pool, new_prior, independent_param_matrix, training_data
 """
 function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Float32,Float32}
     # nn = Chain(
-    #         Dense(input_size => input_size, mish; init=Flux.glorot_uniform()),
-    #         Dense(input_size => input_size, mish; init=Flux.glorot_uniform()),
-    #         Dense(input_size => n_output; init=Flux.glorot_uniform()),
+    #         Dense(input_size => input_size, mish; init=Flux.glorot_normal()),
+    #         Dense(input_size => input_size, mish; init=Flux.glorot_normal()),
+    #         Dense(input_size => n_output; init=Flux.glorot_normal()),
     # 		softmax
     #     )
     nn = Chain(
-        Parallel(vcat, Dense(input_size => input_size, identity), Dense(input_size => input_size, mish), Dense(input_size => input_size, tanh), Dense(input_size => input_size, sin)),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity), Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, tanh), Dense(4 * input_size => input_size, sin)),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity), Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, tanh), Dense(4 * input_size => input_size, sin)),
+        Parallel(vcat, Dense(input_size => input_size, mish), Dense(input_size => input_size, mish), Dense(input_size => input_size, mish), Dense(input_size => input_size, mish)),
+        Parallel(vcat, Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, mish)),
         Dense(4 * input_size => n_output),
         softmax)
 

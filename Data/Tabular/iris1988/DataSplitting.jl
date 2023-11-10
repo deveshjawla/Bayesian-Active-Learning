@@ -19,8 +19,8 @@ df = float_features
 
 Random.seed!(1234)
 df = df[shuffle(axes(df, 1)), :]
-train_size = 50
-n_folds = 3
+train_size = 20
+n_folds = 5
 fold_size = div(size(df)[1], n_folds)
 
 mkpath("./FiveFolds")

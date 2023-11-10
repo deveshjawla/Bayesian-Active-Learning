@@ -8,16 +8,37 @@ using LaplaceRedux
 PATH = @__DIR__
 cd(PATH)
 
-experiment = "Laplace_all_on_singleNN"
+experiment = "DeepEnsembleWithGlorotNormal"
 activation_function = "mixed"
-function_names = ["Cosine", "Polynomial", "Exponential", "Logarithmic","sin(pisin)"]#  "Cosine", "Polynomial", "Exponential", "Logarithmic","sin(pisin)"
+function_names = ["Cosine", "Polynomial", "Exponential", "Logarithmic", "sin(pisin)"]#  "Cosine", "Polynomial", "Exponential", "Logarithmic","sin(pisin)"
+
+"""
+    Returns a matrix of size { 2 (mean, std), n_samples }
+    """
+    function pred_regression(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
+        n_samples = size(test_xs)[2]
+        ensemble_size = size(params_set)[1]
+        pred_matrix = Array{Float32}(undef, 2, n_samples)
+        for i = 1:n_samples
+            predictions = []
+            for j = 1:ensemble_size
+                model = reconstruct(params_set[j, :])
+                ŷ = model(test_xs[:, i])
+                append!(predictions, ŷ)
+            end
+            mean_ = mean(predictions)
+            std_ = std(predictions)
+            pred_matrix[:, i] = [mean_, std_]
+        end
+        return pred_matrix
+    end
 
 function nn_without_dropout(input_size, output_size)
     return Chain(
-        Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(input_size => input_size, sin; init=Flux.glorot_uniform())),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
+        Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, sin; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
         Dense(4 * input_size => output_size)
     )
 end
@@ -29,22 +50,22 @@ end
     using Flux
     function network_training(n_epochs, input_size, output_size, data; lr=0.001, dropout_rate=0.2)#::Tuple{Vector{Float32},Any}
         # model = Chain(
-        #     Dense(input_size => 5, mish; init=Flux.glorot_uniform()),
+        #     Dense(input_size => 5, mish; init=Flux.glorot_normal()),
         #     # Dropout(dropout_rate),
-        #     Dense(5 => 5, mish; init=Flux.glorot_uniform()),
+        #     Dense(5 => 5, mish; init=Flux.glorot_normal()),
         #     # Dropout(dropout_rate),
-        #     Dense(5=> output_size; init=Flux.glorot_uniform()),
+        #     Dense(5=> output_size; init=Flux.glorot_normal()),
         # )
         # train_loader = Flux.DataLoader((train_x, train_y), batchsize=batch_size)
         train_loader = data
         model = Chain(
-            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(input_size => input_size, sin; init=Flux.glorot_uniform())),
+            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, sin; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
+            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
+            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_uniform()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_uniform())),
+            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
             Dense(4 * input_size => output_size)
         )
@@ -177,33 +198,33 @@ for function_name in function_names
     m = nn_without_dropout(input_size, output_size)
     params_, rec = Flux.destructure(m)
     num_params = lastindex(params_)
-    ensemble_size = 1
+    ensemble_size = 100
     # trained_params = network_training(1000, input_size, output_size, data)
     trained_params = parallel_network_training(ensemble_size, num_params, 500, input_size, output_size, data)
     # nn = reconstruct(trained_params)
 
-	plt=0
-    posterior_predictive_mean_samples = []
-    posterior_predictive_full_samples = []
+    plt = 0
+    # posterior_predictive_mean_samples = []
+    # posterior_predictive_full_samples = []
 
-    @showprogress 1 "Computing LA..." for i = 1:ensemble_size
-        nn_params = trained_params[i, :]
-        nn = rec(nn_params)
-        subset_w = :all
-        la = Laplace(nn; likelihood=:regression, subset_of_weights=subset_w)
-        # data = Flux.DataLoader((train_x, train_y), batchsize=1)
-        fit!(la, data)
-        optimize_prior!(la)
-        preds = predict(la, permutedims(Xline), link_approx=:mc)
-		means = vcat(preds[1, :]...)
-        variances = vcat(preds[2, :]...)
-		stds = sqrt.(variances.^2 .+ la.σ^2)
-		predictive_distribution = vec(Normal.(means, stds))
-        postpred_full_sample = rand(Product(predictive_distribution))
-        push!(posterior_predictive_mean_samples, mean.(predictive_distribution))
-        push!(posterior_predictive_full_samples, postpred_full_sample)
-		plt = plot(Xline, means, ribbon=stds, fillalpha=0.7, ylim= [-2,2], legend=:none, label="Laplace Approximation", fmt=:pdf, size=(600, 400), dpi=600)
-    end
+    # @showprogress 1 "Computing LA..." for i = 1:ensemble_size
+    #     nn_params = trained_params[i, :]
+    #     nn = rec(nn_params)
+    #     subset_w = :all
+    #     la = Laplace(nn; likelihood=:regression, subset_of_weights=subset_w)
+    #     # data = Flux.DataLoader((train_x, train_y), batchsize=1)
+    #     fit!(la, data)
+    #     optimize_prior!(la)
+    #     preds = predict(la, permutedims(Xline), link_approx=:mc)
+    # 	means = vcat(preds[1, :]...)
+    #     standard_deviations = vcat(preds[2, :]...)
+    # 	stds = sqrt.(standard_deviations.^2 .+ la.σ^2)
+    # 	predictive_distribution = vec(Normal.(means, stds))
+    #     postpred_full_sample = rand(Product(predictive_distribution))
+    #     push!(posterior_predictive_mean_samples, mean.(predictive_distribution))
+    #     push!(posterior_predictive_full_samples, postpred_full_sample)
+    # 	plt = plot(Xline, means, ribbon=stds, fillalpha=0.7, ylim= [-2,2], legend=:none, label="Laplace Approximation", fmt=:pdf, size=(600, 400), dpi=600)
+    # end
 
     # posterior_predictive_mean_samples = hcat(posterior_predictive_mean_samples...)
 
@@ -218,43 +239,24 @@ for function_name in function_names
     # plt = plot(Xline[:], pp_mean, ribbon=(pp_mean .- pp_full_lower, pp_full_upper .- pp_mean), ylim=[-2, 2], legend=:none, label="Full posterior predictive distribution", fmt=:pdf, size=(600, 400), dpi=600)
     # plot!(Xline[:], pp_mean, ribbon=(pp_mean .- pp_mean_lower, pp_mean_upper .- pp_mean), label="Posterior predictive mean distribution (epistemic uncertainty)")
 
-# 	"""
-# Returns a matrix of size { 2 (mean, std), n_samples }
-# """
-# function pred_regression(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
-#     n_samples = size(test_xs)[2]
-#     ensemble_size = size(params_set)[1]
-#     pred_matrix = Array{Float32}(undef, 2, n_samples)
-#     for i = 1:n_samples
-#         predictions = []
-#         for j = 1:ensemble_size
-#             model = reconstruct(params_set[j, :])
-#             ŷ = model(test_xs[:, i])
-#             append!(predictions, ŷ)
-#         end
-# 		mean_ = mean(predictions)
-# 		std_ = std(predictions)
-#         pred_matrix[:, i] = [mean_, std_]
-#     end
-#     return pred_matrix
-# end
-# 	@time begin
-# 		preds = pred_regression(rec, permutedims(Xline), trained_params)
+    
+    @time begin
+        preds = pred_regression(rec, permutedims(Xline), trained_params)
 
-#         means = vec(preds[1, :])
-#         variances = vec(preds[2, :])
+        means = vec(preds[1, :])
+        standard_deviations = 3 .* vec(preds[2, :])
 
-#         plt = plot(Xline[:], means, ribbon=variances, fillalpha=0.7, legend=:none, label="Deep Ensemble", fmt=:pdf, size=(600, 400), dpi=600)
-#     end
+        plt = plot(Xline[:], means, ribbon=standard_deviations, fillalpha=0.7, legend=:none, label="Deep Ensemble", fmt=:pdf, size=(600, 400), dpi=600)
+    end
 
     plot!(Xline, map(x -> f(x, function_name), Xline), label="Truth", color=:green)
     # plot!(Xline, vec(nn(permutedims(Xline))), seriestype=:line, label="MLE Estimate", color=:red)
     scatter!(xs, ys, color=:green, label="Training data", markerstrokecolor=:green)
 
-    mkpath("./$(experiment)/$(function_name)")
-    writedlm("./$(experiment)/$(function_name)/$(activation_function)_weights.csv", trained_params, ',')
+    mkpath("./$(experiment)")
+    writedlm("./$(experiment)/$(function_name)_$(activation_function)_weights.csv", trained_params, ',')
     # writedlm("./$(experiment)/$(function_name)/$(activation_function)_sigmas.csv", sigmas, ',')
-    savefig(plt, "./$(experiment)/$(function_name)/$(activation_function).pdf")
+    savefig(plt, "./$(experiment)/$(function_name)_$(activation_function).pdf")
 
 end
 
