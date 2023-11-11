@@ -1,24 +1,37 @@
-l1, l2 = 4, 4
+l1, l2 = 12, 12 
 nl1 = 4 * l1 + l1
 nl2 = l1 * l2 + l2
 n_output_layer = l2 * n_output + n_output
+
 total_num_params = nl1 + nl2 + n_output_layer
 
-function feedforward(θ::AbstractVector)
-	W0 = reshape(θ[1:16], 4, 4)
-	b0 = θ[17:20]
-	W1 = reshape(θ[21:36], 4, 4)
-	b1 = θ[37:40]
-	W2 = reshape(θ[41:52], 3, 4)
-	b2 = θ[53:55]
+function feedforward(nn_params::AbstractVector)
+	w10	= reshape(nn_params[1:12], 3, 4)
+	b10 = reshape(nn_params[13:15], 3)
+	w11 = reshape(nn_params[16:27], 3, 4)
+	b11 = reshape(nn_params[28:30], 3)
+	w12 = reshape(nn_params[31:42], 3, 4)
+	b12 = reshape(nn_params[43:45], 3)
+	w13 = reshape(nn_params[46:57], 3, 4)
+	b13 = reshape(nn_params[58:60], 3)
+
+	w20 = reshape(nn_params[61:96], 3, 12)
+	b20 = reshape(nn_params[97:99], 3)
+	w21 = reshape(nn_params[100:135], 3, 12)
+	b21 = reshape(nn_params[136:138], 3)
+	w22 = reshape(nn_params[139:174], 3, 12)
+	b22 = reshape(nn_params[175:177], 3)
+	w23 = reshape(nn_params[178:213], 3, 12)
+	b23 = reshape(nn_params[214:216], 3)
+
+	w31 = reshape(nn_params[217:252], 3, 12)
+	b31 = reshape(nn_params[253:255], 3)
 
 	model = Chain(
-		Dense(W0, b0, mish),
-		Dense(W1, b1, mish),
-		Dense(W2, b2, mish),
-		softmax
-	)
+		Parallel(vcat, Dense(w10, b10,identity), Dense(w11, b11, mish), Dense(w12, b12, tanh), Dense(w13, b13, relu)), 
+		Parallel(vcat, Dense(w20, b20,identity), Dense(w21, b21, mish), Dense(w22, b22, tanh), Dense(w23, b23, relu)), 
+		Dense(w31, b31), softmax)
 	return model
 end
 
-num_params = 55
+num_params = 255

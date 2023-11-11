@@ -9,8 +9,8 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     # 		softmax
     #     )
     nn = Chain(
-        Parallel(vcat, Dense(input_size => input_size, mish), Dense(input_size => input_size, mish), Dense(input_size => input_size, mish), Dense(input_size => input_size, mish)),
-        Parallel(vcat, Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, mish), Dense(4 * input_size => input_size, mish)),
+        Parallel(vcat, Dense(input_size => input_size, tanh), Dense(input_size => input_size, tanh), Dense(input_size => input_size, tanh), Dense(input_size => input_size, tanh)),
+        Parallel(vcat, Dense(4 * input_size => input_size, tanh), Dense(4 * input_size => input_size, tanh), Dense(4 * input_size => input_size, tanh), Dense(4 * input_size => input_size, tanh)),
         Dense(4 * input_size => n_output),
         softmax)
 

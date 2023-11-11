@@ -114,8 +114,8 @@ end
 conv_1, out_1 = conv_layer(128, (3, 3), 1, 1, mish, (2, 2), bnmom=nothing)
 conv_2, out_2 = conv_layer(out_1, (3, 3), 1, 1, mish, (2, 2), bnmom=nothing)
 conv_3, out_3 = conv_layer(out_2, (3, 3), 1, 1, mish, (2, 2), bnmom=nothing)
-dense_1 = dense_layer(out_3^2, 128, 0.1f0, mish)
-dense_2 = dense_layer(128, 10, 0.1f0, mish)
+dense_1 = dense_layer(out_3^2, 128, 0.1f0, tanh)
+dense_2 = dense_layer(128, 10, 0.1f0, tanh)
 
 # An example Network. You may customize each layer above or remove/add layers as needed.
 network = Chain(conv_1, conv_2, conv_3, flatten, dense_1, dense_2, softmax)
@@ -212,7 +212,7 @@ end
 ### Dense Network specifications
 ###
 
-# dense_layers = [DenseParams(indim = 150, outdim = 5, activation_fn = mish), DenseParams(indim = 5, outdim = 3, activation_fn = mish), DenseParams(indim = 3, outdim = 1, activation_fn = sigmoid)]
+# dense_layers = [DenseParams(indim = 150, outdim = 5, activation_fn = tanh), DenseParams(indim = 5, outdim = 3, activation_fn = tanh), DenseParams(indim = 3, outdim = 1, activation_fn = sigmoid)]
 
 # function forward(x, nn_params, layers_spec)
 #     nn = Chain([layer(i..., j) for (i, j) in zip(nn_params, layers_spec)]...)
@@ -252,10 +252,10 @@ end
 #     W4 = reshape(θ[15641:15660], 1, 20)
 #     b4 = θ[15661:15661]
 #     model = Chain(
-#         Dense(W0, b0, mish),
-#         Dense(W1, b1, mish),
-#         Dense(W2, b2, mish),
-#         Dense(W3, b3, mish),
+#         Dense(W0, b0, tanh),
+#         Dense(W1, b1, tanh),
+#         Dense(W2, b2, tanh),
+#         Dense(W3, b3, tanh),
 #         Dense(W4, b4, σ)
 #     )
 #     return model
@@ -274,10 +274,10 @@ end
 #     W4 = reshape(θ[13241:13260], 1, 20)
 #     b4 = θ[13261:13261]
 #     model = Chain(
-#         Dense(W0, b0, mish),
-#         Dense(W1, b1, mish),
-#         Dense(W2, b2, mish),
-#         Dense(W3, b3, mish),
+#         Dense(W0, b0, tanh),
+#         Dense(W1, b1, tanh),
+#         Dense(W2, b2, tanh),
+#         Dense(W3, b3, tanh),
 #         Dense(W4, b4, sigmoid)
 #     )
 #     return model
@@ -295,10 +295,10 @@ end
 #     W4 = reshape(θ[13641:13660], 1, 20)
 #     b4 = θ[13661:13661]
 #     model = Chain(
-#         Dense(W0, b0, mish),
-#         Dense(W1, b1, mish),
-#         Dense(W2, b2, mish),
-#         Dense(W3, b3, mish),
+#         Dense(W0, b0, tanh),
+#         Dense(W1, b1, tanh),
+#         Dense(W2, b2, tanh),
+#         Dense(W3, b3, tanh),
 #         Dense(W4, b4, sigmoid)
 #     )
 #     return model
@@ -313,11 +313,11 @@ end
 using Flux
 
 # function nn(theta::AbstractVector)
-#     W0 = reshape(theta[1:25], 5, 5, 1, 1) # Conv((5, 5), 1=>1, mish)
+#     W0 = reshape(theta[1:25], 5, 5, 1, 1) # Conv((5, 5), 1=>1, tanh)
 #     b0 = theta[26:26] #same length as the number of output channels
-#     W1 = reshape(theta[27:35], 3, 3, 1, 1) # Conv((3, 3), 1=>1, mish)
+#     W1 = reshape(theta[27:35], 3, 3, 1, 1) # Conv((3, 3), 1=>1, tanh)
 #     b1 = theta[36:36]
-#     W2 = reshape(theta[37:45], 3, 3, 1, 1) # Conv((3, 3), 1=>1, mish)
+#     W2 = reshape(theta[37:45], 3, 3, 1, 1) # Conv((3, 3), 1=>1, tanh)
 #     b2 = theta[46:46]
 
 #     W3 = reshape(theta[1:25], 9, 128)
@@ -328,12 +328,12 @@ using Flux
 #     b5 = theta[46:46]
 	
 #     model = Chain(
-#         Conv(W0, b0, mish),
-#         Conv(W1, b1, mish),
-#         Conv(W2, b2, mish),
+#         Conv(W0, b0, tanh),
+#         Conv(W1, b1, tanh),
+#         Conv(W2, b2, tanh),
 #         flatten, # for a defined input image size, we can calculate the flattened size
-#         Dense(W3, b3, mish),
-#         Dense(W4, b4, mish),
+#         Dense(W3, b3, tanh),
+#         Dense(W4, b4, tanh),
 #         Dense(W5, b5, sigmoid) # for binary classification
 #     )
 #     return model
@@ -372,10 +372,10 @@ using Flux
 #     W4 = reshape(θ[15641:15660], 1, 20)
 #     b4 = θ[15661:15661]
 #     model = Chain(
-#         Dense(W0, b0, mish),
-#         Dense(W1, b1, mish),
-#         Dense(W2, b2, mish),
-#         Dense(W3, b3, mish),
+#         Dense(W0, b0, tanh),
+#         Dense(W1, b1, tanh),
+#         Dense(W2, b2, tanh),
+#         Dense(W3, b3, tanh),
 #         Dense(W4, b4, σ)
 #     )
 #     return model
@@ -394,10 +394,10 @@ using Flux
     #     W4 = reshape(θ[401:420], 2, 10)
     #     b4 = θ[421:422]
     #     model = Chain(
-    #         Dense(W0, b0, mish),
-    #         Dense(W1, b1, mish),
-    #         Dense(W2, b2, mish),
-    #         Dense(W3, b3, mish),
+    #         Dense(W0, b0, tanh),
+    #         Dense(W1, b1, tanh),
+    #         Dense(W2, b2, tanh),
+    #         Dense(W3, b3, tanh),
     #         Dense(W4, b4),
     #         softmax
     #     )
@@ -408,8 +408,8 @@ using Flux
 using Flux, Turing
 	# Specify the network architecture.
 network_shape = [
-    (23,23, :mish),
-    (23,23, :mish), 
+    (23,23, :tanh),
+    (23,23, :tanh), 
     (2,23, :σ)]
 
 # Regularization, parameter variance, and total number of
@@ -519,17 +519,17 @@ total_num_params = nl1 + nl2 + nl3 + nl4 + n_output_layer
 # 	W4 = reshape(θ[116:130], 3, 5)
 # 	b4 = θ[131:133]
 # 	model = Chain(
-# 		Dense(W0, b0, mish),
-# 		Dense(W1, b1, mish),
-# 		Dense(W2, b2, mish),
-# 		Dense(W3, b3, mish),
+# 		Dense(W0, b0, tanh),
+# 		Dense(W1, b1, tanh),
+# 		Dense(W2, b2, tanh),
+# 		Dense(W3, b3, tanh),
 # 		Dense(W4, b4),
 # 		softmax
 # 	)
 # 	return model
 # end
 
-nn_initial = Chain(Dense(input_size, l1, mish), Dense(l1, l2, mish), Dense(l2, l3, mish), Dense(l3, l4, mish), Dense(l4, n_output, mish), softmax)
+nn_initial = Chain(Dense(input_size, l1, tanh), Dense(l1, l2, tanh), Dense(l2, l3, tanh), Dense(l3, l4, tanh), Dense(l4, n_output, tanh), softmax)
 
 # Extract weights and a helper function to reconstruct NN from weights
 parameters_initial, feedforward = Flux.destructure(nn_initial)
@@ -550,10 +550,10 @@ total_num_params = length(parameters_initial) # number of paraemters in NN
 # 	W4 = reshape(θ[1881:1920], 2, 20)
 # 	b4 = θ[1921:1922]
 # 	model = Chain(
-# 		Dense(W0, b0, mish),
-# 		Dense(W1, b1, mish),
-# 		Dense(W2, b2, mish),
-# 		Dense(W3, b3, mish),
+# 		Dense(W0, b0, tanh),
+# 		Dense(W1, b1, tanh),
+# 		Dense(W2, b2, tanh),
+# 		Dense(W3, b3, tanh),
 # 		Dense(W4, b4),
 # 		softmax
 # 	)
@@ -572,10 +572,10 @@ total_num_params = length(parameters_initial) # number of paraemters in NN
 # 	W4 = reshape(θ[1481:1520], 2, 20)
 # 	b4 = θ[1521:1522]
 # 	model = Chain(
-# 		Dense(W0, b0, mish),
-# 		Dense(W1, b1, mish),
-# 		Dense(W2, b2, mish),
-# 		Dense(W3, b3, mish),
+# 		Dense(W0, b0, tanh),
+# 		Dense(W1, b1, tanh),
+# 		Dense(W2, b2, tanh),
+# 		Dense(W3, b3, tanh),
 # 		Dense(W4, b4),
 # 		softmax
 # 	)

@@ -90,7 +90,7 @@ for dataset in datasets
 
         # n_hidden = input_size > 30 ? 30 : input_size
 
-        # nn_initial = Chain(Dense(input_size, n_hidden, mish), Dense(n_hidden, n_hidden, mish), Dense(n_hidden, n_output), softmax)
+        # nn_initial = Chain(Dense(input_size, n_hidden, tanh), Dense(n_hidden, n_hidden, tanh), Dense(n_hidden, n_output), softmax)
 
         # # Extract weights and a helper function to reconstruct NN from weights
         # parameters_initial, destructured = Flux.destructure(nn_initial)
@@ -100,9 +100,9 @@ for dataset in datasets
         # num_params = length(parameters_initial) # number of paraemters in NN
 
         network_shape = []
-        #     (n_hidden, input_size, :mish),
-        #     (n_hidden, n_hidden, :mish),
-        #     (n_output, n_hidden, :identity)]
+        #     (n_hidden, input_size, :tanh),
+        #     (n_hidden, n_hidden, :tanh),
+        #     (n_output, n_hidden, :tanh)]
 
         # # Regularization, parameter variance, and total number of
         # # parameters.

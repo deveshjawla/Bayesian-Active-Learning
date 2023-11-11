@@ -8,18 +8,18 @@ cd(PATH)
 # input_size = 1
 # firstlayer = Parallel(
 #     vcat, 
-#     Dense(input_size => 3, mish), 
+#     Dense(input_size => 3, tanh), 
 #     Dense(input_size => 1, tanh), 
-#     Dense(input_size => 1, sin),  
+#     Dense(input_size => 1, tanh),  
 # )
 # outdims = size(firstlayer(rand(1)))
 
 # secondlayer = Parallel(
 #     vcat,
-#     Dense(5 => 1, mish), 
 #     Dense(5 => 1, tanh), 
-#     Dense(5 => 1, sin),  
-#     # Dense(33 => 3, relu),  
+#     Dense(5 => 1, tanh), 
+#     Dense(5 => 1, tanh),  
+#     # Dense(33 => 3, tanh),  
 #     # Dense(33 => 3, cos),  
 #     # Dense(33 => 3, x->x^2),
 # 	# Dense(33 => 3, x->x^3),
@@ -42,7 +42,7 @@ cd(PATH)
 # outerlayer = Dense(12 => output_size) 
 # # model = Chain(firstlayer, secondlayer, outerlayer)
 
-# model = Chain(Dense(1, 12, sin), Dense(12, 12, sin), Dense(12, 1))
+# model = Chain(Dense(1, 12, tanh), Dense(12, 12, tanh), Dense(12, 1))
 
 # parameters_initial, destructured = Flux.destructure(model)
 # feedforward(x, theta) = destructured(theta)(x)
@@ -138,8 +138,8 @@ for function_name in function_names
     function nn_forward(nn_params::AbstractVector)
         w11, w12, w13, b11, b12, b13, w21, w22, w23, b21, b22, b23, w31, b31 = unpack(nn_params)
         nn = Chain(
-            Parallel(vcat, Dense(w11, b11,mish), Dense(w12, b12, sin), Dense(w13, b13, tanh)),
-			Parallel(vcat, Dense(w21, b21, mish), Dense(w22, b22, sin), Dense(w23, b23,tanh)), 
+            Parallel(vcat, Dense(w11, b11,tanh), Dense(w12, b12, tanh), Dense(w13, b13, tanh)),
+			Parallel(vcat, Dense(w21, b21, tanh), Dense(w22, b22, tanh), Dense(w23, b23,tanh)), 
 			Dense(w31, b31))
         return nn
     end
@@ -155,7 +155,7 @@ for function_name in function_names
     # end
 	# function nn_forward(nn_params::AbstractVector)
     #     W₁, b₁, W₂, b₂, W₃, b₃ = unpack(nn_params)
-    #     nn = Chain(Dense(W₁, b₁, relu), Dense(W₂, b₂, relu), Dense(W₃, b₃))
+    #     nn = Chain(Dense(W₁, b₁, tanh), Dense(W₂, b₂, tanh), Dense(W₃, b₃))
     #     return nn
     # end
 

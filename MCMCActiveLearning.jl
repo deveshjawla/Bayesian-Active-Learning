@@ -17,20 +17,20 @@ using Distributed
 using Turing
 num_chains = 3
 
-experiments = ["EffectofScalingSumofVariances"]
-datasets = ["iris1988", "stroke"]#20, 20, 10, 10, 20, 20, 10, 40
+experiments = ["WithMixed"]
+datasets = ["coalmineseismicbumps",  "iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-acquisition_sizes = [30, 40]
+acquisition_sizes = [100, 30, 296]
 
 #minimum_training_sizes for 5folds [40, 120, 40, 40, 80, 100, 30, 296]
 
-list_inout_dims = [(4, 3), (4, 2)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
 list_class_balancing = ["UnBalancedAcquisition"] #"BalancedBinaryAcquisition"
 list_prior_informativeness = ["InformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
-list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
+list_prior_variance = [1.0, "GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood"
 acq_functions = ["Initial"] # "BayesianUncertainty", "Initial"
 # temperature = nothing, or a Float or list of nothing and Floats, nothing invokes a non-customised Likelihood in the @model
@@ -128,7 +128,7 @@ for experiment in experiments
 
                                         # n_hidden = n_input > 30 ? 30 : n_input
 
-                                        # nn_initial = Chain(Dense(n_input, n_hidden, mish), Dense(n_hidden, n_hidden, mish), Dense(n_hidden, n_output), softmax)
+                                        # nn_initial = Chain(Dense(n_input, n_hidden, tanh), Dense(n_hidden, n_hidden, tanh), Dense(n_hidden, n_output), softmax)
 
                                         # # Extract weights and a helper function to reconstruct NN from weights
                                         # parameters_initial, destructured = Flux.destructure(nn_initial)
@@ -138,9 +138,9 @@ for experiment in experiments
                                         # num_params = length(parameters_initial) # number of paraemters in NN
 
                                         # network_shape = []
-                                        #     (n_hidden, n_input, :mish),
-                                        #     (n_hidden, n_hidden, :mish),
-                                        #     (n_output, n_hidden, :identity)]
+                                        #     (n_hidden, n_input, :tanh),
+                                        #     (n_hidden, n_hidden, :tanh),
+                                        #     (n_output, n_hidden, :tanh)]
 
                                         # # Regularization, parameter variance, and total number of
                                         # # parameters.
