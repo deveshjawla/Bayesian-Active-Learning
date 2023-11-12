@@ -18,19 +18,19 @@ using Turing
 num_chains = 3
 
 experiments = ["WithMixed"]
-datasets = ["coalmineseismicbumps",  "iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-acquisition_sizes = [100, 30, 296]
+acquisition_sizes = [40, 120, 40, 40, 80, 100, 30, 296]
 
 #minimum_training_sizes for 5folds [40, 120, 40, 40, 80, 100, 30, 296]
 
-list_inout_dims = [(11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
 list_class_balancing = ["UnBalancedAcquisition"] #"BalancedBinaryAcquisition"
 list_prior_informativeness = ["InformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
-list_prior_variance = [1.0, "GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
+list_prior_variance = [1.0] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood"
 acq_functions = ["Initial"] # "BayesianUncertainty", "Initial"
 # temperature = nothing, or a Float or list of nothing and Floats, nothing invokes a non-customised Likelihood in the @model
@@ -159,7 +159,7 @@ for experiment in experiments
 											prior_std = prior_variance .* ones(num_params)
                                         else
                                             # GlorotNormal initialisation
-                                            prior_std = vcat(2 / (n_input + l1) * ones(nl1), 2 / (l1 + l2) * ones(nl2), 2 / (l2 + n_output) * ones(n_output_layer))
+                                            prior_std = sqrt.(vcat(2 / (n_input + l1) * ones(nl1), 2 / (l1 + l2) * ones(nl2), 2 / (l2 + n_output) * ones(n_output_layer)))
                                         end
                                     end
 
