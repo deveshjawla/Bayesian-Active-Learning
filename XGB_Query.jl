@@ -70,8 +70,11 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         xgb = xgb_timed.value
         elapsed = xgb_timed.time
     else
-        xgb_timed = @timed update!(xgb, (training_data_x, training_data_y), num_round=nsteps)
-        _ = xgb_timed.value
+        # xgb_timed = @timed update!(xgb, (training_data_x, training_data_y), num_round=nsteps)
+        # _ = xgb_timed.value
+        # elapsed = xgb_timed.time
+		xgb_timed = @timed xgboost((training_data_x, training_data_y), num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
+        xgb = xgb_timed.value
         elapsed = xgb_timed.time
     end
 

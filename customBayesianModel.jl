@@ -48,7 +48,7 @@ end
 plot_data()
 
 # Construct a neural network using Flux
-nn_initial = Chain(Dense(2, 3, tanh), Dense(3, 2, tanh), Dense(2, 1, σ))
+nn_initial = Chain(Dense(2, 3, relu), Dense(3, 2, relu), Dense(2, 1, σ))
 
 # Extract weights and a helper function to reconstruct NN from weights
 parameters_initial, reconstruct = Flux.destructure(nn_initial)

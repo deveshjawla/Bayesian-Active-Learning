@@ -8,7 +8,7 @@ Flux.@functor Likelihood #tell Flux to look for trainable parameters in Likeliho
 
 (p::Likelihood)(x) = Normal.(p.network(x)[:], p.sigma[1]); #Flux only recognizes Matrix parameters but Normal() needs a scalar for sigma
 
-likelihood = Likelihood(Chain(Dense(1,5,tanh),Dense(5,1)), ones(1,1))
+likelihood = Likelihood(Chain(Dense(1,5,relu),Dense(5,1)), ones(1,1))
 
 params, likelihood_reconstructor = Flux.destructure(likelihood)
 n_weights = length(params) - 1

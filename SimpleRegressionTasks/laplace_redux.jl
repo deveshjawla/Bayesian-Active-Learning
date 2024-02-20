@@ -35,10 +35,10 @@ function_names = ["Cosine", "Polynomial", "Exponential", "Logarithmic", "sin(pis
 
 function nn_without_dropout(input_size, output_size)
     return Chain(
-        Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, sin; init=Flux.glorot_normal())),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
+        Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
         Dense(4 * input_size => output_size)
     )
 end
@@ -50,22 +50,22 @@ end
     using Flux
     function network_training(n_epochs, input_size, output_size, data; lr=0.001, dropout_rate=0.2)#::Tuple{Vector{Float32},Any}
         # model = Chain(
-        #     Dense(input_size => 5, mish; init=Flux.glorot_normal()),
+        #     Dense(input_size => 5, tanh; init=Flux.glorot_normal()),
         #     # Dropout(dropout_rate),
-        #     Dense(5 => 5, mish; init=Flux.glorot_normal()),
+        #     Dense(5 => 5, tanh; init=Flux.glorot_normal()),
         #     # Dropout(dropout_rate),
         #     Dense(5=> output_size; init=Flux.glorot_normal()),
         # )
         # train_loader = Flux.DataLoader((train_x, train_y), batchsize=batch_size)
         train_loader = data
         model = Chain(
-            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, mish; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, sin; init=Flux.glorot_normal())),
+            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
+            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
+            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, mish; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, sin; init=Flux.glorot_normal())),
+            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
             # Dropout(dropout_rate),
             Dense(4 * input_size => output_size)
         )

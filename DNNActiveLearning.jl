@@ -17,14 +17,14 @@ using Distributed
 using Turing
 num_chains = 8
 
-experiments = ["DeepEnsembleWithMish"]
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
+experiments = ["DeepEnsembleWithWiderLayers"]
+datasets = ["stroke", "adult1994", "banknote2012"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-acquisition_sizes = [40, 120, 40, 40, 80, 100, 30, 296]#80, 120, 40, 40, 80, 150, 50, 494
+acquisition_sizes = [40, 120, 40]#80, 120, 40, 40, 80, 150, 50, 494
 
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(4, 2), (4, 2), (4, 2)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [5, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
 acq_functions = ["Initial"] #, "BayesianUncertainty"
 

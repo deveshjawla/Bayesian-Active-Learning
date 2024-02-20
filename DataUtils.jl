@@ -80,7 +80,7 @@ function maxabsscaling(x, absmax_)
     return x ./ absmax_
 end
 
-function pool_test_maker(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{Tuple{Array{Float32,2},Array{Int,2}},Tuple{Array{Float32,2},Array{Int,2}}}
+function pool_test_maker(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Array{Float32,2},Array{Float32,2}}}
     pool = Matrix{Float32}(permutedims(pool))
     test = Matrix{Float32}(permutedims(test))
     pool_x = pool[1:n_input, :]
@@ -105,12 +105,15 @@ function pool_test_maker(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{
     return pool, test
 end
 
-function pool_test_maker_xgb(pool::DataFrame, test::DataFrame, n_input::Int)::Tuple{Tuple{Array{Float32,2},Array{Int,2}},Tuple{Array{Float32,2},Array{Int,2}}}
+function pool_test_maker_xgb(pool::DataFrame, test::DataFrame, n_input::Int, n_output::Int)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Array{Float32,2},Array{Float32,2}}}
     pool = Matrix{Float32}(permutedims(pool))
     test = Matrix{Float32}(permutedims(test))
     pool_x = pool[1:n_input, :]
-    pool_y = pool[end, :]
-    pool_y = Int.(pool_y) .- 1
+	if n_output == 2
+    	pool_y = replace(pool[end, :], 2=>0)
+	else
+		pool_y = pool[end, :] .- 1
+	end
     # pool_max = maximum(pool_x, dims=1)
     # pool_mini = minimum(pool_x, dims=1)
     # pool_x = minmaxscaling(pool_x, pool_max, pool_mini)
@@ -119,8 +122,11 @@ function pool_test_maker_xgb(pool::DataFrame, test::DataFrame, n_input::Int)::Tu
     # pool_x = standardize(pool_x, pool_mean, pool_std)
 
     test_x = test[1:n_input, :]
-    test_y = test[end, :]
-    test_y = Int.(test_y) .- 1
+    if n_output == 2
+    	test_y = replace(test[end, :], 2=>0)
+	else
+		test_y = test[end, :] .- 1
+	end
     # test_x = minmaxscaling(test_x, pool_max, pool_mini)
     # test_x = standardize(test_x, pool_mean, pool_std)
 
@@ -131,7 +137,6 @@ function pool_test_maker_xgb(pool::DataFrame, test::DataFrame, n_input::Int)::Tu
     test = (test_x, test_y)
     return pool, test
 end
-
 
 # Function to split samples.
 function split_data(df; at=0.70)
@@ -149,6 +154,7 @@ function performance_stats(ground_truth_, predictions_)
     predictions = deepcopy(Int.(vec(predictions_)))
     ground_truth[ground_truth.==2] .= 0
     predictions[predictions.==2] .= 0
+	println(current_encoding())
     cm = ConfusionMatrix(ground_truth, predictions)
     f1 = f1_score(cm)
     mcc = matthews_correlation_coefficient(cm)
@@ -161,6 +167,15 @@ function performance_stats(ground_truth_, predictions_)
     recall = true_positive_rate(cm)
     threat_score = EvalMetrics.threat_score(cm)
     return acc, mcc, f1, fpr, prec, recall, threat_score, cm
+end
+
+
+function performance_stats_regression(ground_truth_, predictions_)
+    ground_truth = deepcopy(vec(ground_truth_))
+    predictions = deepcopy(vec(predictions_))  
+	mse =  Flux.mse(predictions, ground_truth)
+	mae =  Flux.mae(predictions, ground_truth)
+    return mse, mae
 end
 
 function accuracy_multiclass(true_labels, predictions)

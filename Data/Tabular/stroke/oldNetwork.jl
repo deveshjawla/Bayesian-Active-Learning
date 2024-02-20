@@ -14,8 +14,8 @@ function feedforward(θ::AbstractVector)
 	b2 = θ[241:242]
 
 	model = Chain(
-		Dense(W0, b0, tanh),
-		Dense(W1, b1, tanh),
+		Dense(W0, b0, relu),
+		Dense(W1, b1, relu),
 		Dense(W2, b2,),
 		softmax
 	)

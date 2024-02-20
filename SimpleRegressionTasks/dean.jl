@@ -27,7 +27,7 @@ end
 
 function nn_forward(xs, nn_params::AbstractVector)
     W₁, b₁, W₂, b₂ = unpack(nn_params)
-    nn = Chain(Dense(W₁, b₁, tanh), Dense(W₂, b₂))
+    nn = Chain(Dense(W₁, b₁, relu), Dense(W₂, b₂))
     return nn(xs)
 end
 

@@ -22,6 +22,62 @@ function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{
     return pred_matrix
 end
 
+using Flux: activations
+function activations_weighted_sums(test_xs::Array{Float32, 1}, params_set::Array{Float32, 2}, directory_plots, n_layers)
+	nets = map(feedforward, eachrow(params_set))
+	activations_weights = map(x-> activations_weights_df_aggregator(x, test_xs, n_layers), nets)
+	activations_df=DataFrame()
+	for i =1:lastindex(nets)
+		activations_df=vcat(activations_df, activations_weights[i][1])
+	end
+	weights_df=DataFrame()
+	for i =1:lastindex(nets)
+		weights_df=vcat(weights_df, activations_weights[i][2])
+	end
+    activations_weights_plot = plot_maker_activations_weights(activations_df, weights_df)
+	activations_weights_plot |> PDF("$(directory_plots)/activations_weights.pdf", dpi=600)
+	return nothing
+end
+
+function activations_weights_df_aggregator(ch, input, n_layers)
+	_activations = activations(ch, input)
+	# last_layer = lastindex(_activations)
+	# n_layers = lastindex(_activations)
+	# if n_layers != last_layer
+	# 	error("Check number of layers")
+	# end
+	_params = Flux.params(ch)
+	df_activations=DataFrame()
+	df_weights=DataFrame()
+	for layer in 1:n_layers
+		acts_df=_activations[layer]
+		if layer == n_layers #last_layer
+			acts_df=tanh.(_activations[layer])
+		end
+		layers_df=[layer for x in 1:lastindex(acts_df)]
+		df_activations = vcat(df_activations, DataFrame(Activations=acts_df, Layer=layers_df))
+		params_df=vec(_params[layer*2-1])
+		layers_df=[layer for x in 1:lastindex(params_df)]
+		df_weights = vcat(df_weights, DataFrame(Weights=params_df, Layer=layers_df))
+	end
+	return df_activations, df_weights
+end
+
+
+function plot_maker_activations_weights(df_activations, df_weights)
+	width = 6inch
+	height = 8inch
+	set_default_plot_size(width, height)
+	theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
+	Gadfly.push_theme(theme)
+	myviolinplot_activations=plot(df_activations, x=:Layer, y=:Activations, Geom.violin)
+	myboxplot_activations=plot(df_activations, x=:Layer, y=:Activations, Geom.boxplot)
+	myviolinplot=plot(df_weights, x=:Layer, y=:Weights, Geom.violin)
+	myboxplot=plot(df_weights, x=:Layer, y=:Weights, Geom.boxplot)
+	activations_weights = gridstack([myviolinplot_activations myboxplot_activations; myviolinplot myboxplot])
+	return activations_weights
+end
+
 
 function convergence_stats(i::Int, chains, elapsed::Float32)::Tuple{Float32, Float32, Float32, Float32, Float32}
     ch = chains[:, :, i]
@@ -124,7 +180,7 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 		# lPlot = Plots.plot(chains[:lp], title="Log Posterior", label=:none)
 		df = DataFrame(chains)
 		df[!, :chain] = categorical(df.chain)
-		lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps))
+		lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps)) # need to change :acceptance_rate to Log Posterior
 		# plt= Plots.plot(lPlot, size=(1600, 600))
 		# Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).pdf")
 		lPlot |> PDF("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.pdf", 800pt, 600pt)

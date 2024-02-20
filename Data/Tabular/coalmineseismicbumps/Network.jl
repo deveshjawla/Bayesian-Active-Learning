@@ -28,8 +28,8 @@ function feedforward(nn_params::AbstractVector)
 	b31 = reshape(nn_params[325:326], 2)
 
 	model = Chain(
-		Parallel(vcat, Dense(w10, b10,identity), Dense(w11, b11, sin), Dense(w12, b12, tanh), Dense(w13, b13, relu)), 
-		Parallel(vcat, Dense(w20, b20,identity), Dense(w21, b21, sin), Dense(w22, b22, tanh), Dense(w23, b23, relu)), 
+		Parallel(vcat, Dense(w10, b10,relu), Dense(w11, b11, relu), Dense(w12, b12, relu), Dense(w13, b13, relu)), 
+		Parallel(vcat, Dense(w20, b20,relu), Dense(w21, b21, relu), Dense(w22, b22, relu), Dense(w23, b23, relu)), 
 		Dense(w31, b31), softmax)
 	return model
 end
@@ -58,10 +58,10 @@ num_params = 326
 # 	b4 = θ[2069:2070]
 
 # 	return Chain(
-# 		Dense(W0, b0, tanh),
-# 		Dense(W1, b1, tanh),
-# 		Dense(W2, b2, tanh),
-# 		Dense(W3, b3, tanh),
+# 		Dense(W0, b0, relu),
+# 		Dense(W1, b1, relu),
+# 		Dense(W2, b2, relu),
+# 		Dense(W3, b3, relu),
 # 		Dense(W4, b4),
 # 		softmax
 # 	)

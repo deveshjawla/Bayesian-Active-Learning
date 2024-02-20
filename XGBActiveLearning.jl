@@ -1,15 +1,19 @@
 using Distributed
 using Turing
-experiments = ["XGB"]
+experiments = ["IncrementalLearningXGB"]
 datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-acquisition_sizes = [80, 120, 40, 40, 80, 150, 50, 494]#80, 120, 40, 40, 80, 150, 50, 494
+minimum_training_sizes = [40, 60, 40, 40, 80, 100, 30, 296] #60, 60, 40, 40, 80, 100, 30, 296
+acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
 
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (11, 2), (22, 2), (4, 3), (8, 10)
 
-list_n_folds = [4, 5, 5, 5, 5, 2, 3, 3]#4, 5, 5, 5, 5, 2, 3, 3
+list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-acq_functions = ["Initial"] #, "BayesianUncertainty"
+list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+
+acq_functions = ["Random"] # "BayesianUncertainty", "Initial", "Random"
+
+
 
 # Add four processes to use for sampling.
 addprocs(8; exeflags=`--project`)
@@ -24,7 +28,7 @@ using StatsBase
 using Flux: softmax
 using Gadfly, Cairo, Fontconfig, DataFrames, CSV
 width = 6inch
-height = 4inch
+height = 8inch
 set_default_plot_size(width, height)
 
 theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
@@ -59,7 +63,7 @@ for experiment in experiments
 
             test = CSV.read("./FiveFolds/test_$(fold).csv", DataFrame, header=1)
 
-            pool, test = pool_test_maker_xgb(train, test, n_input)
+            pool, test = pool_test_maker_xgb(train, test, n_input, n_output)
             total_pool_samples = size(pool[1])[2]
 
             class_names = Array{String}(undef, n_output)
@@ -67,7 +71,7 @@ for experiment in experiments
                 class_names[i] = "$(i-1)"
             end
 
-            kpi_df = Array{Any}(missing, 0, 9 + 2*n_output)
+            kpi_df = Array{Any}(missing, 0, 9 + 2 * n_output)
             for acq_func in acq_functions
                 @everywhere acq_func = $acq_func
 
@@ -144,7 +148,7 @@ for experiment in experiments
                         ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
                         ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
                         performance_data[4, al_step] = ensemble_majority_avg
-                        rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
+                        # rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
                         performance_data[5, al_step] = m[3, 2] #Elapsed
                         performance_data[6, al_step] = acq_func
                         performance_data[7, al_step] = experiment
@@ -170,20 +174,44 @@ for experiment in experiments
                     writedlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", kpi, ',')
                     kpi = readdlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", ',')
                     kpi_df = vcat(kpi_df, permutedims(kpi))
-
                 end
             end
             kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :Accuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumTrainedSize], Symbol.(class_names), Symbol.(class_names), :CumCDE)
             df = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df)
 
-            # df = CSV.read("./Experiments/$(experiment)/df_$(fold).csv", DataFrame)
-            df_folds = vcat(df_folds, df)
+
+            begin
+                aucs_acc = []
+                aucs_t = []
+                list_compared = []
+                list_total_training_samples = []
+                for i in groupby(df, :AcquisitionFunction)
+                    acc_ = i.:Accuracy
+                    time_ = i.:Elapsed
+                    # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
+                    n_aocs_samples = lastindex(acc_)
+                    total_training_samples = i.:CumTrainedSize[end]
+                    push!(list_total_training_samples, total_training_samples)
+                    auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
+                    auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
+                    push!(list_compared, first(i.:AcquisitionFunction))
+                    append!(aucs_acc, (auc_acc))
+                    append!(aucs_t, auc_t)
+                end
+                min_total_samples = minimum(list_total_training_samples)
+                writedlm("./Experiments/$(experiment)/auc_acq_$(fold).txt", [list_compared min_total_samples .* (aucs_acc) min_total_samples .* aucs_t], ',')
+            end
+
+            # df = CSV.read("./Experiments/$(experiment)/df.csv", DataFrame)
+            df_fold = CSV.read("./Experiments/$(experiment)/df_$(fold).csv", DataFrame)
+            df_folds = vcat(df_folds, df_fold)
         end
+        CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
         for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
-            mean_std_acc = combine(groupby(i, :AcquisitionFunction), :Accuracy => mean, :Accuracy => std)
-            mean_std_time = combine(groupby(i, :AcquisitionFunction), :Elapsed => mean, :Elapsed => std)
-            mean_std_ensemble_majority = combine(groupby(i, :AcquisitionFunction), :EnsembleMajority => mean, :EnsembleMajority => std)
+            mean_std_acc = combine(groupby(i, :CumTrainedSize), :Accuracy => mean, :Accuracy => std)
+            mean_std_time = combine(groupby(i, :CumTrainedSize), :Elapsed => mean, :Elapsed => std)
+            mean_std_ensemble_majority = combine(groupby(i, :CumTrainedSize), :EnsembleMajority => mean, :EnsembleMajority => std)
             acquisition_function = i.AcquisitionFunction[1]
             CSV.write("./Experiments/$(experiment)/mean_std_acc$(acquisition_function).csv", mean_std_acc)
             CSV.write("./Experiments/$(experiment)/mean_std_time$(acquisition_function).csv", mean_std_time)
@@ -247,6 +275,36 @@ for experiment in experiments
 
         #     fig1d = plot(DataFrames.stack(filter(:Experiment => ==(acq_functions[1]), i), Symbol.(class_names)), x=:CumTrainedSize, y=:value, color=:variable, Guide.colorkey(title="Class", labels=class_names), Geom.point, Geom.line, Guide.ylabel(acq_functions[1]), Scale.color_discrete_manual("red", "purple", "green"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
         # end
+        ### Loops when using Cross Validation for AL
+        begin
+            df_acc = DataFrame()
+            df_time = DataFrame()
+            for acq_func in acq_functions
+                df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(acq_func).csv", DataFrame, header=1)
+                df_time_ = CSV.read("./Experiments/$(experiment)/mean_std_time$(acq_func).csv", DataFrame, header=1)
 
+                df_acc_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
+                df_time_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
+
+                df_acc = vcat(df_acc, df_acc_)
+                df_time = vcat(df_time, df_time_)
+            end
+
+            fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+
+            fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
+
+            fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+            fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+
+            df = DataFrame()
+            for fold in 1:n_folds
+                df_ = CSV.read("./Experiments/$(experiment)/auc_acq_$(fold).txt", DataFrame, header=false)
+                df = vcat(df, df_)
+            end
+
+            mean_auc = combine(groupby(df, :Column1), :Column2 => mean, :Column2 => std, :Column3 => mean, :Column3 => std)
+            CSV.write("./Experiments/$(experiment)/mean_auc.txt", mean_auc, header=[:AcquisitionFunction, :AccAUC_mean, :AccAUC_std, :TimeAUC_mean, :TimeAUC_std])
+        end
     end
 end
