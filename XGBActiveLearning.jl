@@ -1,13 +1,13 @@
 using Distributed
 using Turing
 experiments = ["IncrementalLearningXGB"]
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-minimum_training_sizes = [40, 60, 40, 40, 80, 100, 30, 296] #60, 60, 40, 40, 80, 100, 30, 296
+minimum_training_sizes = [40, 60, 40, 40, 80, 100] #60, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
 
 
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
 list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
@@ -143,7 +143,7 @@ for experiment in experiments
                         performance_data[1, al_step] = m[1, 2]#AcquisitionSize
                         cd = readdlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                         performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
-                        performance_data[3, al_step] = m[2, 2] #Accuracy
+                        performance_data[3, al_step] = m[4, 2] #Accuracy
 
                         ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
                         ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])

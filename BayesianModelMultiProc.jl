@@ -97,6 +97,20 @@ end
 	end
 end
 
+@model function BNN_onehot(x, y, location, scale)
+	θ ~ MvNormal(location, scale)
+	# @code_warntype feedforward(θ)
+	nn = feedforward(θ)
+	# nn = feedforward(θ_input, θ_hidden)
+	preds = nn(x)
+	probs ~ Dirichlet(preds .+ 1)
+	for i = 1:lastindex(y)
+		# y[i] ~ Categorical(probs[:, i])
+		loglik = loglikelihood(Categorical(probs[:, i]/sum(probs[:, i])), y[:, i]) + (y[:, i] + (1 - y[:, i]) * probs[:, i])
+		Turing.@addlogprob!(loglik)
+	end
+end
+
 # @model function bayesnnMVG(x, y, num_params, warn = true)
 #     θ ~ MvNormal(zeros(num_params), ones(num_params))
 #     nn = feedforward(x, θ)

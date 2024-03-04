@@ -18,15 +18,15 @@ using Turing
 num_chains = 3
 
 experiments = ["IncrementalLearning"]
-datasets = ["yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-minimum_training_sizes = [296] #60, 60, 40, 40, 80, 100, 30, 296
+minimum_training_sizes = [60, 60, 40, 40, 80, 100] #60, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
+list_acq_steps = [7, 10, 10, 10, 10, 10]
 
+list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_inout_dims = [(8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
-
-list_n_folds = [5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [5, 5, 5, 5, 5, 3]#5, 5, 5, 5, 5, 3, 5, 5
 
 list_class_balancing = ["UnBalancedAcquisition"] #"BalancedBinaryAcquisition"
 list_prior_informativeness = ["InformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
@@ -67,7 +67,7 @@ include("./AcquisitionFunctions.jl")
 
 for experiment in experiments
     @everywhere experiment = $experiment
-    for (dataset, inout_dims, acquisition_size, n_folds) in zip(datasets, list_inout_dims, acquisition_sizes, list_n_folds)
+    for (dataset, inout_dims, acquisition_size, n_folds, n_acq_steps) in zip(datasets, list_inout_dims, acquisition_sizes, list_n_folds, list_acq_steps)
         # for (dataset, inout_dims, acquisition_size) in zip(datasets, list_inout_dims, acquisition_sizes)
         println(dataset)
         PATH = @__DIR__
@@ -177,7 +177,7 @@ for experiment in experiments
                                         # mkpath("./Experiments/$(experiment)/$(pipeline_name)/log_distribution_changes")
                                         mkpath("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions")
 
-                                        n_acq_steps = 10#round(Int, total_pool_samples / acquisition_size, RoundUp)
+                                        # n_acq_steps = 10#round(Int, total_pool_samples / acquisition_size, RoundUp)
                                         prior = (zeros(num_params), prior_std)
                                         param_matrix, new_training_data = 0, 0
                                         map_matrix = 0
@@ -269,11 +269,11 @@ for experiment in experiments
                                                 performance_data[1, al_step] = m[1, 2]#AcquisitionSize
                                                 cd = readdlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                                                 performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
-                                                performance_data[3, al_step] = m[2, 2] #Accuracy #4 for F1Score
+                                                performance_data[3, al_step] = m[4, 2] #Accuracy #4 for F1Score
 
-                                                ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
-                                                ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
-                                                performance_data[4, al_step] = ensemble_majority_avg
+                                                # ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
+                                                # ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
+                                                performance_data[4, al_step] = 0#ensemble_majority_avg
                                                 # rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
 
                                                 c = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", ',')

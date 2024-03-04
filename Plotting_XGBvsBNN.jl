@@ -1,5 +1,5 @@
-datasets = ["stroke"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"
-minimum_training_sizes = [60] #40, 60, 40, 40, 80, 100, 30, 296
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"
+minimum_training_sizes = [40, 60, 40, 40, 80, 100] #40, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
 
 y_ticks = collect(0:0.1:1.0)
