@@ -74,10 +74,10 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 	# println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
 	# pŷ_test = predictions[:,2]
 	if n_output == 2
-		acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+		acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
+		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, f1, mcc, fpr, prec, recall, threat, cm]], ',')
 		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
-		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
+		# println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, f1, mcc, fpr, prec, recall, threat, cm]])
 	else
 		acc = accuracy_multiclass(test_y, ŷ_test)
 		writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size","Accuracy"] [acq_size_, acc]], ',')

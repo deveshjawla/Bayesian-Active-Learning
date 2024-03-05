@@ -130,27 +130,29 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     end
     test_x, test_y = test_data
     predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
-    predictions_map = pred_analyzer_multiclass(test_x, independent_map_params)
+    # predictions_map = pred_analyzer_multiclass(test_x, independent_map_params)
 
 	# activations_weighted_sums(test_x[:,1], independent_param_matrix, "./Experiments/$(experiment)/$(pipeline_name)/", 3) # 3 is the number of layers
     writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
     # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$(al_step)_map.csv", predictions_map, ',')
     ŷ_test = permutedims(Int.(predictions[1, :]))
-    ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
+    # ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
     if n_output == 2
-        acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-        acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map = performance_stats(test_y, ŷ_test_map)
-        writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
-        writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map]], ',')
+        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
+        # acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map = performance_stats(test_y, ŷ_test_map)
+        writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, f1, mcc, fpr, prec, recall, threat, cm]], ',')
+        # writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map]], ',')
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
-        # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
+        # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, f1, mcc, fpr, prec, recall, threat, cm]])
     else
-        acc = accuracy_multiclass(test_y, ŷ_test)
-        acc_map = accuracy_multiclass(test_y, ŷ_test_map)
-        writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy"] [acq_size_, acc]], ',')
-        writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy"] [acq_size_, acc_map]], ',')
+        # acc = accuracy_multiclass(test_y, ŷ_test)
+		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
+
+        # acc_map = accuracy_multiclass(test_y, ŷ_test_map)
+        # writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy"] [acq_size_, acc_map]], ',')
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
         # println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acq_size_, balance_of_acquired_batch, acc]])
     end

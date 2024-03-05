@@ -1,18 +1,26 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Float32,Float32}
-    # nn = Chain(
-    #         Dense(input_size => input_size, tanh; init=Flux.glorot_normal()),
-    #         Dense(input_size => input_size, tanh; init=Flux.glorot_normal()),
-    #         Dense(input_size => n_output; init=Flux.glorot_normal()),
-    # 		softmax
-    #     )
+function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, ensemble_size::Int, al_sampling::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Float32,Float32}
     nn = Chain(
-        Parallel(vcat, Dense(input_size => input_size, identity), Dense(input_size => input_size, relu), Dense(input_size => input_size, relu), Dense(input_size => input_size, relu)),
-        Parallel(vcat, Dense(4 * input_size => input_size, identity), Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu)),
-        Dense(4 * input_size => n_output),
-        softmax)
+            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
+			# Dropout(0.2),
+            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
+			# Dropout(0.2),
+            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
+			# Dropout(0.2),
+            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
+			# Dropout(0.2),
+            Dense(input_size => n_output; init=Flux.glorot_normal()),
+    		softmax
+        )
+
+		# trainmode!(nn)
+    # nn = Chain(
+    #     Parallel(vcat, Dense(input_size => input_size, relu), Dense(input_size => input_size, relu), Dense(input_size => input_size, relu), Dense(input_size => input_size, relu)),
+    #     Parallel(vcat, Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu)),
+    #     Dense(4 * input_size => n_output),
+    #     softmax)
 
     init_params, re = Flux.destructure(nn)
     num_params = lastindex(init_params)
@@ -88,17 +96,19 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     training_data_x, training_data_y = training_data[1:input_size, :], training_data[end, :]
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
-    sample_weights = similar(training_data_y, Float32)
-    nos_training = lastindex(training_data_y)
-    for i = 1:nos_training
-        sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
-    end
+	sample_weights =  similar(training_data_y, Float32)
+	nos_training = lastindex(training_data_y)
+	for i = 1:nos_training
+		sample_weights[i] = nos_training/balance_of_training_data[training_data_y[i]]
+	end
+	sample_weights ./= n_output
+	
     # println("The acquired Batch has the follwing class distribution: $balance_of_acquired_batch")
     training_data_xy = (training_data_x, Int.(permutedims(training_data_y)))
     # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
     if acq_size_ !== 0
         #Training on Acquired Samples and logging classification_performance
-        independent_param_matrix, elapsed = ensemble_training(num_params, input_size, n_output, acq_size_, training_data_xy, nsteps, n_chains, al_step, experiment_name, pipeline_name, sample_weights)
+        independent_param_matrix, elapsed = ensemble_training(num_params, input_size, n_output, acq_size_, training_data_xy, ensemble_size, sample_weights)
     elseif acq_size_ == 0
         independent_param_matrix, elapsed = param_matrix, 0
     end
@@ -112,13 +122,14 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
     if n_output == 2
-        acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, f1, mcc, fpr, prec, recall, threat, cm]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
-        # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, mcc, f1, fpr, prec, recall, threat, cm]])
+        # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, f1, mcc, fpr, prec, recall, threat, cm]])
     else
-        acc = accuracy_multiclass(test_y, ŷ_test)
-        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy"] [acq_size_, acc]], ',')
+        # acc = accuracy_multiclass(test_y, ŷ_test)
+		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
         # println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acq_size_, balance_of_acquired_batch, acc]])
     end

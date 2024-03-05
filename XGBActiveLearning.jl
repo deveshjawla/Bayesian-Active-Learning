@@ -1,22 +1,18 @@
 using Distributed
-using Turing
-experiments = ["IncrementalLearningXGB"]
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps"]#20, 20, 10, 10, 20, 20, 10, 40
-# acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-minimum_training_sizes = [40, 60, 40, 40, 80, 100] #60, 60, 40, 40, 80, 100, 30, 296
-acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
-
-
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
-
-list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
-
-acq_functions = ["Random"] # "BayesianUncertainty", "Initial", "Random"
-
-
-
 # Add four processes to use for sampling.
 addprocs(8; exeflags=`--project`)
+
+experiments = ["IncrementalLearningXGB"]
+datasets = ["iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
+# acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+minimum_training_sizes = [30, 296] #60, 60, 40, 40, 80, 100, 30, 296
+acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
+list_acq_steps = [10, 10]
+
+list_inout_dims = [(4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+
+list_n_folds = [5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+acq_functions = ["Random"] #, "BayesianUncertainty"
 
 using DataFrames
 using CSV
@@ -28,7 +24,7 @@ using StatsBase
 using Flux: softmax
 using Gadfly, Cairo, Fontconfig, DataFrames, CSV
 width = 6inch
-height = 8inch
+height = 6inch
 set_default_plot_size(width, height)
 
 theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
@@ -71,7 +67,7 @@ for experiment in experiments
                 class_names[i] = "$(i-1)"
             end
 
-            kpi_df = Array{Any}(missing, 0, 9 + 2 * n_output)
+            kpi_df = Array{Any}(missing, 0, 10 + 2 * n_output)
             for acq_func in acq_functions
                 @everywhere acq_func = $acq_func
 
@@ -136,14 +132,15 @@ for experiment in experiments
 
                     class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
                     cum_class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
-                    performance_data = Array{Any}(undef, 8, n_acq_steps) #dims=(features, samples(i))
+                    performance_data = Array{Any}(undef, 9, n_acq_steps) #dims=(features, samples(i))
                     cum_class_dist_ent = Array{Any}(undef, 1, n_acq_steps)
                     for al_step = 1:n_acq_steps
                         m = readdlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
                         performance_data[1, al_step] = m[1, 2]#AcquisitionSize
                         cd = readdlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                         performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
-                        performance_data[3, al_step] = m[4, 2] #Accuracy
+                        performance_data[3, al_step] = m[2, 2] #Accuracy
+                        performance_data[9, al_step] = m[3, 2] #F1
 
                         ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
                         ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
@@ -176,7 +173,7 @@ for experiment in experiments
                     kpi_df = vcat(kpi_df, permutedims(kpi))
                 end
             end
-            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :Accuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumTrainedSize], Symbol.(class_names), Symbol.(class_names), :CumCDE)
+            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :Accuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumTrainedSize, :F1], Symbol.(class_names), Symbol.(class_names), :CumCDE)
             df = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df)
 
@@ -208,12 +205,14 @@ for experiment in experiments
             df_folds = vcat(df_folds, df_fold)
         end
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
-        for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
+		for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
             mean_std_acc = combine(groupby(i, :CumTrainedSize), :Accuracy => mean, :Accuracy => std)
+            mean_std_f1 = combine(groupby(i, :CumTrainedSize), :F1 => mean, :F1 => std)
             mean_std_time = combine(groupby(i, :CumTrainedSize), :Elapsed => mean, :Elapsed => std)
             mean_std_ensemble_majority = combine(groupby(i, :CumTrainedSize), :EnsembleMajority => mean, :EnsembleMajority => std)
             acquisition_function = i.AcquisitionFunction[1]
             CSV.write("./Experiments/$(experiment)/mean_std_acc$(acquisition_function).csv", mean_std_acc)
+            CSV.write("./Experiments/$(experiment)/mean_std_f1$(acquisition_function).csv", mean_std_f1)
             CSV.write("./Experiments/$(experiment)/mean_std_time$(acquisition_function).csv", mean_std_time)
             CSV.write("./Experiments/$(experiment)/mean_std_ensemble_majority$(acquisition_function).csv", mean_std_ensemble_majority)
         end
@@ -278,23 +277,30 @@ for experiment in experiments
         ### Loops when using Cross Validation for AL
         begin
             df_acc = DataFrame()
+            df_f1 = DataFrame()
             df_time = DataFrame()
             for acq_func in acq_functions
                 df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(acq_func).csv", DataFrame, header=1)
+                df_f1_ = CSV.read("./Experiments/$(experiment)/mean_std_f1$(acq_func).csv", DataFrame, header=1)
                 df_time_ = CSV.read("./Experiments/$(experiment)/mean_std_time$(acq_func).csv", DataFrame, header=1)
 
                 df_acc_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
+                df_f1_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
                 df_time_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
 
                 df_acc = vcat(df_acc, df_acc_)
+                df_f1 = vcat(df_f1, df_f1_)
                 df_time = vcat(df_time, df_time_)
             end
 
             fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+            fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+
 
             fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
 
             fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+            fig1aa |> PDF("./Experiments/$(experiment)/F1_$(dataset)_$(experiment)_folds.pdf", dpi=600)
             fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=600)
 
             df = DataFrame()

@@ -65,22 +65,27 @@ using Distributed
     using Flux
 
     function network_training(n_epochs, input_size, output_size, train_loader, sample_weights_loader; lr=1e-3, dropout_rate=0.2)::Vector{Float32}
-        # model = Chain(
-        #     Dense(input_size => input_size, tanh; init=Flux.glorot_normal()),
-        #     Dropout(dropout_rate),
-        #     Dense(input_size => input_size, tanh; init=Flux.glorot_normal()),
-        #     Dropout(dropout_rate),
-        #     Dense(input_size => output_size; init=Flux.glorot_normal()),
-        # )
-
         model = Chain(
-            Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal())),
+            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
             # Dropout(dropout_rate),
-            Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
+			Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
             # Dropout(dropout_rate),
-            Dense(4 * input_size => output_size),
-            softmax
+			Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
+            # Dropout(dropout_rate),
+            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
+            # Dropout(dropout_rate),
+            Dense(input_size => output_size; init=Flux.glorot_normal()),
+			softmax
         )
+
+        # model = Chain(
+        #     Parallel(vcat, Dense(input_size => input_size, relu; init=Flux.glorot_normal()), Dense(input_size => input_size, relu; init=Flux.glorot_normal()), Dense(input_size => input_size, relu; init=Flux.glorot_normal()), Dense(input_size => input_size, relu; init=Flux.glorot_normal())),
+        #     # Dropout(dropout_rate),
+        #     Parallel(vcat, Dense(4 * input_size => input_size, relu; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, relu; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, relu; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, relu; init=Flux.glorot_normal())),
+        #     # Dropout(dropout_rate),
+        #     Dense(4 * input_size => output_size),
+        #     softmax
+        # )
         opt = Adam(lr)
         opt_state = Flux.setup(opt, model)
 
@@ -122,8 +127,8 @@ using Distributed
             end
 
             # If we haven't seen improvement in 5 epochs, drop our learning rate:
-            if epoch_idx - last_improvement >= 10 && opt_state.layers[1].layers[1].weight.rule.eta > 1e-6
-                new_eta = opt_state.layers[1].layers[1].weight.rule.eta / 10.0
+            if epoch_idx - last_improvement >= 10 && opt_state.layers[1].weight.rule.eta > 1e-6
+                new_eta = opt_state.layers[1].weight.rule.eta / 10.0
                 # @warn(" -> Haven't improved in a while, dropping learning rate to $(new_eta)!")
                 Flux.adjust!(opt_state; eta=new_eta)
                 # After dropping learning rate, give it a few epochs to improve
@@ -151,7 +156,7 @@ function parallel_network_training(n_networks, nparameters, n_epochs, input_size
     return convert(Matrix{Float32}, param_matrices_accumulated)
 end
 
-function ensemble_training(num_params::Int, input_size::Int, output_size::Int, acq_size::Int, training_data::Tuple{Array{Float32,2},Array{Int,2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String, sample_weights; n_epochs=1000)::Tuple{Array{Float32,2},Float32}
+function ensemble_training(num_params::Int, input_size::Int, output_size::Int, acq_size::Int, training_data::Tuple{Array{Float32,2},Array{Int,2}}, ensemble_size::Int, sample_weights; n_epochs=100)::Tuple{Array{Float32,2},Float32}
     train_x, train_y = training_data
 
     train_y = Flux.onehotbatch(vec(train_y), 1:output_size)
@@ -159,8 +164,6 @@ function ensemble_training(num_params::Int, input_size::Int, output_size::Int, a
     # println(eltype(train_x), eltype(train_y))
     train_loader = Flux.DataLoader((train_x, train_y), batchsize=acq_size)
     sample_weights_loader = Flux.DataLoader(permutedims(sample_weights), batchsize=acq_size)
-
-    ensemble_size = n_chains * nsteps
 
     chain_timed = @timed parallel_network_training(ensemble_size, num_params, n_epochs, input_size, output_size, train_loader, sample_weights_loader)
 

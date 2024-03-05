@@ -50,7 +50,6 @@ end
 """
 Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
 
-
 Returns : predictive_uncertainty, aleatoric_uncertainty, epistemic_uncertainty
 """
 function uncertainties(prob_matrix::Matrix, n_output)

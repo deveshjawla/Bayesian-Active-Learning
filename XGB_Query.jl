@@ -58,22 +58,27 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
 
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
-    sample_weights = similar(training_data_y, Float32)
-    nos_training = lastindex(training_data_y)
-    for i = 1:nos_training
-        sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
-    end
+	sample_weights =  similar(training_data_y, Float32)
+	nos_training = lastindex(training_data_y)
+	for i = 1:nos_training
+		sample_weights[i] = nos_training/balance_of_training_data[training_data_y[i]]
+	end
+	sample_weights ./= n_output
+
+	d_matrix= DMatrix(training_data_x, training_data_y; weight = sample_weights)
+
+	println("checking if size of training and weights is coomatible",size(training_data_x), size(sample_weights))
 
     #Training on Acquired Samples and logging classification_performance
     if al_step == 1
-        xgb_timed = @timed xgboost((training_data_x, training_data_y), num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
+        xgb_timed = @timed xgboost(d_matrix, num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
         xgb = xgb_timed.value
         elapsed = xgb_timed.time
     else
         # xgb_timed = @timed update!(xgb, (training_data_x, training_data_y), num_round=nsteps)
         # _ = xgb_timed.value
         # elapsed = xgb_timed.time
-		xgb_timed = @timed xgboost((training_data_x, training_data_y), num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
+		xgb_timed = @timed xgboost(d_matrix, num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
         xgb = xgb_timed.value
         elapsed = xgb_timed.time
     end
@@ -87,12 +92,13 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
     if n_output == 2
-        acc, mcc, f1, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
-        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed", "MCC", "f1", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, elapsed, mcc, f1, fpr, prec, recall, threat, cm]], ',')
+        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, elapsed, f1, mcc, fpr, prec, recall, threat, cm]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     else
-        acc = accuracy_multiclass(test_y, ŷ_test)
-        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed"] [acq_size_, acc, elapsed]], ',')
+        # acc = accuracy_multiclass(test_y, ŷ_test)
+		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "Elapsed", "MacroF1Score"] [acq_size_, acc, elapsed, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     end
 

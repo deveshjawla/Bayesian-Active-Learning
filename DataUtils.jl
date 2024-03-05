@@ -154,7 +154,6 @@ function performance_stats(ground_truth_, predictions_)
     predictions = deepcopy(Int.(vec(predictions_)))
     ground_truth[ground_truth.==2] .= 0
     predictions[predictions.==2] .= 0
-	println(current_encoding())
     cm = ConfusionMatrix(ground_truth, predictions)
     f1 = f1_score(cm)
     mcc = matthews_correlation_coefficient(cm)
@@ -166,7 +165,7 @@ function performance_stats(ground_truth_, predictions_)
     prec = precision(cm)
     recall = true_positive_rate(cm)
     threat_score = EvalMetrics.threat_score(cm)
-    return acc, mcc, f1, fpr, prec, recall, threat_score, cm
+    return acc, f1, mcc, fpr, prec, recall, threat_score, cm
 end
 
 
@@ -180,6 +179,16 @@ end
 
 function accuracy_multiclass(true_labels, predictions)
     return mean(true_labels .== predictions)
+end
+
+using StatisticalMeasures: macro_f1score, balanced_accuracy
+using StatsBase: countmap
+function performance_stats_multiclass(a,b)
+	a = deepcopy(Int.(vec(a)))
+    b = deepcopy(Int.(vec(b)))
+    f1 = macro_f1score(b,a, countmap(a))/lastindex(a)
+    acc = balanced_accuracy(b,a)
+    return acc, f1
 end
 
 function train_validate_test(df; v=0.6, t=0.8)

@@ -4,8 +4,8 @@ acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
 
 y_ticks = collect(0:0.1:1.0)
 
-experiments = ["IncrementalLearning", "IncrementalLearningXGB"]
-sub_experiments = ["InformedPrior", "Random"]
+experiments = ["IncrementalLearning", "IncrementalLearningXGB", "IncrementalLearningDNN"]
+sub_experiments = ["InformedPrior", "Random", "Random"]
 
 using DelimitedFiles
 using Random
@@ -31,18 +31,24 @@ for (dataset, acquisition_size, max_training_size) in zip(datasets, acquisition_
 
     PATH = pwd()
     df_acc = DataFrame()
+    df_f1 = DataFrame()
 
     for (experiment, sub_experiment) in zip(experiments, sub_experiments)
         df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(sub_experiment).csv", DataFrame, header=1)
+        df_f1_ = CSV.read("./Experiments/$(experiment)/mean_std_f1$(sub_experiment).csv", DataFrame, header=1)
 
 		insertcols!(df_acc_, :Experiment => experiment)
+		insertcols!(df_f1_, :Experiment => experiment)
 
         df_acc = vcat(df_acc, df_acc_)
+        df_f1 = vcat(df_f1, df_f1_)
     end
 
 
     fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:Experiment, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+    fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:Experiment, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
 
-    fig1a |> PDF("./Experiments/XGBvsBNN_Accuracy_$(dataset).pdf", dpi=600)
+    fig1a |> PDF("./Experiments/Model_comparison_Accuracy_$(dataset).pdf", dpi=600)
+    fig1aa |> PDF("./Experiments/Model_comparison_F1_$(dataset).pdf", dpi=600)
 
 end

@@ -79,5 +79,5 @@ for threshold in thresholds
 
 	predictions_mean = vec(round.(Int, predictions_mean))
 
-    writedlm("./test_results_$(experiment)/results_$(threshold).txt", [elapsed, mcc, f1, acc, fpr, fnr, tpr, tnr, prec, recall], ',')
+    writedlm("./test_results_$(experiment)/results_$(threshold).txt", [elapsed, f1, mcc, acc, fpr, fnr, tpr, tnr, prec, recall], ',')
 end
