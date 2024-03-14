@@ -17,7 +17,7 @@ function bnn_query_regression(prior::Tuple, pool::Tuple, previous_training_data,
         pool_scores = mapslices(x -> bald(x, n_output), pool_prediction_matrix, dims=[1, 3])
         bald_scores = map(x -> x[2], pool_scores[1, 1, :])
         sampled_indices = power_acquisition(bald_scores, acq_size_)
-        # softmax_entropy = softmax_acquisition(entropy_scores, acq_size_)
+        # softmax_entropy = stochastic_acquisition(entropy_scores, acq_size_)
         # var_ratio_scores = 1 .- pŷ_test
     elseif al_sampling == "BayesianUncertainty"
         pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)

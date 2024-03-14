@@ -8,23 +8,45 @@ function majority_voting(predictions::AbstractVector)::Vector{Float32}
 	return [prediction, pred_probability]
 end
 
+uncertainty(α) = first(size(α)) ./ sum(α, dims = 1)
+
 """
 Returns a tuple of {Prediction, Prediction probability}
 
 Uses a simple argmax and percentage of samples in the ensemble respectively
 """
+# function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Array{Float32, 2}
+# 	nets = map(feedforward, eachrow(params_set))
+# 	predictions_nets = map(x-> x(test_xs), nets)
+# 	ensembles = mapreduce(x-> mapreduce(argmax, hcat, eachcol(x)), vcat, predictions_nets)
+# 	pred_matrix = mapslices(majority_voting, ensembles, dims =1)
+#     return pred_matrix
+# end
+
 function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Array{Float32, 2}
 	nets = map(feedforward, eachrow(params_set))
-	## Test predictions
-	# predictions_nets = predictions_nets .+ 1
-	# ŷ = predictions_nets ./ sum(predictions_nets, dims = 1)
-	# u = uncertainty(predictions_nets)
-	predictions_nets = map(x-> x(test_xs), nets)
-	ensembles = map(x-> map(argmax, eachcol(x)), predictions_nets)
-	predictions = permutedims(reduce(hcat, ensembles))
-	pred_matrix= mapslices(majority_voting, predictions, dims =1)
-    return pred_matrix
+	predictions_nets = map(x -> x(test_xs), nets)
+	predictions_nets = map(x -> x .+ 1, predictions_nets)
+	ŷ_prob = map(x-> mapreduce(y-> y ./ sum(y),hcat, eachcol(x)), predictions_nets) #ŷ
+	u = mapreduce(x-> mapreduce(uncertainty,hcat, eachcol(x)), vcat, predictions_nets)
+	ŷ_label = mapreduce(x-> mapreduce(argmax, hcat, eachcol(x)), vcat, ŷ_prob)
+	pred_plus_std = mapslices(majority_voting, ŷ_label, dims =1)
+	u_plus_std = mapslices(x->[mean(x), std(x)], u, dims =1)
+	pred_matrix = vcat(pred_plus_std, u_plus_std)
+    return pred_matrix[[1,3],:]
 end
+
+# function pred_analyzer_dirichlet(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Tuple{Array{Float32, 2}, Array{Float32, 2}}
+# 	nets = map(feedforward, eachrow(params_set))
+# 	predictions_nets = map(x-> x(test_xs), nets)
+# 	predictions_nets = map(x-> x .+ 1, predictions_nets)
+# 	ŷ_prob = map(x-> mapreduce(y-> y ./ sum(y),hcat, eachcol(x)), predictions_nets) #ŷ
+# 	u = mapreduce(x-> mapreduce(uncertainty,hcat, eachcol(x)), vcat, predictions_nets)
+# 	ŷ_label = mapreduce(x-> mapreduce(argmax, hcat, eachcol(x)), vcat, ŷ_prob)
+# 	pred_plus_std = mapslices(majority_voting, ŷ_label, dims =1)
+# 	u_plus_std = mapslices(x->[mean(x), std(x)], u, dims =1)
+#     return pred_plus_std, u_plus_std
+# end
 
 using Flux: activations
 function activations_weighted_sums(test_xs::Array{Float32, 1}, params_set::Array{Float32, 2}, directory_plots, n_layers)

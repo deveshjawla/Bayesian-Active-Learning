@@ -39,7 +39,7 @@ function top_k_acquisition(pool_scores::Vector, acquisition_size; descending=fal
     return top_k
 end
 
-function softmax_acquisition(pool_scores::Vector, acquisition_size; β=1.0)
+function stochastic_acquisition(pool_scores::Vector, acquisition_size; β=1.0)
 	gumbel_dist = Gumbel(0, β^-1)
 	scores=pool_scores .+ rand(gumbel_dist, lastindex(pool_scores))
 	df = DataFrame(Scores=scores, Sample_indices=collect(1:lastindex(scores)))

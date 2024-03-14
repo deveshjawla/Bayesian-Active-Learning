@@ -1,11 +1,11 @@
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"
-minimum_training_sizes = [40, 60, 40, 40, 80, 100] #40, 60, 40, 40, 80, 100, 30, 296
+datasets = ["iris1988"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"
+minimum_training_sizes = [30] #40, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
 
 y_ticks = collect(0:0.1:1.0)
 
 experiments = ["IncrementalLearning", "IncrementalLearningXGB", "IncrementalLearningDNN"]
-sub_experiments = ["InformedPrior", "Random", "Random"]
+sub_experiments = ["Random", "Random", "Random"]
 
 using DelimitedFiles
 using Random
@@ -46,7 +46,7 @@ for (dataset, acquisition_size, max_training_size) in zip(datasets, acquisition_
 
 
     fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:Experiment, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
-    fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:Experiment, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+    fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:Experiment, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
 
     fig1a |> PDF("./Experiments/Model_comparison_Accuracy_$(dataset).pdf", dpi=600)
     fig1aa |> PDF("./Experiments/Model_comparison_F1_$(dataset).pdf", dpi=600)

@@ -19,7 +19,7 @@ using CSV
 using DelimitedFiles
 using XGBoost
 using Random
-Random.seed!(1234);
+Random.seed!(1234)
 using StatsBase
 using Flux: softmax
 using Gadfly, Cairo, Fontconfig, DataFrames, CSV
@@ -140,7 +140,7 @@ for experiment in experiments
                         cd = readdlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
                         performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
                         performance_data[3, al_step] = m[2, 2] #Accuracy
-                        performance_data[9, al_step] = m[3, 2] #F1
+                        performance_data[9, al_step] = m[4, 2] #F1
 
                         ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
                         ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])

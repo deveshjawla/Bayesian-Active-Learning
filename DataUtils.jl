@@ -181,13 +181,18 @@ function accuracy_multiclass(true_labels, predictions)
     return mean(true_labels .== predictions)
 end
 
-using StatisticalMeasures: macro_f1score, balanced_accuracy
+using StatisticalMeasures: macro_f1score, accuracy
 using StatsBase: countmap
 function performance_stats_multiclass(a,b)
 	a = deepcopy(Int.(vec(a)))
     b = deepcopy(Int.(vec(b)))
-    f1 = macro_f1score(b,a, countmap(a))/lastindex(a)
-    acc = balanced_accuracy(b,a)
+	weights_ = countmap(a)
+	keys_, values_ = keys(weights_), values(weights_)
+	n_classes = lastindex(collect(keys(weights_)))
+	weights = map(x->lastindex(a)/(n_classes*x), values_)
+	class_weights = Dict(keys_ .=> weights)
+    f1 = macro_f1score(b,a, class_weights)
+    acc = accuracy(b,a, class_weights)
     return acc, f1
 end
 

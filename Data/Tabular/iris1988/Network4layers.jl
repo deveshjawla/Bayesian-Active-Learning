@@ -23,8 +23,7 @@ function feedforward(θ::AbstractVector)
 		Dense(W1, b1, relu),
 		Dense(W2, b2, relu),
 		Dense(W3, b3, relu),
-		Dense(W4, b4),
-		softmax
+		Dense(W4, b4, softplus)
 	)
 	return model
 end

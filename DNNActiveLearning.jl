@@ -89,7 +89,7 @@ for experiment in experiments
                 @everywhere acq_func = $acq_func
 
                 let
-                    ensemble_size = 50
+                    ensemble_size = 100
 
                     pipeline_name = "$(acquisition_size)_$(acq_func)_$(fold)"
                     mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
@@ -138,7 +138,7 @@ for experiment in experiments
                         ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
                         ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
                         performance_data[4, al_step] = ensemble_majority_avg
-                        rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
+                        # rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
 
                         c = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step).csv", ',')
                         performance_data[5, al_step] = c[1] #Elapsed

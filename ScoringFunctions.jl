@@ -13,34 +13,9 @@ end
 """
 Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
 
-
-Returns : H(normalized_entropy), E+H(BALD score, Mutual Information)
+Returns : H(macro_entropy)
 """
-function bald(prob_matrix::Matrix, n_output)
-    # println(size(prob_matrix))
-    mean_prob_per_class = vec(mean(prob_matrix, dims=2))
-    H = normalized_entropy(mean_prob_per_class, n_output)
-    E_H = mean(mapslices(x -> normalized_entropy(x, n_output), prob_matrix, dims=1))
-    return H, H + E_H
-end
-
-function var_ratio(predictions::Vector)
-    count_map = countmap(predictions)
-    # println(count_map)
-    uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
-    index_max = argmax(nUniques)
-    prediction = uniques[index_max]
-    pred_probability = maximum(nUniques) / sum(nUniques)
-    return 1 - pred_probability
-end
-
-"""
-Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
-
-
-Returns : H(normalized_entropy)
-"""
-function predictive_uncertainty(prob_matrix::Matrix, n_output)
+function macro_entropy(prob_matrix::Matrix, n_output)
     # println(size(prob_matrix))
     mean_prob_per_class = vec(mean(prob_matrix, dims=2))
     H = normalized_entropy(mean_prob_per_class, n_output)
@@ -50,7 +25,18 @@ end
 """
 Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
 
-Returns : predictive_uncertainty, aleatoric_uncertainty, epistemic_uncertainty
+Returns : H (macro_entropy), E_H (expectation_entropy) + H(BALD score, Mutual Information)
+"""
+function bald(prob_matrix::Matrix, n_output)
+    H = macro_entropy(prob_matrix, n_output)
+    E_H = mean(mapslices(x -> normalized_entropy(x, n_output), prob_matrix, dims=1))
+    return H, H + E_H
+end
+
+"""
+Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
+
+Returns : macro_entropy, expectation_entropy, epistemic_uncertainty
 """
 function uncertainties(prob_matrix::Matrix, n_output)
     # println(size(prob_matrix))
@@ -60,4 +46,14 @@ function uncertainties(prob_matrix::Matrix, n_output)
     # writedlm("./uncertainties.csv", [H E_H])
     return H, E_H, H - E_H
 end
+
+# function variances_ratio(predictions::Vector)
+#     count_map = countmap(predictions)
+#     # println(count_map)
+#     uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
+#     index_max = argmax(nUniques)
+#     prediction = uniques[index_max]
+#     pred_probability = maximum(nUniques) / sum(nUniques)
+#     return 1 - pred_probability
+# end
 

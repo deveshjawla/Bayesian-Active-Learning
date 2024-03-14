@@ -17,19 +17,19 @@ using Distributed
 using Turing
 num_chains = 3
 
-experiments = ["IncrementalLearning"]
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps"]#20, 20, 10, 10, 20, 20, 10, 40
+experiments = ["EvidentialMCMC"]
+datasets = ["iris1988"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-minimum_training_sizes = [60, 60, 40, 40, 80, 100] #60, 60, 40, 40, 80, 100, 30, 296
+minimum_training_sizes = [30, 296] #60, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
-list_acq_steps = [7, 10, 10, 10, 10, 10]
+list_acq_steps = [10, 10]
 
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [5, 5, 5, 5, 5, 3]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
 list_class_balancing = ["UnBalancedAcquisition"] #"BalancedBinaryAcquisition"
-list_prior_informativeness = ["InformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
+list_prior_informativeness = ["NoInit"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood", "Regression"
 acq_functions = ["Random"] # "BayesianUncertainty", "Initial", "Random"
@@ -51,7 +51,7 @@ using ProgressMeter
 @everywhere using StatsBase
 using Gadfly, Cairo, Fontconfig, DataFrames, CSV
 width = 6inch
-height = 4inch
+height = 6inch
 set_default_plot_size(width, height)
 theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
 Gadfly.push_theme(theme)

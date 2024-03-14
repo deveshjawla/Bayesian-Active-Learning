@@ -17,7 +17,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
         pool_scores = mapslices(x -> bald(x, n_output), pool_prediction_matrix, dims=[1, 3])
         bald_scores = map(x -> x[2], pool_scores[1, 1, :])
         sampled_indices = power_acquisition(bald_scores, acq_size_)
-        # softmax_entropy = softmax_acquisition(entropy_scores, acq_size_)
+        # softmax_entropy = stochastic_acquisition(entropy_scores, acq_size_)
         # var_ratio_scores = 1 .- pŷ_test
     elseif al_sampling == "BayesianUncertainty"
         pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
@@ -149,7 +149,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     else
         # acc = accuracy_multiclass(test_y, ŷ_test)
 		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
-        writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
+        writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
 
         # acc_map = accuracy_multiclass(test_y, ŷ_test_map)
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy"] [acq_size_, acc_map]], ',')

@@ -86,7 +86,7 @@ using Distributed
         #     Dense(4 * input_size => output_size),
         #     softmax
         # )
-        opt = Adam(lr)
+        opt = Flux.Optimise.AdaBelief()
         opt_state = Flux.setup(opt, model)
 
         # @info("Beginning training loop...")
@@ -126,14 +126,14 @@ using Distributed
                 last_improvement = epoch_idx
             end
 
-            # If we haven't seen improvement in 5 epochs, drop our learning rate:
-            if epoch_idx - last_improvement >= 10 && opt_state.layers[1].weight.rule.eta > 1e-6
-                new_eta = opt_state.layers[1].weight.rule.eta / 10.0
-                # @warn(" -> Haven't improved in a while, dropping learning rate to $(new_eta)!")
-                Flux.adjust!(opt_state; eta=new_eta)
-                # After dropping learning rate, give it a few epochs to improve
-                last_improvement = epoch_idx
-            end
+            # # If we haven't seen improvement in 5 epochs, drop our learning rate:
+            # if epoch_idx - last_improvement >= 10 && opt_state.layers[1].weight.rule.eta > 1e-6
+            #     new_eta = opt_state.layers[1].weight.rule.eta / 10.0
+            #     # @warn(" -> Haven't improved in a while, dropping learning rate to $(new_eta)!")
+            #     Flux.adjust!(opt_state; eta=new_eta)
+            #     # After dropping learning rate, give it a few epochs to improve
+            #     last_improvement = epoch_idx
+            # end
 
             if epoch_idx - last_improvement >= 30
                 # @warn(" -> We're calling this converged.")
