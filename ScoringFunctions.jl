@@ -25,25 +25,15 @@ end
 """
 Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
 
-Returns : H (macro_entropy), E_H (expectation_entropy) + H(BALD score, Mutual Information)
+The H is the Total Uncertainty
+E_H is the Aleatoric
+H - E_H is the Epistemic
+
+Returns : H (macro_entropy), E_H (mean of Entropies) is the Aleatoric, H - E_H(Epistemic unceratinty)
 """
 function bald(prob_matrix::Matrix, n_output)
     H = macro_entropy(prob_matrix, n_output)
     E_H = mean(mapslices(x -> normalized_entropy(x, n_output), prob_matrix, dims=1))
-    return H, H + E_H
-end
-
-"""
-Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
-
-Returns : macro_entropy, expectation_entropy, epistemic_uncertainty
-"""
-function uncertainties(prob_matrix::Matrix, n_output)
-    # println(size(prob_matrix))
-    mean_prob_per_class = vec(mean(prob_matrix, dims=2))
-    H = normalized_entropy(mean_prob_per_class, n_output)
-    E_H = mean(mapslices(x -> normalized_entropy(x, n_output), prob_matrix, dims=1))
-    # writedlm("./uncertainties.csv", [H E_H])
     return H, E_H, H - E_H
 end
 

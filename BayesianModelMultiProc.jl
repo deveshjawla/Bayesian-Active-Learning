@@ -68,6 +68,7 @@ weights is a vector of the sample weights according to their importance or propo
 """
 @model function classweightedBNN(x, y, location, scale, weights_vector)
 	θ ~ MvNormal(location, scale)
+	# θ ~ Product([Laplace(0,1) for _ in 1:num_params])
 	# @code_warntype feedforward(θ)
 	nn = feedforward(θ)
 	# nn = feedforward(θ_input, θ_hidden)

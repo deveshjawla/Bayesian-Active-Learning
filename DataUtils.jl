@@ -130,7 +130,6 @@ function pool_test_maker_xgb(pool::DataFrame, test::DataFrame, n_input::Int, n_o
     # test_x = minmaxscaling(test_x, pool_max, pool_mini)
     # test_x = standardize(test_x, pool_mean, pool_std)
 
-
     pool_y = permutedims(pool_y)
     test_y = permutedims(test_y)
     pool = (pool_x, pool_y)
@@ -154,16 +153,16 @@ function performance_stats(ground_truth_, predictions_)
     predictions = deepcopy(Int.(vec(predictions_)))
     ground_truth[ground_truth.==2] .= 0
     predictions[predictions.==2] .= 0
-    cm = ConfusionMatrix(ground_truth, predictions)
-    f1 = f1_score(cm)
-    mcc = matthews_correlation_coefficient(cm)
-    acc = accuracy(cm)
-    fpr = false_positive_rate(cm)
+    cm = EvalMetrics.ConfusionMatrix(ground_truth, predictions)
+    f1 = EvalMetrics.f1_score(cm)
+    mcc = EvalMetrics.matthews_correlation_coefficient(cm)
+    acc = EvalMetrics.accuracy(cm)
+    fpr = EvalMetrics.false_positive_rate(cm)
     # fnr = fnr(cm)
     # tpr = tpr(cm)
     # tnr = tnr(cm)
-    prec = precision(cm)
-    recall = true_positive_rate(cm)
+    prec = EvalMetrics.precision(cm)
+    recall = EvalMetrics.true_positive_rate(cm)
     threat_score = EvalMetrics.threat_score(cm)
     return acc, f1, mcc, fpr, prec, recall, threat_score, cm
 end

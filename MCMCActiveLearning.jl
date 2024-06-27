@@ -15,24 +15,24 @@
 
 using Distributed
 using Turing
-num_chains = 3
+num_chains = 2
 
-experiments = ["EvidentialMCMC"]
-datasets = ["iris1988"]#20, 20, 10, 10, 20, 20, 10, 40
+experiments = ["WeightedLikelihood"]
+datasets = ["iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
 minimum_training_sizes = [30, 296] #60, 60, 40, 40, 80, 100, 30, 296
-acquisition_sizes = round.(Int, minimum_training_sizes ./ 10)
-list_acq_steps = [10, 10]
+acquisition_sizes = round.(Int, minimum_training_sizes ./ 2)
+list_acq_steps = repeat([1],8)
 
 list_inout_dims = [(4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
 list_n_folds = [5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
 list_class_balancing = ["UnBalancedAcquisition"] #"BalancedBinaryAcquisition"
-list_prior_informativeness = ["NoInit"] # "UnInformedPrior", "InformedPrior", "NoInit"
+list_prior_informativeness = ["UnInformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood", "Regression"
-acq_functions = ["Random"] # "BayesianUncertainty", "Initial", "Random"
+acq_functions = ["Initial"] # "BayesianUncertainty", "Initial", "Random"
 # temperature = nothing, or a Float or list of nothing and Floats, nothing invokes a non-customised Likelihood in the @model
 temperatures = [nothing] # 1.0, 0.1, 0.001 or nothing
 
@@ -120,7 +120,7 @@ for experiment in experiments
                                         ###
                                         ### Dense Network specifications(Functional Model)
                                         ###
-                                        include(PATH * "/Network4layers.jl")
+                                        include(PATH * "/Network.jl")
 
                                         # n_hidden = n_input > 30 ? 30 : n_input
 
@@ -155,11 +155,10 @@ for experiment in experiments
                                             prior_std = prior_variance .* ones(num_params)
                                         else
                                             # GlorotNormal initialisation
-                                            # prior_std = sqrt.(2 .* vcat(2 / (n_input + l1) * ones(nl1), 2 / (l1 + l2) * ones(nl2), 2 / (l2 + n_output) * ones(n_output_layer)))
-                                            prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
+                                            prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer))
+                                            # prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
                                         end
                                     end
-
 
                                     let
                                         # for acquisition_size in acquisition_sizes
@@ -167,7 +166,7 @@ for experiment in experiments
 
                                         pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
                                         # pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(num_chains)_$(num_mcsteps)"
-                                        mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
+                                        # mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
                                         # mkpath("./Experiments/$(experiment)/$(pipeline_name)/hyperpriors")
                                         mkpath("./Experiments/$(experiment)/$(pipeline_name)/classification_performance")
                                         mkpath("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics")
@@ -244,7 +243,6 @@ for experiment in experiments
 
                                         begin
                                             performance_stats = Array{Any}(undef, 5, n_acq_steps)
-
                                             for al_step = 1:n_acq_steps
                                                 data = Array{Any}(undef, 5, num_chains)
                                                 for i = 1:num_chains
@@ -365,7 +363,6 @@ for experiment in experiments
             CSV.write("./Experiments/$(experiment)/mean_std_numerical_errors$(acquisition_function).csv", mean_std_numerical_errors)
         end
 
-
         # df = CSV.read("./Experiments/$(experiment)/df.csv", DataFrame, header=1)
 
         # df = filter(:AcquisitionFunction => !=("BayesianUncertainty"), df)
@@ -415,48 +412,46 @@ for experiment in experiments
 
 
         ### Loops when using Cross Validation for AL
-        begin
-            df_acc = DataFrame()
-            df_f1 = DataFrame()
+        # begin
+        #     df_acc = DataFrame()
+        #     df_f1 = DataFrame()
 
-            df_time = DataFrame()
-            for acq_func in acq_functions
-                df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(acq_func).csv", DataFrame, header=1)
-                df_f1_ = CSV.read("./Experiments/$(experiment)/mean_std_f1$(acq_func).csv", DataFrame, header=1)
+        #     df_time = DataFrame()
+        #     for acq_func in acq_functions
+        #         df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(acq_func).csv", DataFrame, header=1)
+        #         df_f1_ = CSV.read("./Experiments/$(experiment)/mean_std_f1$(acq_func).csv", DataFrame, header=1)
 
-                df_time_ = CSV.read("./Experiments/$(experiment)/mean_std_time$(acq_func).csv", DataFrame, header=1)
+        #         df_time_ = CSV.read("./Experiments/$(experiment)/mean_std_time$(acq_func).csv", DataFrame, header=1)
 
-                df_acc_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
-                df_f1_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
+        #         df_acc_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
+        #         df_f1_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
 
-                df_time_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
+        #         df_time_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
 
-                df_acc = vcat(df_acc, df_acc_)
-                df_f1 = vcat(df_f1, df_f1_)
+        #         df_acc = vcat(df_acc, df_acc_)
+        #         df_f1 = vcat(df_f1, df_f1_)
 
-                df_time = vcat(df_time, df_time_)
-            end
+        #         df_time = vcat(df_time, df_time_)
+        #     end
 
-            fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
-            fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+        #     fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+        #     fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
 
+        #     fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
 
+        #     fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+        #     fig1aa |> PDF("./Experiments/$(experiment)/F1_$(dataset)_$(experiment)_folds.pdf", dpi=600)
 
-            fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
+        #     fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=600)
 
-            fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-            fig1aa |> PDF("./Experiments/$(experiment)/F1_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+        #     df = DataFrame()
+        #     for fold in 1:n_folds
+        #         df_ = CSV.read("./Experiments/$(experiment)/auc_acq_$(fold).txt", DataFrame, header=false)
+        #         df = vcat(df, df_)
+        #     end
 
-            fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-
-            df = DataFrame()
-            for fold in 1:n_folds
-                df_ = CSV.read("./Experiments/$(experiment)/auc_acq_$(fold).txt", DataFrame, header=false)
-                df = vcat(df, df_)
-            end
-
-            mean_auc = combine(groupby(df, :Column1), :Column2 => mean, :Column2 => std, :Column3 => mean, :Column3 => std)
-            CSV.write("./Experiments/$(experiment)/mean_auc.txt", mean_auc, header=[:AcquisitionFunction, :AccAUC_mean, :AccAUC_std, :TimeAUC_mean, :TimeAUC_std])
-        end
+        #     mean_auc = combine(groupby(df, :Column1), :Column2 => mean, :Column2 => std, :Column3 => mean, :Column3 => std)
+        #     CSV.write("./Experiments/$(experiment)/mean_auc.txt", mean_auc, header=[:AcquisitionFunction, :AccAUC_mean, :AccAUC_std, :TimeAUC_mean, :TimeAUC_std])
+        # end
     end
 end

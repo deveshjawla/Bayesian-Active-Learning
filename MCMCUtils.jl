@@ -150,7 +150,8 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	elseif likelihood_name == "WeightedLikelihood" && temperature === nothing
 		@everywhere model = classweightedBNN(train_x, train_y, location, scale, sample_weights)
 	else
-		@everywhere model = BNN(train_x, train_y, location, scale)
+		nothing
+		# @everywhere model = BNN(train_x, train_y, location, scale)
 	end
 
 	if al_step==1 || prior_informativeness == "NoInit"
@@ -173,7 +174,7 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	# θ_input = MCMCChains.group(chains, :θ_input).value
 	# θ_hidden = MCMCChains.group(chains, :θ_hidden).value
 
-	burn_in = 0#Int(0.6*nsteps)
+	burn_in = Int(0.6*nsteps)
 	n_indep_samples = Int((nsteps-burn_in) / 10)
 	# hyperpriors_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters - lastindex(location))
 	param_matrices_accumulated = Array{Float32}(undef, n_chains*n_indep_samples, nparameters)
@@ -203,18 +204,18 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 
     	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess]], ',')
 
-		# lPlot = Plots.plot(chains[:lp], title="Log Posterior", label=:none)
-		df = DataFrame(chains)
-		df[!, :chain] = categorical(df.chain)
-		lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps)) # need to change :acceptance_rate to Log Posterior
-		# plt= Plots.plot(lPlot, size=(1600, 600))
-		# Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).pdf")
-		lPlot |> PDF("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.pdf", 800pt, 600pt)
+		# # lPlot = Plots.plot(chains[:lp], title="Log Posterior", label=:none)
+		# df = DataFrame(chains)
+		# df[!, :chain] = categorical(df.chain)
+		# lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps)) # need to change :acceptance_rate to Log Posterior
+		# # plt= Plots.plot(lPlot, size=(1600, 600))
+		# # Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).pdf")
+		# lPlot |> PDF("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.pdf", 800pt, 600pt)
 
-		lp, maxInd = findmax(chains[:lp])
-		params, internals = chains.name_map
-		bestParams = map(x -> chains[x].data[maxInd], params[1:nparameters])
-		map_params_accumulated[i, :] = bestParams
+		# lp, maxInd = findmax(chains[:lp])
+		# params, internals = chains.name_map
+		# bestParams = map(x -> chains[x].data[maxInd], params[1:nparameters])
+		# map_params_accumulated[i, :] = bestParams
 		# println(oob_rhat)
 
 		# hyperpriors_accumulated[(i-1)*size(independent_hyperprior_matrix)[1]+1:i*size(independent_hyperprior_matrix)[1],:] = independent_hyperprior_matrix

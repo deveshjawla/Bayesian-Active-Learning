@@ -22,8 +22,8 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     elseif al_sampling == "BayesianUncertainty"
         pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
         pool_scores = mapslices(x -> uncertainties(x, n_output), pool_prediction_matrix, dims=[1, 3])
-        aleatoric_uncertainties = map(x -> x[2], pool_scores[1, 1, :])
-        epistemic_uncertainties = map(x -> x[3], pool_scores[1, 1, :])
+        aleatoric_uncertainties = map(x -> x[2], pool_scores[1, :, 1])
+        epistemic_uncertainties = map(x -> x[3], pool_scores[1, :, 1])
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/aleatoric_uncertainties_$(al_step).csv", summary_stats(aleatoric_uncertainties), ',')
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/epistemic_uncertainties_$(al_step).csv", summary_stats(epistemic_uncertainties), ',')
         most_unambiguous_samples = top_k_acquisition(aleatoric_uncertainties, round(Int, acq_size_ * 0.2))
@@ -133,7 +133,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     # predictions_map = pred_analyzer_multiclass(test_x, independent_map_params)
 
 	# activations_weighted_sums(test_x[:,1], independent_param_matrix, "./Experiments/$(experiment)/$(pipeline_name)/", 3) # 3 is the number of layers
-    writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
+    # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
     # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$(al_step)_map.csv", predictions_map, ',')
     ŷ_test = permutedims(Int.(predictions[1, :]))
     # ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
