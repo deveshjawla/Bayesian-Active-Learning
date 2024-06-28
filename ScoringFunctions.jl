@@ -1,4 +1,4 @@
-function normalized_entropy(prob_vec::Vector, n_output)
+function normalized_entropy(prob_vec::Vector, n_output::Int64)::Float32
     if any(i -> i == 0, prob_vec)
         return 0
     elseif n_output == 1
@@ -15,7 +15,7 @@ Take Probability Matrix as an argument, whose dimensions are the length of the p
 
 Returns : H(macro_entropy)
 """
-function macro_entropy(prob_matrix::Matrix, n_output)
+function macro_entropy(prob_matrix::Matrix, n_output::Int64)::Float32
     # println(size(prob_matrix))
     mean_prob_per_class = vec(mean(prob_matrix, dims=2))
     H = normalized_entropy(mean_prob_per_class, n_output)
@@ -31,7 +31,7 @@ H - E_H is the Epistemic
 
 Returns : H (macro_entropy), E_H (mean of Entropies) is the Aleatoric, H - E_H(Epistemic unceratinty)
 """
-function bald(prob_matrix::Matrix, n_output)
+function bald(prob_matrix::Matrix, n_output::Int64)::Tuple{Float32, Float32, Float32}
     H = macro_entropy(prob_matrix, n_output)
     E_H = mean(mapslices(x -> normalized_entropy(x, n_output), prob_matrix, dims=1))
     return H, E_H, H - E_H
