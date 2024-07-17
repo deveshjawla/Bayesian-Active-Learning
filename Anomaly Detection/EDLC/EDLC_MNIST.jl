@@ -8,68 +8,80 @@ addprocs(8; exeflags=`--project`)
     PATH = @__DIR__
     cd(PATH)
 
-    function gendata(n)
-        x1 = randn(Float32, 2, n)
-        x2 = randn(Float32, 2, n) .+ [2, 2]
-        x3 = randn(Float32, 2, n) .+ [-2, 2]
-        y1 = vcat(ones(Float32, n), zeros(Float32, 2 * n))
-        y2 = vcat(zeros(Float32, n), ones(Float32, n), zeros(Float32, n))
-        y3 = vcat(zeros(Float32, n), zeros(Float32, n), ones(Float32, n))
-        hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
-    end
+    using MLDatasets
 
     # Generate data
-    n = 200
-    X, y = gendata(n)
+    trainset = MNIST(:train)
+    testset = MNIST(:test)
 
-    input_size = size(X)[1]
-    output_size = size(y)[1]
+    X_train, y_train = trainset[1:6000]
+	X_train = Flux.unsqueeze(X_train, 3)
+    y_train = Flux.onehotbatch(y_train, 0:9)
+    X_test, y_test = testset[:]
+	X_test = Flux.unsqueeze(X_test, 3)
+    y_test = Flux.onehotbatch(y_test, 0:9)
 
-    l1, l2 = 8, 8
-    nl1 = input_size * l1 + l1
-    nl2 = l1 * l2 + l2
-    n_output_layer = l2 * output_size #+ output_size
 
-    num_params = nl1 + nl2 + n_output_layer
+    input_size = size(X_train)[1]
+    output_size = size(y_train)[1]
 
     m = Chain(
-        Dense(input_size => 8, relu; bias=true),
-        Dense(8 => 8, relu; bias=true),
-        DIR(8 => output_size; bias=false)
+        # First convolution, operating upon a 28x28 image
+        Conv((3, 3), 1 => 8, pad=(1, 1), relu),
+        x -> maxpool(x, (2, 2)),
+
+        # Second convolution, operating upon a 14x14 image
+        Conv((3, 3), 8 => 8, pad=(1, 1), relu),
+        x -> maxpool(x, (2, 2)),
+
+        # Third convolution, operating upon a 7x7 image
+        Conv((3, 3), 8 => 8, pad=(1, 1), relu),
+        x -> maxpool(x, (2, 2)),
+
+        # Reshape 3d tensor into a 2d one, at this point it should be (3, 3, 32, N)
+        # which is where we get the 288 in the `Dense` layer below:
+        x -> reshape(x, :, size(x, 4)),
+        Dense(72=>10, relu),
+        Dense(10 => output_size),
+        # DIR(10 => output_size)
     )
 
+
     _, re = Flux.destructure(m)
+    num_params = 2_088
 
     function network_training(input_size, output_size; n_epochs, train_loader, sample_weights_loader)::Vector{Float32}
 
         # Define model
-        m = Chain(
-            Dense(input_size => 8, relu; bias=true),
-            Dense(8 => 8, relu; bias=true),
-            DIR(8 => output_size; bias=false)
-        )
+		m = Chain(
+			# First convolution, operating upon a 28x28 image
+			Conv((3, 3), 1 => 8, pad=(1, 1), relu),
+			x -> maxpool(x, (2, 2)),
+	
+			# Second convolution, operating upon a 14x14 image
+			Conv((3, 3), 8 => 8, pad=(1, 1), relu),
+			x -> maxpool(x, (2, 2)),
+	
+			# Third convolution, operating upon a 7x7 image
+			Conv((3, 3), 8 => 8, pad=(1, 1), relu),
+			x -> maxpool(x, (2, 2)),
+	
+			# Reshape 3d tensor into a 2d one, at this point it should be (3, 3, 32, N)
+			# which is where we get the 288 in the `Dense` layer below:
+			x -> reshape(x, :, size(x, 4)),
+			Dense(72=>10, relu),
+			Dense(10 => output_size),
+			# DIR(10 => output_size)
+		)
 
-        # m = Chain(
-        #     Parallel(vcat,
-        #         Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
-        #         Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
-        #         Dense(input_size => input_size, tanh; init=Flux.glorot_normal()),
-        #         Dense(input_size => input_size, sin; init=Flux.glorot_normal())),
-        # 		Parallel(vcat,
-        #         Dense(4*input_size => input_size, relu; init=Flux.glorot_normal()),
-        #         Dense(4*input_size => input_size, relu; init=Flux.glorot_normal()),
-        #         Dense(4*input_size => input_size, tanh; init=Flux.glorot_normal()),
-        #         Dense(4*input_size => input_size, sin; init=Flux.glorot_normal())),
-        #     DIR(4 * input_size => output_size)
-        # )
         opt = Flux.Optimise.AdaBelief()
         p = Flux.params(m)
 
-        # Train it
-        least_loss = Inf32
+		least_loss = Inf32
         last_improvement = 0
         optim_params = 0
 
+        # Train it
         epochs = n_epochs
         trnlosses = zeros(epochs)
         for e in 1:epochs
@@ -83,33 +95,33 @@ addprocs(8; exeflags=`--project`)
             # trnlosses[e] = trnloss
             # Flux.Optimise.update!(opt, p, grads)
 
-            loss = 0.0
+			loss = 0.0
             for (x, y) in train_loader
                 # Compute the loss and the gradients:
-                local l = 0.0
+				local l = 0.0
                 grads = Flux.gradient(p) do
-                    α = m(x)
-                    # trnloss = Flux.mse(y, α)
-                    l = dirloss(y, α, e)
-                    l
-                end
+					α = m(x)
+					l = Flux.logitcrossentropy(α, y)
+					# l = dirloss(y, α, e)
+					l
+				end
 
-                # Update the model parameters (and the Adam momenta):
-                Flux.Optimise.update!(opt, p, grads)
-                # Accumulate the mean loss, just for logging:
-                loss += l / length(train_loader)
+				# Update the model parameters (and the Adam momenta):
+				Flux.Optimise.update!(opt, p, grads)
+				# Accumulate the mean loss, just for logging:
+				loss += l / length(train_loader)
             end
-            trnlosses[e] = loss
+			trnlosses[e] = loss
 
-            if loss < least_loss
+			if loss < least_loss
                 # @info(" -> New minimum loss! Saving model weights")
-                optim_params, re = Flux.destructure(m)
+                optim_params, _ = Flux.destructure(m)
                 least_loss = loss
                 last_improvement = e
             end
 
-            # #If we haven't seen improvement in 5 epochs, drop our learning rate:
-            # if e - last_improvement >= 10 && opt.eta > 1e-6
+			# If we haven't seen improvement in 5 epochs, drop our learning rate:
+            # if e - last_improvement >= 10 && opt.eta > 1e-5
             #     new_eta = opt.eta / 10.0
             #     # @warn(" -> Haven't improved in a while, dropping learning rate to $(new_eta)!")
             #     opt = Flux.Optimise.AdaBelief(new_eta)
@@ -117,14 +129,14 @@ addprocs(8; exeflags=`--project`)
             #     last_improvement = e
             # end
 
-            # if e - last_improvement >= 30
+			# if e - last_improvement >= 10
             #     # @warn(" -> We're calling this converged.")
             #     break
             # end
 
         end
-        scatter(1:epochs, trnlosses, width=80, height=30)
-        savefig("./loss.pdf")
+		# scatter(1:epochs, trnlosses, width = 80, height = 30)
+		# savefig("./$(rand()).pdf")
 
         # optim_params, re = Flux.destructure(m)
         return optim_params
@@ -141,7 +153,7 @@ function parallel_network_training(input_size, output_size, n_networks, nparamet
     end
     return convert(Matrix{Float32}, param_matrices_accumulated)
 end
-function ensemble_training(num_params::Int, input_size::Int, output_size::Int, acq_size::Int, training_data; ensemble_size::Int=100, sample_weights=nothing, n_epochs=100)::Tuple{Array{Float32,2},Float32}
+function ensemble_training(num_params::Int, input_size::Int, output_size::Int, acq_size::Int, training_data; ensemble_size::Int=100, sample_weights=nothing, n_epochs=500)::Tuple{Array{Float32,2},Float32}
     train_x, train_y = training_data
 
     # train_y = Flux.onehotbatch(vec(train_y), 1:output_size)
@@ -185,7 +197,7 @@ function normalized_entropy(prob_vec::Vector, n_output)
     elseif sum(prob_vec) < 0.99
         return error("sum(prob_vec) is not 1 BUT $(sum(prob_vec)) and the prob_vector is $(prob_vec)")
     else
-        return (-sum(prob_vec .* log2.(prob_vec))) / log2(n_output)
+        return (-sum(prob_vec .* log.(prob_vec))) / log(n_output)
     end
 end
 
@@ -202,7 +214,7 @@ function macro_entropy(prob_matrix::Matrix, n_output)
 end
 
 """
-returns H, E_H, H + E_H
+return H, E_H, H + E_H
 """
 function bald(prob_matrix::Matrix, n_output)
     H = macro_entropy(prob_matrix, n_output)
@@ -210,7 +222,7 @@ function bald(prob_matrix::Matrix, n_output)
     return H, E_H, H + E_H
 end
 
-function pred_analyzer_multiclass(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
+function pred_analyzer_multiclass(reconstruct, test_xs::Array, params_set::Array)::Array{Float32,2}
     nets = map(reconstruct, eachrow(params_set))
     predictions_nets = map(x -> x(test_xs), nets)
     # predictions_nets = map(x -> x .+ 1, predictions_nets)
@@ -237,27 +249,11 @@ end
 # end
 
 
-param_matrix, elapsed = ensemble_training(num_params, input_size, output_size, 100, (X, y); ensemble_size=8, n_epochs=500)
-# pred_analyzer_multiclass(re, X, param_matrix)
+param_matrix, elapsed = ensemble_training(num_params, input_size, output_size, 100, (X_train, y_train); ensemble_size=7, n_epochs = 500)
 
-xs = Float32.(-10:0.1:10)
-ys = Float32.(-10:0.1:10)
-heatmap(xs, ys, (x, y) -> pred_analyzer_multiclass(re, reshape([x, y], (:, 1)), param_matrix)[2]) #plots the outlier probabilities
-scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1")
-scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2")
-scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3")
-savefig("./EDLC_relu_ensemble.pdf")
 
-# scatter(1:epochs, trnlosses, width=80, height=30)
+# Test predictions
+ŷ_u = pred_analyzer_multiclass(re, X_test, param_matrix)
 
-# # Test predictions
-# α̂ = m(X)
-# ŷ = α̂ ./ sum(α̂, dims=1)
-# u = uncertainty(α̂)
-
-# # Show epistemic uncertainty
-# heatmap(-7:0.1:7, -7:0.1:7, (x, y) -> uncertainty(m(vcat(x, y)))[1])
-# scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1")
-# scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2")
-# scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3")
-# savefig("./relu_edlc.pdf")
+using StatisticalMeasures: accuracy
+println(accuracy(ŷ_u[1,:], Flux.onecold(y_test)))

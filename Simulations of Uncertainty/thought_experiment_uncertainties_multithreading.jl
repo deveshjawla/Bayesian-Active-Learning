@@ -2,8 +2,9 @@ using Statistics, DataFrames
 using StaticArrays
 using CSV, DataFrames, ProgressMeter
 using Plots
+using DelimitedFiles
 
-function fast_var_aleatoric(AvgEntropyCorrect::Float16, AvgEntropyInCorrect::Float16, PctCorrectByMembers::SMatrix, TotalSamples)::Float16
+function fast_var_aleatoric(AvgEntropyCorrect::Float16, AvgEntropyInCorrect::Float16, PctCorrectByMembers::SMatrix, TotalSamples::Int)::Float16
     len_correct = round(Int, PctCorrectByMembers[1] * TotalSamples)
     len_incorrect = round(Int, PctCorrectByMembers[2] * TotalSamples)
     total_len = len_correct + len_incorrect
@@ -28,7 +29,7 @@ function normalized_entropy(prob_vec::SVector, n_output::Int64)::Float16
     elseif sum(prob_vec) < 0.99
         return error("sum(prob_vec) is not 1 BUT $(sum(prob_vec)) and the prob_vector is $(prob_vec)")
     else
-        return (-sum(prob_vec .* log2.(prob_vec))) / log2(n_output)
+        return (-sum(prob_vec .* log.(prob_vec))) / log(n_output)
     end
 end
 
@@ -89,7 +90,7 @@ function neither_argmax_nor_argmin(A::Vector{<:Number})::Union{Vector{Int64},Not
     end
 end
 
-function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64)::Array{Float16,2}
+function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64, case::Int)::Tuple{Matrix{Float16}, Int64}
     if num_Categories == 2
         Possible_Ratio_Pred_CorrectInCorrect = [[i j] for i in 0:TotalSamples, j in 0:TotalSamples if sum([i, j]) == TotalSamples]
     elseif num_Categories == 3
@@ -148,7 +149,6 @@ function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64)::Arra
         end
     end
 
-    Cases = [1, 2, 3] #:Correct_Maj, :Correct_Min, :Correct_Eq
     C_Maj = convert(Vector{SMatrix{1,num_Categories,Float16,num_Categories}}, filter(x -> only_one_argmax(vec(x)) == 1, Possible_Ratio_Pred_CorrectInCorrect) ./ TotalSamples) #Majority of the ensemble mebers vote as correct
     C_Min = convert(Vector{SMatrix{1,num_Categories,Float16,num_Categories}}, filter(x -> only_one_argmax(vec(x)) != 1 && only_one_argmax(vec(x)) !== nothing, Possible_Ratio_Pred_CorrectInCorrect) ./ TotalSamples)
     C_Eq = convert(Vector{SMatrix{1,num_Categories,Float16,num_Categories}}, filter(x -> !isnothing(neither_argmax_nor_argmin(vec(x))), Possible_Ratio_Pred_CorrectInCorrect) ./ TotalSamples)
@@ -156,9 +156,7 @@ function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64)::Arra
     List_AverageSoftmaxofCorrect = deepcopy(C_Maj)
     List_AverageSoftmaxofInCorrect = deepcopy(C_Min)
 
-    total_cases = (lastindex(C_Maj, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1)) + (lastindex(C_Min, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1)) + (lastindex(C_Eq, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1))
-
-	@info "Total Samples are the total number of cases = $(total_cases)"
+    # total_cases = (lastindex(C_Maj, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1)) + (lastindex(C_Min, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1)) + (lastindex(C_Eq, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1))
 
     # list_ = Tuple{Int64, SMatrix{1, num_Categories, Float16, num_Categories}, SMatrix{1, num_Categories, Float16, num_Categories}, SMatrix{1, num_Categories, Float16, num_Categories}}[]
     # list_ = []
@@ -177,27 +175,40 @@ function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64)::Arra
     # end
 
     # Assuming C_Maj, C_Min, and C_Eq are predefined arrays or values
-    Ratios = Dict(1 => C_Maj, 2 => C_Min, 3 => C_Eq)
-    list_ = Vector{Tuple{Int64,SMatrix{1,num_Categories,Float16,num_Categories},SMatrix{1,num_Categories,Float16,num_Categories},SMatrix{1,num_Categories,Float16,num_Categories}}}(undef, total_cases)
+
+    if case == 1
+        Ratio = C_Maj
+    elseif case == 2
+        Ratio = C_Min
+    elseif case == 3
+        Ratio = C_Eq
+    end
+
+    total_cases = (lastindex(Ratio, 1) * lastindex(List_AverageSoftmaxofCorrect, 1) * lastindex(List_AverageSoftmaxofInCorrect, 1))
+    @info "Total Samples are the total number of cases = $(total_cases)"
+
+
+    # Ratios = Dict(1 => C_Maj, 2 => C_Min, 3 => C_Eq)
+    list_ = Vector{Tuple{SMatrix{1,num_Categories,Float16,num_Categories},SMatrix{1,num_Categories,Float16,num_Categories},SMatrix{1,num_Categories,Float16,num_Categories}}}(undef, total_cases)
     index = 1
-    for case in Cases
-        Ratio = Ratios[case]
-        for PctCorrectByMembers in Ratio
-            for AverageSoftmaxofCorrect in List_AverageSoftmaxofCorrect
-                for AverageSoftmaxofInCorrect in List_AverageSoftmaxofInCorrect
-                    list_[index] = (case, PctCorrectByMembers, AverageSoftmaxofCorrect, AverageSoftmaxofInCorrect)
-                    index += 1
-                end
+    # for case in Cases
+    # Ratio = Ratios[case]
+    for PctCorrectByMembers in Ratio
+        for AverageSoftmaxofCorrect in List_AverageSoftmaxofCorrect
+            for AverageSoftmaxofInCorrect in List_AverageSoftmaxofInCorrect
+                list_[index] = (PctCorrectByMembers, AverageSoftmaxofCorrect, AverageSoftmaxofInCorrect)
+                index += 1
             end
         end
     end
+    # end
     # array_size_MB = Base.summarysize(list_)*1e-6
 
-    empty_matrix = Matrix{Float16}(undef, total_cases, 8)
+    empty_matrix = Matrix{Float16}(undef, total_cases, 7)
     # array_size_GB = Base.summarysize(empty_matrix)*1e-9
 
     @showprogress Threads.@threads for i = 1:total_cases
-        case, PctCorrectByMembers, AverageSoftmaxofCorrect, AverageSoftmaxofInCorrect = list_[i]
+        PctCorrectByMembers, AverageSoftmaxofCorrect, AverageSoftmaxofInCorrect = list_[i]
         PctCorrectByMembers = SMatrix{1,2,Float16,2}(PctCorrectByMembers[1], 1 - PctCorrectByMembers[1])
         AverageSoftmax = PctCorrectByMembers * vcat(AverageSoftmaxofCorrect, AverageSoftmaxofInCorrect)
         TotalUncertainty = normalized_entropy(vec(AverageSoftmax), num_Categories)
@@ -206,16 +217,16 @@ function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64)::Arra
         Aleatoric = PctCorrectByMembers * vcat(AvgEntropyCorrect, AvgEntropyInCorrect)
         VarAleatoric = fast_var_aleatoric(AvgEntropyCorrect, AvgEntropyInCorrect, PctCorrectByMembers, TotalSamples)
         Epistemic = TotalUncertainty - first(Aleatoric)
-        empty_matrix[i, :] = [case first(PctCorrectByMembers) AvgEntropyCorrect AvgEntropyInCorrect TotalUncertainty first(Aleatoric) Epistemic VarAleatoric]
+        empty_matrix[i, :] = [first(PctCorrectByMembers) AvgEntropyCorrect AvgEntropyInCorrect TotalUncertainty first(Aleatoric) Epistemic VarAleatoric]
     end
-    return empty_matrix
+    return empty_matrix, total_cases
 end
 
 function plotter(cr::Matrix{Float32}, num_Categories::Int, TotalSamples::Int, case, cols::Vector)::Nothing
     (n, m) = size(cr)
     heatmap([i > j ? NaN : cr[i, j] for i in 1:m, j in 1:n], fc=cgrad([:red, :white, :dodgerblue4]), clim=(-1.0, 1.0), xticks=(1:m, cols), xrot=90, yticks=(1:m, cols), yflip=true, dpi=600, size=(800, 700), title="NumCategories=$(num_Categories) TotalSamples=$(TotalSamples) Case=$(case)")
     annotate!([(j, i, text(round(cr[i, j], digits=3), 10, "Computer Modern", :black)) for i in 1:n for j in 1:m])
-    savefig("./pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).png")
+    savefig("./Simulations of Uncertainty/$(TotalSamples) Samples/pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).png")
     return nothing
 end
 
@@ -223,45 +234,26 @@ end
 
 ##================================================================
 
-List_TotalCategories = [3]
-TotalSamples = 50
-elapsed = 698.7132405
+List_TotalCategories = [3, 4]
+List_TotalSamples = [100]
 using DelimitedFiles
-
+Cases = [1,2,3] #:Correct_Maj, :Correct_Min, :Correct_Eq
 for num_Categories in List_TotalCategories
-    # @info "Now running simulations for $(num_Categories) Categories!"
-    # results_timed = @timed analyse_uncertainties(TotalSamples, num_Categories)
-    # elapsed = results_timed.time
-    # names = [:Case, :PctCorrectByMembers, :AvgEntropyCorrect, :AvgEntropyInCorrect, :TotalUncertainty, :Aleatoric, :Epistemic, :VarAleatoric]
-    # results = DataFrame(results_timed.value, names)
-    # CSV.write("./unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Elapsed_$(elapsed)seconds.csv", results)
-
-    results = CSV.read("./unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Elapsed_$(elapsed)seconds.csv", DataFrame; types=[Float16, Float16, Float16, Float16, Float16, Float16, Float16, Float16], delim=',', silencewarnings=true)
-	
-    cols = [:PctCorrectByMembers, :AvgEntropyCorrect, :AvgEntropyInCorrect, :TotalUncertainty, :Aleatoric, :Epistemic, :VarAleatoric]
-    
-	case = "All"
-    M = Matrix{Float32}(results[!, cols])
-    results = nothing
-    GC.gc(true)
-    M = cor(M)
-    writedlm("./pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).csv", M, ',')
-    # M=readdlm("./pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).csv", ',', Float32)
-    plotter(M, num_Categories, TotalSamples, case, cols)
-
-    results = CSV.read("./unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Elapsed_$(elapsed)seconds.csv", DataFrame; types=[Float16, Float16, Float16, Float16, Float16, Float16, Float16, Float16], delim=',', silencewarnings=true)
-
-    groups = groupby(results, :Case)
-    results = nothing
-    GC.gc(true)
-
-    for df in groups
-        M = Matrix{Float32}(df[!, cols])
-        case = first(df).Case
-        df = nothing
-        GC.gc(true)
-        M = cor(M)
-        writedlm("./pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).csv", M, ',')
-        plotter(M, num_Categories, TotalSamples, case, cols)
+    for TotalSamples in List_TotalSamples
+        for case in Cases
+            @info "Now running simulations for $(num_Categories) Categories! and Case = $(case)"
+            results_timed = @timed analyse_uncertainties(TotalSamples, num_Categories, case)
+            elapsed = results_timed.time
+			M, total_permutations = results_timed.value
+            # writedlm("./Simulations of Uncertainty/$(TotalSamples) Samples/unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case)_TotalPermutations=$(total_permutations)_Elapsed=$(elapsed)seconds.csv", M, ',')
+			# results = readdlm("./unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case)_TotalPermutations=$(total_permutations)_Elapsed=$(elapsed)seconds.csv", ',', Float32)
+			mkpath("./Simulations of Uncertainty/$(TotalSamples) Samples")
+			M = convert(Matrix{Float32}, M)
+            cols = [:PctCorrectByMembers, :AvgEntropyCorrect, :AvgEntropyInCorrect, :TotalUncertainty, :Aleatoric, :Epistemic, :VarAleatoric]
+            M = cor(M)
+            writedlm("./Simulations of Uncertainty/$(TotalSamples) Samples/pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(Float16(case)).csv", M, ',')
+            # M=readdlm("./pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).csv", ',', Float32)
+            plotter(M, num_Categories, TotalSamples, case, cols)
+        end
     end
 end

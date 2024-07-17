@@ -1,4 +1,4 @@
-function normalized_entropy(prob_vec::Vector, n_output::Int64)::Float32
+function normalized_entropy10(prob_vec::Vector, n_output::Int64)::Float32
     if any(i -> i == 0, prob_vec)
         return 0
     elseif n_output == 1
@@ -6,7 +6,7 @@ function normalized_entropy(prob_vec::Vector, n_output::Int64)::Float32
     elseif sum(prob_vec) < 0.99
         return error("sum(prob_vec) is not 1 BUT $(sum(prob_vec)) and the prob_vector is $(prob_vec)")
     else
-        return (-sum(prob_vec .* log2.(prob_vec))) / log2(n_output)
+        return (-sum(prob_vec .* log10.(prob_vec))) / log10(n_output)
     end
 end
 

@@ -118,7 +118,7 @@ function normalized_entropy(prob_vec::Vector, n_output)
     elseif sum(prob_vec) < 0.99
         return error("sum(prob_vec) is not 1 BUT $(sum(prob_vec)) and the prob_vector is $(prob_vec)")
     else
-        return (-sum(prob_vec .* log2.(prob_vec))) / log2(n_output)
+        return (-sum(prob_vec .* log.(prob_vec))) / log(n_output)
     end
 end
 
