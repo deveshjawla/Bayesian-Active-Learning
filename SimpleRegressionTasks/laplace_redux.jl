@@ -12,27 +12,6 @@ experiment = "DeepEnsembleWithGlorotNormal"
 activation_function = "mixed"
 function_names = ["Cosine", "Polynomial", "Exponential", "Logarithmic", "sin(pisin)"]#  "Cosine", "Polynomial", "Exponential", "Logarithmic","sin(pisin)"
 
-"""
-    Returns a matrix of size { 2 (mean, std), n_samples }
-    """
-    function pred_regression(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
-        n_samples = size(test_xs)[2]
-        ensemble_size = size(params_set)[1]
-        pred_matrix = Array{Float32}(undef, 2, n_samples)
-        for i = 1:n_samples
-            predictions = []
-            for j = 1:ensemble_size
-                model = reconstruct(params_set[j, :])
-                ŷ = model(test_xs[:, i])
-                append!(predictions, ŷ)
-            end
-            mean_ = mean(predictions)
-            std_ = std(predictions)
-            pred_matrix[:, i] = [mean_, std_]
-        end
-        return pred_matrix
-    end
-
 function nn_without_dropout(input_size, output_size)
     return Chain(
         Parallel(vcat, Dense(input_size => input_size, identity; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(input_size => input_size, tanh; init=Flux.glorot_normal())),

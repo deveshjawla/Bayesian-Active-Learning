@@ -110,17 +110,6 @@ optimize_prior!(la; verbose=true, n_steps=100)
 # mapslices(x->1-maximum(x), predict_la, dims=1)
 # entropies = mapslices(x -> normalized_entropy(x, output_size), predict_la, dims=1)
 
-function normalized_entropy(prob_vec::Vector, n_output)
-    if any(i -> i == 0, prob_vec)
-        return 0
-    elseif n_output == 1
-        return error("n_output is $(n_output)")
-    elseif sum(prob_vec) < 0.99
-        return error("sum(prob_vec) is not 1 BUT $(sum(prob_vec)) and the prob_vector is $(prob_vec)")
-    else
-        return (-sum(prob_vec .* log.(prob_vec))) / log(n_output)
-    end
-end
 
 xs = -7.0f0:0.10f0:7.0f0
 ys = -7.0f0:0.10f0:7.0f0

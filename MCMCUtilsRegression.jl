@@ -4,7 +4,11 @@ Returns a tuple of {Prediction, Prediction probability}
 Uses a simple argmax and percentage of samples in the ensemble respectively
 """
 function pred_analyzer_regression(test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Tuple{Array{Float32,2}, Array{Float32,2}}
-    nets = map(feedforward, eachrow(params_set))
+    if isnothing(reconstruct) 
+    	nets = map(feedforward, eachrow(param_matrix))
+	else
+		nets = map(reconstruct, eachrow(params_set))
+	end
     predictions_nets = map(x -> x(test_xs), nets)
     predictions = permutedims(reduce(vcat, predictions_nets))
     pred_matrix_mean = mapslices(mean, predictions, dims=2)

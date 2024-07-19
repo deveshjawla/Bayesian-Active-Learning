@@ -1,39 +1,3 @@
-function majority_voting(predictions::AbstractVector)::Vector{Float32}
-	count_map = countmap(predictions)
-	# println(count_map)
-	uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
-	index_max = argmax(nUniques)
-	prediction = uniques[index_max]
-	pred_probability = maximum(nUniques) / sum(nUniques)
-	return [prediction, pred_probability]
-end
-
-"""
-Returns a tuple of {Prediction, Prediction probability}
-
-Uses a simple argmax and percentage of samples in the ensemble respectively
-"""
-function pred_analyzer_multiclass(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
-	nets = map(reconstruct, eachrow(params_set))
-	predictions_nets = map(x-> x(test_xs), nets)
-	ensembles = map(x-> map(argmax, eachcol(x)), predictions_nets)
-	predictions = permutedims(reduce(hcat, ensembles))
-	pred_matrix= mapslices(majority_voting, predictions, dims =1)
-    return pred_matrix
-end
-
-"""
-Returns a matrix of size { 2 (mean, std), n_samples }
-"""
-function pred_regression(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
-	nets = map(reconstruct, eachrow(params_set))
-	predictions_nets = map(x-> x(test_xs), nets)
-	predictions = reduce(vcat, predictions_nets)
-	predictions_means = mapslices(mean, predictions, dims =1)
-	predictions_stds = mapslices(std, predictions, dims =1)
-	pred_matrix = vcat(predictions_means, predictions_stds)
-    return pred_matrix
-end
 
 """
 Returns a matrix of dims (n_output, ensemble_size, n_samples)

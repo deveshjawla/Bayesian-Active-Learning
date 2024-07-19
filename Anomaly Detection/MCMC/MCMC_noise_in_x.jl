@@ -102,23 +102,10 @@ function majority_voting(predictions::AbstractVector)::Vector{Float64}
     index_max = argmax(nUniques)
     prediction = uniques[index_max]
     pred_probability = maximum(nUniques) / sum(nUniques)
-    return [prediction, 1 - pred_probability] # 1 -  => give the unceratinty
+    return [prediction, 1 - pred_probability] # 1 - pred_probability => give the unceratinty
 end
 
 uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
-
-# function pred_analyzer_multiclass(test_xs::Array{Float64,2}, params_set::Array{Float64,2})::Array{Float64,2}
-#     nets = map(feedforward, eachrow(params_set))
-#     predictions_nets = map(x -> x(test_xs), nets)
-#     # predictions_nets = map(x -> x .+ 1, predictions_nets)
-#     ŷ_prob = map(x -> mapslices(y -> y ./ sum(y), x, dims=1), predictions_nets) #ŷ
-#     u = mapreduce(x -> mapreduce(uncertainty, hcat, eachcol(x)), vcat, predictions_nets)
-#     ŷ_label = mapreduce(x -> mapreduce(argmax, hcat, eachcol(x)), vcat, ŷ_prob)
-#     pred_plus_std = mapslices(majority_voting, ŷ_label, dims=1)
-#     u_plus_std = mapslices(x -> [mean(x), std(x)], u, dims=1)
-#     pred_matrix = vcat(pred_plus_std, u_plus_std)
-#     return pred_matrix[[1, 3], :]
-# end
 
 function normalized_entropy(prob_vec::Vector, n_output)::Float64
     sum_probs = sum(prob_vec)
@@ -138,7 +125,7 @@ Take Probability Matrix as an argument, whose dimensions are the length of the p
 
 Returns : H(macro_entropy)
 """
-function macro_entropy(prob_matrix::Matrix, n_output)
+function macro_entropy(prob_matrix::Matrix, n_output)::Float32
     # println(size(prob_matrix))
     mean_prob_per_class = vec(mean(prob_matrix, dims=2))
     H = normalized_entropy(mean_prob_per_class, n_output)
@@ -146,7 +133,13 @@ function macro_entropy(prob_matrix::Matrix, n_output)
 end
 
 """
-return H, E_H, H + E_H
+Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
+
+The H is the Total Uncertainty
+E_H is the Aleatoric
+H - E_H is the Epistemic
+
+Returns : H (macro_entropy), E_H (mean of Entropies) is the Aleatoric, H - E_H(Epistemic unceratinty)
 """
 function bald(prob_matrix::Matrix, n_output)
     H = macro_entropy(prob_matrix, n_output)
@@ -154,10 +147,18 @@ function bald(prob_matrix::Matrix, n_output)
     return H, E_H, H - E_H
 end
 
-function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array{Float64,2}, noise_set)::Array{Float64,2}
-    nets = map(feedforward, eachrow(param_matrix))
+function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array{Float64,2}, noise_set; reconstruct=nothing)::Array{Float64,2}
+	if isnothing(reconstruct) 
+    	nets = map(feedforward, eachrow(param_matrix))
+	else
+		nets = map(reconstruct, eachrow(params_set))
+	end
     # predictions_nets = map(x -> softmax(x(test_xs)), nets)
     predictions_nets = map((x, y) -> x(test_xs .+ y) ./ sum(x(test_xs .+ y), dims=1), nets, noise_set)
+
+	# predictions_nets = map(x -> x(test_xs), nets)
+    # # predictions_nets = map(x -> x .+ 1, predictions_nets)
+    # ŷ_prob = map(x -> mapslices(y -> y ./ sum(y), x, dims=1), predictions_nets) #ŷ
 
     # Determine the size of the final 3D array
     num_matrices = length(predictions_nets)
@@ -172,29 +173,33 @@ function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array
     end
 
     mean_pred_matrix = mapslices(x -> mean(x, dims=2), pred_matrix, dims=[1, 3])
-    # std_pred_matrix = mapslices(x -> std(x, dims=2), pred_matrix, dims=[1, 3])
+    std_pred_matrix = mapslices(x -> std(x, dims=2), pred_matrix, dims=[1, 3])
     bald_scores = mapslices(x -> bald(x, first(size(x))), pred_matrix, dims=[1, 3])
     aleatoric_uncertainties = mapreduce(x -> x[2], hcat, bald_scores[1, :, 1])
     epistemic_uncertainties = mapreduce(x -> x[3], hcat, bald_scores[1, :, 1])
     total_uncertainties = mapreduce(x -> x[1], hcat, bald_scores[1, :, 1])
 
-    ensembles = mapreduce(x -> mapslices(argmax, x, dims=1), vcat, predictions_nets)
-    pred_plus_std = mapslices(majority_voting, ensembles, dims=1)
+    # ensembles = mapreduce(x -> mapslices(argmax, x, dims=1), vcat, predictions_nets)
+    # pred_plus_std = mapslices(majority_voting, ensembles, dims=1)
 
-    # pred_label = map(argmax, eachcol(mean_pred_matrix[:, :, 1]))
-    # confidence = map(maximum, eachcol(mean_pred_matrix[:, :, 1]))
-    # pred_plus_std = vcat(permutedims(pred_label), permutedims(confidence))
+    pred_label = map(argmax, eachcol(mean_pred_matrix[:, :, 1]))
+    pred_prob = map(maximum, eachcol(mean_pred_matrix[:, :, 1]))
+    pred_std = [std_pred_matrix[x, i, 1] for (i,x) in enumerate(pred_label)]
+    pred_plus_std = vcat(permutedims(pred_label), permutedims(pred_prob), permutedims(pred_std))
 
     pred_matrix = vcat(pred_plus_std, aleatoric_uncertainties, epistemic_uncertainties, total_uncertainties)
     return pred_matrix#[[1, 4], :]#3,4,5
 end
 
-ŷ = pred_analyzer_multiclass(test_X, param_matrix, noise_set)[1,:]
+ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set)
+ŷ = ŷ_uncertainties[1,:]
 @info "Accuracy is" mean(test_Y.==ŷ)
 
-xs = Float64.(-5:0.1:5)
-ys = Float64.(-5:0.1:5)
-heatmap(xs, ys, (x, y) -> pred_analyzer_multiclass(reshape([x, y], (:, 1)), param_matrix, noise_set)[4]) #plots the outlier probabilities
+test = pred_analyzer_multiclass(reshape([0.0,0.0], (:, 1)), param_matrix, noise_set)
+
+xs = Float64.(-10:0.5:10)
+ys = Float64.(-10:0.5:10)
+heatmap(xs, ys, (x, y) -> pred_analyzer_multiclass(reshape([x, y], (:, 1)), param_matrix, noise_set)[3]) #plots the outlier probabilities
 scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1")
 scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2")
 scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3")

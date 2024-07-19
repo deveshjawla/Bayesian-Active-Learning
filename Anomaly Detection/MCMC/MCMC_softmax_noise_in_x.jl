@@ -8,15 +8,7 @@ using Statistics
 PATH = @__DIR__
 cd(PATH)
 
-function gendata(n)
-    x1 = randn(Float64, 2, n)
-    x2 = randn(Float64, 2, n) .+ [2, 2]
-    x3 = randn(Float64, 2, n) .+ [-2, 2]
-    y1 = vcat(ones(Float64, n), zeros(Float64, 2 * n))
-    y2 = vcat(zeros(Float64, n), ones(Float64, n), zeros(Float64, n))
-    y3 = vcat(zeros(Float64, n), zeros(Float64, n), ones(Float64, n))
-    hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
-end
+
 
 # Generate data
 n = 20
@@ -95,100 +87,15 @@ param_matrix = mapreduce(permutedims, vcat, params_set)
 noise_set = collect.(Float64, eachrow(noises[:, :, 1]))
 noise_matrix = mapreduce(permutedims, vcat, noise_set)
 
-using StatsBase: countmap
-function majority_voting(predictions::AbstractVector)::Vector{Float64}
-    count_map = countmap(predictions)
-    # println(count_map)
-    uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
-    index_max = argmax(nUniques)
-    prediction = uniques[index_max]
-    pred_probability = maximum(nUniques) / sum(nUniques)
-    return [prediction, 1 - pred_probability] # 1 -  => give the unceratinty
-end
+
 
 uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
 
-# function pred_analyzer_multiclass(test_xs::Array{Float64,2}, params_set::Array{Float64,2})::Array{Float64,2}
-#     nets = map(feedforward, eachrow(params_set))
-#     predictions_nets = map(x -> x(test_xs), nets)
-#     # predictions_nets = map(x -> x .+ 1, predictions_nets)
-#     ŷ_prob = map(x -> mapslices(y -> y ./ sum(y), x, dims=1), predictions_nets) #ŷ
-#     u = mapreduce(x -> mapreduce(uncertainty, hcat, eachcol(x)), vcat, predictions_nets)
-#     ŷ_label = mapreduce(x -> mapreduce(argmax, hcat, eachcol(x)), vcat, ŷ_prob)
-#     pred_plus_std = mapslices(majority_voting, ŷ_label, dims=1)
-#     u_plus_std = mapslices(x -> [mean(x), std(x)], u, dims=1)
-#     pred_matrix = vcat(pred_plus_std, u_plus_std)
-#     return pred_matrix[[1, 3], :]
-# end
 
-function normalized_entropy(prob_vec::Vector, n_output)::Float64
-    sum_probs = sum(prob_vec)
-    if any(i -> i == 0, prob_vec)
-        return 0
-    elseif n_output == 1
-        return error("n_output is $(n_output)")
-    elseif sum_probs < 0.99999 || sum_probs > 1.00001
-        return error("sum(prob_vec) is not 1 BUT $(sum_probs) and the prob_vector is $(prob_vec)")
-    else
-        return (-sum(prob_vec .* log.(prob_vec))) / log(n_output)
-    end
-end
 
-"""
-Take Probability Matrix as an argument, whose dimensions are the length of the probability vector, total number of runs(samples from MC Chain, or MC dropout models)
 
-Returns : H(macro_entropy)
-"""
-function macro_entropy(prob_matrix::Matrix, n_output)
-    # println(size(prob_matrix))
-    mean_prob_per_class = vec(mean(prob_matrix, dims=2))
-    H = normalized_entropy(mean_prob_per_class, n_output)
-    return H
-end
 
-"""
-return H, E_H, H + E_H
-"""
-function bald(prob_matrix::Matrix, n_output)
-    H = macro_entropy(prob_matrix, n_output)
-    E_H = mean(mapslices(x -> normalized_entropy(x, n_output), prob_matrix, dims=1))
-    return H, E_H, H - E_H
-end
 
-function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array{Float64,2}, noise_set)::Array{Float64,2}
-    nets = map(feedforward, eachrow(param_matrix))
-    # predictions_nets = map(x -> softmax(x(test_xs)), nets)
-    predictions_nets = map((x, y) -> x(test_xs .+ y), nets, noise_set)
-
-    # Determine the size of the final 3D array
-    num_matrices = length(predictions_nets)
-    rows, cols = size(predictions_nets[1])
-
-    # Preallocate the 3D array
-    pred_matrix = Array{Float64}(undef, rows, cols, num_matrices)
-
-    # Fill the preallocated array
-    for i in 1:num_matrices
-        pred_matrix[:, :, i] = predictions_nets[i]
-    end
-
-    mean_pred_matrix = mapslices(x -> mean(x, dims=2), pred_matrix, dims=[1, 3])
-    # std_pred_matrix = mapslices(x -> std(x, dims=2), pred_matrix, dims=[1, 3])
-    bald_scores = mapslices(x -> bald(x, first(size(x))), pred_matrix, dims=[1, 3])
-    aleatoric_uncertainties = mapreduce(x -> x[2], hcat, bald_scores[1, :, 1])
-    epistemic_uncertainties = mapreduce(x -> x[3], hcat, bald_scores[1, :, 1])
-    total_uncertainties = mapreduce(x -> x[1], hcat, bald_scores[1, :, 1])
-
-    ensembles = mapreduce(x -> mapslices(argmax, x, dims=1), vcat, predictions_nets)
-    pred_plus_std = mapslices(majority_voting, ensembles, dims=1)
-
-    # pred_label = map(argmax, eachcol(mean_pred_matrix[:, :, 1]))
-    # confidence = map(maximum, eachcol(mean_pred_matrix[:, :, 1]))
-    # pred_plus_std = vcat(permutedims(pred_label), permutedims(confidence))
-
-    pred_matrix = vcat(pred_plus_std, aleatoric_uncertainties, epistemic_uncertainties, total_uncertainties)
-    return pred_matrix#[[1, 4], :]#3,4,5
-end
 
 ŷ = pred_analyzer_multiclass(test_X, param_matrix, noise_set)[1,:]
 @info "Accuracy is" mean(test_Y.==ŷ)

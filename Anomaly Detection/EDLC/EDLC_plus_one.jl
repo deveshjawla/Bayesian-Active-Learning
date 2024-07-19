@@ -119,41 +119,6 @@ function ensemble_training(num_params::Int, input_size::Int, output_size::Int, a
 end
 
 using Statistics
-using StatsBase: countmap
-function majority_voting(predictions::AbstractVector)::Vector{Float32}
-    count_map = countmap(predictions)
-    # println(count_map)
-    uniques, nUniques = collect(keys(count_map)), collect(values(count_map))
-    index_max = argmax(nUniques)
-    prediction = uniques[index_max]
-    pred_probability = maximum(nUniques) / sum(nUniques)
-    return [prediction, 1 - pred_probability] # 1 -  => give the unceratinty
-end
-
-uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
-
-function pred_analyzer_multiclass(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2})::Array{Float32,2}
-    nets = map(reconstruct, eachrow(params_set))
-    predictions_nets = map(x -> x(test_xs), nets)
-    # predictions_nets = map(x -> x .+ 1, predictions_nets)
-    ŷ_prob = map(x -> mapslices(y -> y ./ sum(y), x, dims=1), predictions_nets) #ŷ
-    u = mapreduce(x -> mapreduce(uncertainty, hcat, eachcol(x)), vcat, predictions_nets)
-    ŷ_label = mapreduce(x -> mapreduce(argmax, hcat, eachcol(x)), vcat, ŷ_prob)
-    pred_plus_std = mapslices(majority_voting, ŷ_label, dims=1)
-    u_plus_std = mapslices(x -> [mean(x), std(x)], u, dims=1)
-    pred_matrix = vcat(pred_plus_std, u_plus_std)
-    return pred_matrix[[1, 3], :]
-end
-
-# function pred_analyzer_multiclass(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2})::Array{Float32, 2}
-# 	nets = map(feedforward, eachrow(params_set))
-# 	predictions_nets = map(x-> x(test_xs), nets)
-# 	ensembles = mapreduce(x-> mapslices(argmax, x, dims=1), vcat, predictions_nets)
-# 	pred_matrix = mapslices(majority_voting, ensembles, dims =1)
-#     return pred_matrix
-# end
-
-# pred_analyzer_multiclass(X, param_matrix)
 
 param_matrix, elapsed = ensemble_training(num_params, input_size, output_size, 600, (X, y))
 
