@@ -14,16 +14,16 @@ function conf_bin_indices_bayesian(n_labels, n_bins, predicted_probs, true_label
         # println(lower, upper)
 		bin_size, mean_acc_, mean_conf_, calibration_gap = 0, 0, 0, 0
         bin = findall(x -> x > lower && x <= upper, predicted_probs)
-		bin_size = length(bin)
+		bin_size = lastindex(bin)
         bins[i] = bin
-        if length(predictions[bin]) > 1
+        if lastindex(predictions[bin]) > 1
             mean_acc_ = mean(true_labels[bin] .== predictions[bin])
             mean_conf_ = mean(predicted_probs[bin])
         else
             mean_acc_ = NaN
             mean_conf_ = NaN
         end
-        # println(length(predictions[bin]), ' ', mean_acc_)
+        # println(lastindex(predictions[bin]), ' ', mean_acc_)
         calibration_gap = abs(mean_acc_ - mean_conf_)
 		push!(df, [i bin_size mean_acc_ mean_conf_ calibration_gap])
     end

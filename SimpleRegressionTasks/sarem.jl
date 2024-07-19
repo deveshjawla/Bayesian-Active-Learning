@@ -11,7 +11,7 @@ Flux.@functor Likelihood #tell Flux to look for trainable parameters in Likeliho
 likelihood = Likelihood(Chain(Dense(1,5,relu),Dense(5,1)), ones(1,1))
 
 params, likelihood_reconstructor = Flux.destructure(likelihood)
-n_weights = length(params) - 1
+n_weights = lastindex(params) - 1
 
 likelihood_conditional(weights, sigma) = likelihood_reconstructor(vcat(weights...,sigma))
 

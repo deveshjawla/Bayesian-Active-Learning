@@ -72,7 +72,7 @@ end
                     # Update the model parameters (and the Adam momenta):
                     Flux.update!(opt_state, model, gs[1])
                     # Accumulate the mean loss, just for logging:
-                    loss += l / length(train_loader)
+                    loss += l / lastindex(train_loader)
                 end
             end
 

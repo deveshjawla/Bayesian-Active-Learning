@@ -301,7 +301,7 @@ function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array
     # ŷ_prob = map(x -> mapslices(y -> y ./ sum(y), x, dims=1), predictions_nets) #ŷ
 
     # Determine the size of the final 3D array
-    num_matrices = length(predictions_nets)
+    num_matrices = lastindex(predictions_nets)
     rows, cols = size(predictions_nets[1])
 
     # Preallocate the 3D array

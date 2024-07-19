@@ -12,12 +12,12 @@ check_random_state(rng::AbstractRNG) = rng
 
 # https://en.wikipedia.org/wiki/Histogram
 # estimate number of bins for histograms
-Sturges_bins(x) = ceil(Int, log2(length(x))) + 1
+Sturges_bins(x) = ceil(Int, log2(lastindex(x))) + 1
 function Freedman_Diaconis_bins(x::Vector)
-    n = length(x)
+    n = lastindex(x)
     x_sort = sort(x)
-    idx_Q1 = floor(Int, 0.25*length(x_sort))
-    idx_Q3 = ceil(Int, 0.75*length(x_sort))
+    idx_Q1 = floor(Int, 0.25*lastindex(x_sort))
+    idx_Q3 = ceil(Int, 0.75*lastindex(x_sort))
     IQR = x[idx_Q3] - x[idx_Q1]
     nbins = ceil(Int, 2*IQR/(n^(1/3)) )
     return nbins
@@ -48,7 +48,7 @@ confusion_matrix(y_actual::Vector{T}, y_pred::Vector{T}) => Matrix{T}
 Returns a confusion matrix where the rows are the actual classes, and the columns are the predicted classes
 """
 function confusion_matrix(y_actual::Vector{T}, y_pred::Vector{T}) where T
-    if length(y_actual) != length(y_pred)
+    if lastindex(y_actual) != lastindex(y_pred)
         throw(DimensionMismatch("y_actual length is not the same as y_pred length"))
     end
     n = max(maximum(y_actual), maximum(y_pred))

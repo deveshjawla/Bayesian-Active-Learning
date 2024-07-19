@@ -123,7 +123,7 @@ for experiment in experiments
 
                                     # feedforward(x, theta) = destructured(theta)(x)
 
-                                    # num_params = length(parameters_initial) # number of paraemters in NN
+                                    # num_params = lastindex(parameters_initial) # number of paraemters in NN
 
                                     # network_shape = []
                                     #     (n_hidden, n_input, :relu),

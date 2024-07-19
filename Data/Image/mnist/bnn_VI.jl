@@ -124,7 +124,7 @@ end
 # # Extract weights and a helper function to reconstruct NN from weights
 # parameters_initial, reconstruct = Flux.destructure(neural_network)
 
-# total_num_params = length(parameters_initial) # number of paraemters in NN
+# total_num_params = lastindex(parameters_initial) # number of paraemters in NN
 total_num_params = 25560
 end
 

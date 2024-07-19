@@ -46,7 +46,7 @@ cd(PATH)
 
 # parameters_initial, destructured = Flux.destructure(model)
 # feedforward(x, theta) = destructured(theta)(x)
-# num_params = length(parameters_initial)
+# num_params = lastindex(parameters_initial)
 
 # il=Dense(2, 3)
 # h1=Dense(3, 3)

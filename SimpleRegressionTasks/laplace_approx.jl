@@ -45,7 +45,7 @@ xs, ys = LaplaceRedux.Data.toy_data_non_linear(200)
 
 # prep data for Flux.jl
 
-xs = [Float32.(xs[i]) for i in 1:length(xs)]
+xs = [Float32.(xs[i]) for i in 1:lastindex(xs)]
 
 X = hcat(xs...)
 
@@ -55,9 +55,9 @@ data = zip(xs, ys)
 
 # visualize data
 
-feature1 = [xs[i][1] for i in 1:length(xs)]
+feature1 = [xs[i][1] for i in 1:lastindex(xs)]
 
-feature2 = [xs[i][2] for i in 1:length(xs)]
+feature2 = [xs[i][2] for i in 1:lastindex(xs)]
 
 class = Int32.(ys)
 

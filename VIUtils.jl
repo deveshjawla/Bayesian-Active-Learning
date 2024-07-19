@@ -14,8 +14,8 @@ function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}
 	@everywhere model = bayesnnMVG(train_x, train_y, sigma, nparameters)
 	q = Variational.meanfield(model)
 
-	μ = randn(length(q))
-	ω = exp.(-1 .* ones(length(q)))
+	μ = randn(lastindex(q))
+	ω = exp.(-1 .* ones(lastindex(q)))
 
 	q = AdvancedVI.update(q, μ, ω)
 

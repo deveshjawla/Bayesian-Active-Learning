@@ -111,8 +111,8 @@ m = bayes_nn_general(xs, ts, network_shape, num_params)
 
 q = Variational.meanfield(m)
 
-μ = randn(length(q))
-ω = exp.(-1 .* ones(length(q)))
+μ = randn(lastindex(q))
+ω = exp.(-1 .* ones(lastindex(q)))
 
 using AdvancedVI
 q = AdvancedVI.update(q, μ, ω)

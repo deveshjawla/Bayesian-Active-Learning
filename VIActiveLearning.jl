@@ -97,7 +97,7 @@ for dataset in datasets
 
         # feedforward(x, theta) = destructured(theta)(x)
 
-        # num_params = length(parameters_initial) # number of paraemters in NN
+        # num_params = lastindex(parameters_initial) # number of paraemters in NN
 
         network_shape = []
         #     (n_hidden, input_size, :relu),

@@ -40,7 +40,7 @@ sig = sqrt(1.0 / alpha)
     
     preds = nn_forward(xs, nn_params) #Build the net
     sigma ~ Gamma(0.01, 1/0.01) # Prior for the variance
-    for i = 1:length(ys)
+    for i = 1:lastindex(ys)
         ys[i] ~ Normal(preds[i], sigma)
     end
 end;

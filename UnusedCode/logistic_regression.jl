@@ -38,7 +38,7 @@ experiment = "lr_3"
 mkdir("./test_results_$(experiment)")
 
 function pred_analyzer(test_xs, intercepts, thetas, threshold)
-    l = length(intercepts)
+    l = lastindex(intercepts)
     # Retrieve the number of rows.
     n, _ = size(test_xs)
 

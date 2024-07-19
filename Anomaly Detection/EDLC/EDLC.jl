@@ -104,7 +104,7 @@ addprocs(8; exeflags=`--project`)
                 # Update the model parameters (and the Adam momenta):
                 Flux.Optimise.update!(opt, p, grads)
                 # Accumulate the mean loss, just for logging:
-                loss += l / length(train_loader)
+                loss += l / lastindex(train_loader)
             end
             trnlosses[e] = loss
 

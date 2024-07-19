@@ -477,14 +477,14 @@ end
 @model bayes_nn_general(xs, ts, network_shape, num_params) = begin
     θ ~ MvNormal(zeros(num_params), sig .* ones(num_params))
     preds = nn_forward(xs, θ, network_shape)
-    for i = 1:length(ts)
+    for i = 1:lastindex(ts)
         ts[i] ~ Bernoulli(preds[i])
     end
 end
 @model bayes_nn_general(xs, ts, network_shape, num_params) = begin
     θ ~ MvNormal(zeros(num_params), sig .* ones(num_params))
     preds = nn_forward(θ, network_shape)(xs)
-    for i = 1:length(ts)
+    for i = 1:lastindex(ts)
         ts[i] ~ Bernoulli(preds[i])
     end
 end
@@ -534,7 +534,7 @@ nn_initial = Chain(Dense(input_size, l1, relu), Dense(l1, l2, relu), Dense(l2, l
 # Extract weights and a helper function to reconstruct NN from weights
 parameters_initial, feedforward = Flux.destructure(nn_initial)
 
-total_num_params = length(parameters_initial) # number of paraemters in NN
+total_num_params = lastindex(parameters_initial) # number of paraemters in NN
 
 
 

@@ -53,7 +53,7 @@ nn_initial = Chain(Dense(2, 3, relu), Dense(3, 2, relu), Dense(2, 1, σ))
 # Extract weights and a helper function to reconstruct NN from weights
 parameters_initial, reconstruct = Flux.destructure(nn_initial)
 
-length(parameters_initial) # number of paraemters in NN
+lastindex(parameters_initial) # number of paraemters in NN
 
 mutable struct BernoulliNew <: DiscreteUnivariateDistribution
     pred
@@ -87,7 +87,7 @@ end
 using Turing
 # Perform inference.
 N = 5
-ch = sample(bayes_nn(hcat(xs...), ts, length(parameters_initial), reconstruct), Turing.NUTS(), N)
+ch = sample(bayes_nn(hcat(xs...), ts, lastindex(parameters_initial), reconstruct), Turing.NUTS(), N)
 
 
 using Turing,Parameters
