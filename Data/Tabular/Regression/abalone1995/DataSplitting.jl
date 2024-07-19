@@ -5,7 +5,7 @@ df=CSV.read("./data.txt", DataFrame, header=1)
 rename!(df, :Rings => :label)
 df.label = minmaxscaling(df.label, 29, 1)
 groups = groupby(df, :Sex)
-include("../../../DataUtils.jl")
+include("../../../../DataUtils.jl")
 for (k, g) in pairs(groups)
 	# group_name = k.Sex
 	group = select(g, Not(:Sex))

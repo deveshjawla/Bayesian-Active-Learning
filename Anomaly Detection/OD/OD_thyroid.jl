@@ -21,14 +21,14 @@ proba_oodd = ProbabilisticDetector(oodd)
 
 #Tuning the model
 cv = StratifiedCV(nfolds=5, shuffle=true, rng=0)
-r = range(proba_oodd, :(detector.k), values=[1,2,3,4,5:5:100...])
-t = TunedModel(model=proba_oodd, resampling=cv, tuning=Grid(), range=r, acceleration=CPUThreads(), measure = area_under_curve)
+r = range(proba_oodd, :(detector.k), values=[1, 2, 3, 4, 5:5:100...])
+t = TunedModel(model=proba_oodd, resampling=cv, tuning=Grid(), range=r, acceleration=CPUThreads(), measure=area_under_curve)
 m = machine(t, X[train, :], vec(y[train, :])) |> fit!
 
 #Use the best trained model to predict a test dataset
 report(m).best_history_entry
 b = report(m).best_model
-eval_report = MLJ.evaluate(b, X[test, :], vec(y[test, :]), resampling=cv, measure= area_under_curve)
+eval_report = MLJ.evaluate(b, X[test, :], vec(y[test, :]), resampling=cv, measure=area_under_curve)
 
 # # OutlierDetection.jl provides helper functions to normalize the scores,
 # # for example using min-max scaling based on the training scores

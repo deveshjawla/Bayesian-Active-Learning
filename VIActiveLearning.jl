@@ -18,7 +18,7 @@ using Distributed
 using Turing
 num_epochs = 1
 num_mcsteps = 10000
-datasets = [ "stroke", "banknote", "coalmine", "creditfraud"]
+datasets = ["stroke", "banknote", "coalmine", "creditfraud"]
 acq_functions = ["Random", "TopKBayesian"]
 # Add four processes to use for sampling.
 addprocs(2; exeflags=`--project`)
@@ -33,13 +33,13 @@ using Distances
 # @everywhere using DistributionsAD
 
 include("./VIUtils.jl")
-include("./VI_Query.jl")
+include("./Query.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
 
 for dataset in datasets
-	aocs = []
+    aocs = []
     acquisition_sizes = [294]
 
     experiment_name = "001_VI"
@@ -108,12 +108,12 @@ for dataset in datasets
         # # parameters.
         # num_params = sum([i * o + i for (i, o, _) in network_shape])
 
-        include("./BayesianModelMultiProc.jl")
+        include("./BayesianModel.jl")
 
-       
-		using Bijectors
-		using Turing: Variational
-		using AdvancedVI
+
+        using Bijectors
+        using Turing: Variational
+        using AdvancedVI
 
 
         #Here we define the layer by layer initialisation
@@ -202,9 +202,9 @@ for dataset in datasets
                 end
                 kpi = vcat(performance_data, class_dist_data)
                 writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/kpi.csv", kpi, ',')
-				acc_ = kpi[3, :]
-				kind_of_aoc = mean(acc_[1:round(Int, 0.2*lastindex(acc_))] .- 0.5)
-				append!(aocs, kind_of_aoc)
+                acc_ = kpi[3, :]
+                kind_of_aoc = mean(acc_[1:round(Int, 0.2 * lastindex(acc_))] .- 0.5)
+                append!(aocs, kind_of_aoc)
 
                 # kpi = readdlm("./Experiments/$(experiment_name)/$(pipeline_name)/kpi.csv", ',')
                 # kpi = copy(performance_data)
@@ -232,7 +232,7 @@ for dataset in datasets
 
         df = DataFrame(kpi_df, kpi_names)
         CSV.write("./Experiments/$(experiment_name)/df.csv", df)
-		writedlm("./Experiments/$(experiment_name)/auc_acq.txt", aocs, ',')
+        writedlm("./Experiments/$(experiment_name)/auc_acq.txt", aocs, ',')
 
     end
 

@@ -128,7 +128,12 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 
     if acq_size_ !== 0
         #Training on Acquired Samples and logging classification_performance
-        independent_param_matrix, elapsed, independent_map_params = bayesian_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)
+		if isnothing(mcmc_init_params)
+			independent_param_matrix, elapsed = vi_inference(prior, training_data_xy, nsteps, n_epochs, al_step, experiment, pipeline_name)
+		else
+        independent_param_matrix, elapsed, independent_map_params = mcmc_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)
+		end
+
     elseif acq_size_ == 0
         for i in 1:n_chains
             writedlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess"] [0, 0, 0, 0, 0]], ',')

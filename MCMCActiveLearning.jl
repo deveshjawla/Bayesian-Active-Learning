@@ -22,7 +22,7 @@ datasets = ["iris1988", "yeast1996"]#20, 20, 10, 10, 20, 20, 10, 40
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
 minimum_training_sizes = [30, 296] #60, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 2)
-list_acq_steps = repeat([1],8)
+list_acq_steps = repeat([1], 8)
 
 list_inout_dims = [(4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
@@ -57,7 +57,7 @@ theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_
 Gadfly.push_theme(theme)
 
 include("./MCMCUtils.jl")
-include("./MCMC_Query.jl")
+include("./Query.jl")
 include("./XGB_Query.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
@@ -142,7 +142,7 @@ for experiment in experiments
                                         # # parameters.
                                         # num_params = sum([i * o + i for (i, o, _) in network_shape])
 
-                                        include("./BayesianModelMultiProc.jl")
+                                        include("./BayesianModel.jl")
 
                                         # setprogress!(false)
                                         # using Zygote

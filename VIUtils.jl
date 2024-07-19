@@ -1,8 +1,6 @@
-
 using StatsBase
 
-
-function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_epochs::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32}
+function vi_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_epochs::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32}
 	sigma, nparameters = prior
 	# @everywhere network_shape = $network_shape
 	@everywhere nparameters = $nparameters

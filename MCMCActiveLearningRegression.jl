@@ -55,8 +55,8 @@ Gadfly.push_theme(theme)
 # @everywhere using LazyArrays
 @everywhere using DistributionsAD
 
-include("./MCMCUtilsRegression.jl")
-include("./MCMC_QueryRegression.jl")
+include("./MCMCUtils.jl")
+include("./Query.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
@@ -134,7 +134,7 @@ for experiment in experiments
                                     # # parameters.
                                     # num_params = sum([i * o + i for (i, o, _) in network_shape])
 
-                                    include("./BayesianModelMultiProcRegression.jl")
+                                    include("./BayesianModel.jl")
 
                                     # setprogress!(false)
                                     # using Zygote

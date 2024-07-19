@@ -86,7 +86,7 @@ end
 
 
 
-function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Array{Int,2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)::Tuple{Array{Float32,2},Float32,Array{Float32,2}}
+function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Array{Int,2}}, nsteps::Int, n_chains::Int, al_step::Int, experiment_name::String, pipeline_name::String, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)::Tuple{Array{Float32,2},Float32,Array{Float32,2}}
     location, scale = prior
     @everywhere location = $location
     @everywhere scale = $scale

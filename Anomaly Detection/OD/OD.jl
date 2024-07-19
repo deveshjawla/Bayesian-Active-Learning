@@ -13,14 +13,14 @@ cd(PATH)
 n = 200
 X, y = gen_3_clusters(n)
 
-scatter(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label = "1", markerstrokewidth=0.1)
-scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label = "2", markerstrokewidth=0.1)
-scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label = "3", markerstrokewidth=0.1)
+scatter(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1", markerstrokewidth=0.1)
+scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2", markerstrokewidth=0.1)
+scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3", markerstrokewidth=0.1)
 
 # use 50% of the data for training
 train, test = partition(eachindex(y), 0.5, shuffle=true)
 
-oodd = OutlierDetectionPython.GMMDetector(n_components = 3) #n_components = number of classes or number of modes of the multivariate gaussian
+oodd = OutlierDetectionPython.GMMDetector(n_components=3) #n_components = number of classes or number of modes of the multivariate gaussian
 
 # oodd_raw = machine(oodd, X) |> fit!
 # # transform data to raw outlier scores based on the test data; note that there
@@ -41,13 +41,13 @@ oodd_probs = OutlierDetection.transform(oodd_probas, X)[2] #probability of being
 # # predict outlier classes based on the test data
 # oodd_preds = MLJ.predict(oodd_classifier, X)
 
-xs=-7:0.1:7
-ys=-7:0.1:7
-heatmap(xs, ys, (x,y) -> OutlierDetection.transform(oodd_probas, reshape([x,y],(:,1)))[2][1], colorbar_title ="Uncertainty", xlabel = "x",  ylabel = "y", dpi = 600, size=(800,800)) #plots the outlier probabilities
-scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label = "1", markerstrokewidth=0.1)
-scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label = "2", markerstrokewidth=0.1)
-scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label = "3", markerstrokewidth=0.1)
-scatter!(X[1, oodd_probs .> 0.5], X[2, oodd_probs .> 0.5], color = :cyan, label = "Anomalies",markerstrokewidth=0.1)
+xs = -7:0.1:7
+ys = -7:0.1:7
+heatmap(xs, ys, (x, y) -> OutlierDetection.transform(oodd_probas, reshape([x, y], (:, 1)))[2][1], colorbar_title="Uncertainty", xlabel="x", ylabel="y", dpi=600, size=(800, 800)) #plots the outlier probabilities
+scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1", markerstrokewidth=0.1)
+scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2", markerstrokewidth=0.1)
+scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3", markerstrokewidth=0.1)
+scatter!(X[1, oodd_probs.>0.5], X[2, oodd_probs.>0.5], color=:cyan, label="Anomalies", markerstrokewidth=0.1)
 savefig("./OD_oodd.pdf")
 
 # scatter!(X[1, oodd_probs .<= 0.5], X[2, oodd_probs .<= 0.5], color = :green)
