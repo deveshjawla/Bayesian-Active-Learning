@@ -75,11 +75,11 @@ Returns a matrix of dims (n_output, ensemble_size, n_samples)
 """
 function pool_predictions(test_xs::Array{Float32,2}, params_set::Array{Float32,2}; reconstruct=nothing)::Array{Float32,3}
     if isnothing(reconstruct)
-        nets = map(feedforward, eachrow(param_matrix))
+        nets = map(feedforward, eachrow(params_set))
     else
         nets = map(reconstruct, eachrow(params_set))
     end
-    predictions_nets = map(x -> x(test_xs), nets)
+    predictions_nets = map(net -> net(test_xs), nets)
     pred_matrix = cat(predictions_nets..., dims=3)
     return pred_matrix
 end
@@ -287,18 +287,18 @@ function bald(prob_matrix::Matrix, n_output)
     return H, E_H, H - E_H
 end
 
-function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array{Float64,2}, noise_set; reconstruct=nothing)::Array{Float64,2}
+function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array{Float64,2}; noise_set=nothing, reconstruct=nothing)::Array{Float64,2}
     if isnothing(reconstruct)
         nets = map(feedforward, eachrow(param_matrix))
     else
-        nets = map(reconstruct, eachrow(params_set))
+        nets = map(reconstruct, eachrow(param_matrix))
     end
-    # predictions_nets = map(x -> softmax(x(test_xs)), nets)
-    predictions_nets = map((x, y) -> x(test_xs .+ y) ./ sum(x(test_xs .+ y), dims=1), nets, noise_set)
-
-    # predictions_nets = map(x -> x(test_xs), nets)
-    # # predictions_nets = map(x -> x .+ 1, predictions_nets)
-    # ŷ_prob = map(x -> mapslices(y -> y ./ sum(y), x, dims=1), predictions_nets) #ŷ
+	if isnothing(noise_set)
+		# predictions_nets = map(x -> softmax(x(test_xs)), nets)
+		predictions_nets = map(net -> net(test_xs) ./sum(x(test_xs), dims=1), nets)
+	else
+    	predictions_nets = map((x, y) -> x(test_xs .+ y) ./ sum(x(test_xs .+ y), dims=1), nets, noise_set)
+	end
 
     # Determine the size of the final 3D array
     num_matrices = lastindex(predictions_nets)
@@ -342,7 +342,7 @@ function pred_analyzer_regression(test_xs::Array{Float32,2}, params_set::Array{F
     else
         nets = map(reconstruct, eachrow(params_set))
     end
-    predictions_nets = map(x -> x(test_xs), nets)
+    predictions_nets = map(net -> net(test_xs), nets)
     predictions = permutedims(reduce(vcat, predictions_nets))
     pred_matrix_mean = mapslices(mean, predictions, dims=2)
     pred_matrix_std = mapslices(std, predictions, dims=2)

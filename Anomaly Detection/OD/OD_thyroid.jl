@@ -28,7 +28,7 @@ m = machine(t, X[train, :], vec(y[train, :])) |> fit!
 #Use the best trained model to predict a test dataset
 report(m).best_history_entry
 b = report(m).best_model
-eval_report = evaluate(b, X[test, :], vec(y[test, :]), resampling=cv, measure= area_under_curve)
+eval_report = MLJ.evaluate(b, X[test, :], vec(y[test, :]), resampling=cv, measure= area_under_curve)
 
 # # OutlierDetection.jl provides helper functions to normalize the scores,
 # # for example using min-max scaling based on the training scores
@@ -36,7 +36,7 @@ eval_report = evaluate(b, X[test, :], vec(y[test, :]), resampling=cv, measure= a
 
 # # predict outlier probabilities based on the test data
 # # oodd_probs = MLJ.predict(oodd_probas, X)
-# oodd_probs = MLJ.transform(oodd_probas, X[test, :])[2] #probability of being an outlier
+# oodd_probs = OutlierDetection.transform(oodd_probas, X[test, :])[2] #probability of being an outlier
 
 # # OutlierDetection.jl also provides helper functions to turn scores into classes,
 # # for example by imposing a threshold based on the training data percentiles

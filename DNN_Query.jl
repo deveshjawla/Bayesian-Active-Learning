@@ -35,19 +35,19 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     elseif al_sampling == "Random"
         sampled_indices = random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerBALD"
-        pool_prediction_matrix = pool_predictions(re, pool_x, param_matrix, n_output)
+        pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output; reconstruct = re)
         pool_scores = mapslices(x -> bald(x, n_output), pool_prediction_matrix, dims=[1, 3])
         bald_scores = map(x -> x[2], pool_scores[1, 1, :])
         sampled_indices = power_acquisition(bald_scores, acq_size_)
         # softmax_entropy = stochastic_acquisition(entropy_scores, acq_size_)
         # var_ratio_scores = 1 .- pŷ_test
     elseif al_sampling == "PowerEntropy"
-        pool_prediction_matrix = pool_predictions(re, pool_x, param_matrix, n_output)
+        pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output; reconstruct = re)
         pool_scores = mapslices(x -> bald(x, n_output), pool_prediction_matrix, dims=[1, 3])
         entropy_scores = map(x -> x[1], pool_scores[1, 1, :])
         sampled_indices = power_acquisition(entropy_scores, acq_size_)
     elseif al_sampling == "EnsembleUncertainty"
-        pool_prediction_matrix = pool_predictions(re, pool_x, param_matrix, n_output)
+        pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output; reconstruct = re)
         pool_scores = mapslices(x -> uncertainties(x, n_output), pool_prediction_matrix, dims=[1, 3])
         aleatoric_uncertainties = map(x -> x[2], pool_scores[1, 1, :])
         epistemic_uncertainties = map(x -> x[3], pool_scores[1, 1, :])
