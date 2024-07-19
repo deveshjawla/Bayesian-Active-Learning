@@ -82,7 +82,7 @@ end
 
     # Observe each prediction.
     ts ~ BernoulliNew(preds)
-end;
+end
 
 using Turing
 # Perform inference.

@@ -12,11 +12,11 @@ cd(PATH)
 
 # Generate data
 n = 10
-X, y = gendata(n)
+X, y = gen_3_clusters(n)
 Y = argmax.(eachcol(y))
 # Y = y
 
-test_X, test_y = gendata(n)
+test_X, test_y = gen_3_clusters(n)
 test_Y = argmax.(eachcol(test_y))
 
 input_size = size(X)[1]
@@ -84,17 +84,6 @@ param_matrix = mapreduce(permutedims, vcat, params_set)
 
 noise_set = collect.(Float64, eachrow(noises[:, :, 1]))
 noise_matrix = mapreduce(permutedims, vcat, noise_set)
-
-
-
-uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
-
-
-
-
-
-
-
 
 ŷ = pred_analyzer_multiclass(test_X, param_matrix, noise_set)[1,:]
 @info "Accuracy is" mean(test_Y.==ŷ)

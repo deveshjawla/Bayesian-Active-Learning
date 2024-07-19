@@ -1,14 +1,4 @@
 
-"""
-Returns a matrix of dims (n_output, ensemble_size, n_samples)
-"""
-function pool_predictions(reconstruct, test_xs::Array{Float32,2}, params_set::Array{Float32,2}, n_output::Int)::Array{Float32,3}
-	nets = map(reconstruct, eachrow(params_set))
-	predictions_nets = map(x-> x(test_xs), nets)
-	pred_matrix = cat(predictions_nets..., dims=3)
-    return pred_matrix
-end
-
 using Distributed
 
 # # instantiate and precompile environment in all processes

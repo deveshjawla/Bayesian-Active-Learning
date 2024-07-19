@@ -22,7 +22,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     elseif al_sampling == "BayesianUncertainty"
         pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output)
         pool_scores = mapslices(x -> uncertainties(x, n_output), pool_prediction_matrix, dims=[1, 3])
-        aleatoric_uncertainties = map(x -> x[2], pool_scores[1, :, 1])
+        aleatoric_uncertainties = map(x -> x[2], pool_scores[1, :, 1]) #TODO = Check this, if it is giving correct answers
         epistemic_uncertainties = map(x -> x[3], pool_scores[1, :, 1])
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/aleatoric_uncertainties_$(al_step).csv", summary_stats(aleatoric_uncertainties), ',')
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/epistemic_uncertainties_$(al_step).csv", summary_stats(epistemic_uncertainties), ',')
@@ -108,15 +108,22 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 
 	#calculate the weights of the samples
 	balance_of_training_data = countmap(Int.(training_data_y))
+
 	sample_weights =  similar(training_data_y, Float32)
+
 	nos_training = lastindex(training_data_y)
+
 	for i = 1:nos_training
 		sample_weights[i] = nos_training/balance_of_training_data[training_data_y[i]]
 	end
 	sample_weights ./= n_output
 	
     # println("The acquired Batch has the follwing class distribution: $balance_of_acquired_batch")
-    training_data_xy = (training_data_x, Int.(permutedims(training_data_y)))
+    if n_output==1
+		training_data_xy = (training_data_x, Float32.(permutedims(training_data_y)))
+	else
+	training_data_xy = (training_data_x, Int.(permutedims(training_data_y)))
+	end
     # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
     if acq_size_ !== 0
@@ -129,17 +136,30 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
         independent_param_matrix, elapsed, independent_map_params = param_matrix, 0, map_matrix
     end
     test_x, test_y = test_data
+	if n_output==1
+		predictions_mean, predictions_std = pred_analyzer_regression(test_x, independent_param_matrix)
+	else
     predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
+	end
     # predictions_map = pred_analyzer_multiclass(test_x, independent_map_params)
 
 	# activations_weighted_sums(test_x[:,1], independent_param_matrix, "./Experiments/$(experiment)/$(pipeline_name)/", 3) # 3 is the number of layers
     # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", predictions, ',')
     # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$(al_step)_map.csv", predictions_map, ',')
+	if n_output==1
+		ŷ_test = permutedims(predictions_mean)
+	else
     ŷ_test = permutedims(Int.(predictions[1, :]))
+	end
     # ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
-    if n_output == 2
+ if n_output==1
+	mse, mae = performance_stats_regression(test_y, ŷ_test)
+	acc= mse
+    writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "MSE", "MAE"] [acq_size_, mse, mae]], ',')
+
+elseif n_output == 2
         acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
         # acc_map, mcc_map, f1_map, fpr_map, prec_map, recall_map, threat_map, cm_map = performance_stats(test_y, ŷ_test_map)
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, f1, mcc, fpr, prec, recall, threat, cm]], ',')

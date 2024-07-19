@@ -12,12 +12,12 @@ cd(PATH)
 
 # Generate data
 n = 20
-X, y = gendata(n)
+X, y = gen_3_clusters(n)
 Y = argmax.(eachcol(y))
 # Y = y
 
 
-test_X, test_y = gendata(100)
+test_X, test_y = gen_3_clusters(100)
 test_Y = argmax.(eachcol(test_y))
 
 input_size = size(X)[1]
@@ -81,15 +81,6 @@ elapsed = Float64(ch1_timed.time)
 weights = MCMCChains.group(ch1, :θ).value #get posterior MCMC samples for network weights
 params_set = collect.(Float64, eachrow(weights[:, :, 1]))
 param_matrix = mapreduce(permutedims, vcat, params_set)
-
-
-uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
-
-
-
-
-
-
 
 ŷ = pred_analyzer_multiclass(test_X, param_matrix)[1,:]
 @info "Accuracy is" mean(test_Y.==ŷ)

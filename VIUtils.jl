@@ -1,28 +1,6 @@
 
 using StatsBase
 
-"""
-Returns a matrix of dims (n_output, ensemble_size, n_samples)
-"""
-function pool_predictions(test_xs::Array{Float32, 2}, params_set::Array{Float32, 2}, n_output::Int)::Array{Float32, 3}
-	n_samples = size(test_xs)[2]
-	ensemble_size = size(params_set)[1]
-	pred_matrix = Array{Float32}(undef, n_output, ensemble_size, n_samples)
-
-    for i = 1:n_samples, j = 1:ensemble_size
-            model = feedforward(params_set[j,:])
-            # # make probabilistic by inserting bernoulli distributions, we can make each prediction as probabilistic and then average out the predictions to give us the final predictions_mean and std
-            ŷ = model(test_xs[:,i])
-            pred_matrix[:, j, i] = ŷ
-			# if i==100 && j==100
-			# 	println(ŷ)
-			# end
-    end
-	# println(pred_matrix[:,100,100])
-	return pred_matrix
-end
-
-
 
 function bayesian_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Array{Int, 2}}, nsteps::Int, n_epochs::Int, al_step::Int, experiment_name::String, pipeline_name::String)::Tuple{Array{Float32, 2}, Float32}
 	sigma, nparameters = prior

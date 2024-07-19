@@ -6,19 +6,10 @@ using LaplaceRedux
 PATH = @__DIR__
 cd(PATH)
 
-function gendata(n)
-    x1 = randn(Float32, 2, n)
-    x2 = randn(Float32, 2, n) .+ [2, 2]
-    x3 = randn(Float32, 2, n) .+ [-2, 2]
-    y1 = vcat(ones(Float32, n), zeros(Float32, 2 * n))
-    y2 = vcat(zeros(Float32, n), ones(Float32, n), zeros(Float32, n))
-    y3 = vcat(zeros(Float32, n), zeros(Float32, n), ones(Float32, n))
-    hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
-end
 
 # Generate data
 n = 200
-X, y = gendata(n)
+X, y = gen_3_clusters(n)
 
 input_size = size(X)[1]
 output_size = size(y)[1]

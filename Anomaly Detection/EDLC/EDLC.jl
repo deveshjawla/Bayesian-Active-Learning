@@ -8,19 +8,10 @@ addprocs(8; exeflags=`--project`)
     PATH = @__DIR__
     cd(PATH)
 
-    function gendata(n)
-        x1 = randn(Float32, 2, n)
-        x2 = randn(Float32, 2, n) .+ [2, 2]
-        x3 = randn(Float32, 2, n) .+ [-2, 2]
-        y1 = vcat(ones(Float32, n), zeros(Float32, 2 * n))
-        y2 = vcat(zeros(Float32, n), ones(Float32, n), zeros(Float32, n))
-        y3 = vcat(zeros(Float32, n), zeros(Float32, n), ones(Float32, n))
-        hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
-    end
 
     # Generate data
     n = 200
-    X, y = gendata(n)
+    X, y = gen_3_clusters(n)
 
     input_size = size(X)[1]
     output_size = size(y)[1]
@@ -182,10 +173,10 @@ savefig("./EDLC_relu_ensemble.pdf")
 # # Test predictions
 # α̂ = m(X)
 # ŷ = α̂ ./ sum(α̂, dims=1)
-# u = uncertainty(α̂)
+# u = edlc_uncertainty(α̂)
 
 # # Show epistemic uncertainty
-# heatmap(-7:0.1:7, -7:0.1:7, (x, y) -> uncertainty(m(vcat(x, y)))[1])
+# heatmap(-7:0.1:7, -7:0.1:7, (x, y) -> edlc_uncertainty(m(vcat(x, y)))[1])
 # scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1")
 # scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2")
 # scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3")
