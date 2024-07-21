@@ -14,9 +14,9 @@ ttrain = transform(train_groups, :label=>mean)
 train = select(ttrain, Not([:SEX, :MARRIAGE]))
 rename!(train, :label_mean => :group_weight)
 train = train[:, [1:21..., 23, 22]]
-a = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float64.(col)), select(train, 2,3))
-b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float64.(col)), select(train, 4:15))
-c = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float64.(col); center=false), select(train, 1, 16:21))
+a = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float32.(col)), select(train, 2,3))
+b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float32.(col)), select(train, 4:15))
+c = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float32.(col); center=false), select(train, 1, 16:21))
 
 float_features = hcat(a, b, c)
 float_features.group_weight = train.group_weight

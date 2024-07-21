@@ -24,8 +24,8 @@ rename!(df, :class => :label)
 df[!, :label] = Int.("1" .== df.label)
 df[df.label.==0, :label] .= 2
 
-a = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float64.(col)), select(df, 1,2,5:9,13,14))
-b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float64.(col)), select(df, 3,4))
+a = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float32.(col)), select(df, 1,2,5:9,13,14))
+b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float32.(col)), select(df, 3,4))
 
 float_features = hcat(a, b)
 float_features.label = df.label

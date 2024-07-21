@@ -61,7 +61,7 @@ function stochastic_acquisition(pool_scores::Vector, acquisition_size::Int; acqu
     return indices
 end
 
-function get_sampled_indices(acq_size_, pool_size, pool_prediction_matrix; reconstruct=nothing)
+function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; reconstruct=nothing)
 	if al_sampling == "Initial"
         sampled_indices = 1:acq_size_
     elseif al_sampling == "Random"

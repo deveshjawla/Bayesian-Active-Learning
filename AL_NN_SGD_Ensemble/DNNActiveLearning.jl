@@ -193,7 +193,7 @@ for experiment in experiments
                     append!(aucs_t, auc_t)
                 end
                 min_total_samples = minimum(list_total_training_samples)
-                writedlm("./Experiments/$(experiment)/auc_acq_$(fold).txt", [list_compared min_total_samples .* (aucs_acc) min_total_samples .* aucs_t], ',')
+                writedlm("./Experiments/$(experiment)/auc_$(fold).csv", [list_compared min_total_samples .* (aucs_acc) min_total_samples .* aucs_t], ',')
             end
 
             # df = CSV.read("./Experiments/$(experiment)/df.csv", DataFrame)
@@ -244,12 +244,12 @@ for experiment in experiments
 
             df = DataFrame()
             for fold in 1:n_folds
-                df_ = CSV.read("./Experiments/$(experiment)/auc_acq_$(fold).txt", DataFrame, header=false)
+                df_ = CSV.read("./Experiments/$(experiment)/auc_$(fold).csv", DataFrame, header=false)
                 df = vcat(df, df_)
             end
 
             mean_auc = combine(groupby(df, :Column1), :Column2 => mean, :Column2 => std, :Column3 => mean, :Column3 => std)
-            CSV.write("./Experiments/$(experiment)/mean_auc.txt", mean_auc, header=[:AcquisitionFunction, :AccAUC_mean, :AccAUC_std, :TimeAUC_mean, :TimeAUC_std])
+            CSV.write("./Experiments/$(experiment)/mean_auc.csv", mean_auc, header=[:AcquisitionFunction, :AccAUC_mean, :AccAUC_std, :TimeAUC_mean, :TimeAUC_std])
         end
     end
 end

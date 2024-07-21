@@ -44,7 +44,7 @@ function vi_inference(prior::Tuple, training_data::Tuple{Array{Float32, 2}, Arra
 			break
 		end
 	end
-	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
+	# writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.csv", elapsed)
 	
 	writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step).csv", [["elapsed", "ELBO"] [elapsed, best_elbo]], ',')
 		# println(oob_rhat)

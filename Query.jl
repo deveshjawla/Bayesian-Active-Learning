@@ -7,8 +7,11 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     pool_x, pool_y = pool
     pool_size = lastindex(pool_y)
     sampled_indices = 0
-    pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix)
-    sampled_indices = get_sampled_indices(acq_size_, pool_size, pool_prediction_matrix)
+	pool_prediction_matrix = 0
+	if typeof(param_matrix) == Array{Float32, 2}
+    	pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix)
+	end
+    sampled_indices = get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix)
 
     pool = vcat(pool_x, pool_y)
     new_acq_size_ = lastindex(sampled_indices)

@@ -1,5 +1,5 @@
 using StatsBase: countmap
-function majority_voting(predictions::AbstractVector)::Vector{Float64}
+function majority_voting(predictions::AbstractVector)::Vector{Float32}
     count_map = countmap(predictions)
     max_count = 0
     total_count = 0
@@ -23,7 +23,7 @@ EDLC Uncertainty
 """
 edlc_uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
 
-function normalized_entropy(prob_vec::Vector, n_output)::Float64
+function normalized_entropy(prob_vec::Vector, n_output)::Float32
     sum_probs = sum(prob_vec)
     if any(i -> i == 0, prob_vec)
         return 0

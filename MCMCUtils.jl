@@ -54,8 +54,8 @@ function plot_maker_activations_weights(df_activations, df_weights)
     return activations_weights
 end
 
-function convergence_stats(i::Int, chains, elapsed::Float32)::Tuple{Float32,Float32,Float32,Float32,Float32}
-	gelman = gelmandiag(chains)
+function convergence_stats(i::Int, chains, elapsed::Float32)::Tuple{Float32,Int64,Float32,Float32,Float32,Float32}
+    gelman = gelmandiag(chains)
     psrf_psrfci = convert(Array, gelman)
     max_psrf = maximum(psrf_psrfci[:, 1])
 
@@ -88,7 +88,7 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
     # println(mean(location), mean(scale))
     if temperature isa Number && likelihood_name == "TemperedLikelihood"
         @everywhere model = temperedBNN(train_x, train_y, location, scale, temperature)
-    elseif likelihood_name == "WeightedLikelihood" && temperature === nothing
+    elseif likelihood_name == "WeightedLikelihood" && temperature == "CWL"
         @everywhere model = classweightedBNN(train_x, train_y, location, scale, sample_weights)
     else
         nothing
@@ -103,7 +103,7 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
     chains = chain_timed.value
     elapsed = Float32(chain_timed.time)
     println("It took $(elapsed) seconds to complete the $(nsteps) iterations")
-    # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.txt", elapsed)
+    # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/elapsed.csv", elapsed)
     θ = MCMCChains.group(chains, :θ).value
 
     burn_in = 0#Int(0.6 * nsteps)
@@ -159,25 +159,25 @@ end
 
 	Returns: Matrix with Dims(6, Number of Samples) where 6 are the following quantitites = [pred_label, pred_prob, pred_std, aleatoric_uncertainties, epistemic_uncertainties, total_uncertainties]
 """
-function pred_analyzer_multiclass(test_xs::Array{Float64,2}, param_matrix::Array{Float64,2}; noise_set=nothing, reconstruct=nothing)::Array{Float64,2}
+function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array{Float32,2}; noise_set=nothing, reconstruct=nothing)::Array{Float32,2}
     if isnothing(reconstruct)
         nets = map(feedforward, eachrow(param_matrix))
     else
         nets = map(reconstruct, eachrow(param_matrix))
     end
-	if isnothing(noise_set)
-		# predictions_nets = map(x -> softmax(x(test_xs)), nets)
-		predictions_nets = map(net -> net(test_xs) ./sum(x(test_xs), dims=1), nets)
-	else
-    	predictions_nets = map((x, y) -> x(test_xs .+ y) ./ sum(x(test_xs .+ y), dims=1), nets, noise_set)
-	end
+    if isnothing(noise_set)
+        # predictions_nets = map(x -> softmax(x(test_xs)), nets)
+        predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
+    else
+        predictions_nets = map((net, noise) -> net(test_xs .+ noise) ./ sum(net(test_xs .+ noise), dims=1), nets, noise_set)
+    end
 
     # Determine the size of the final 3D array
     num_matrices = lastindex(predictions_nets)
     rows, cols = size(predictions_nets[1])
 
     # Preallocate the 3D array
-    pred_matrix = Array{Float64}(undef, rows, cols, num_matrices)
+    pred_matrix = Array{Float32}(undef, rows, cols, num_matrices)
 
     # Fill the preallocated array
     for i in 1:num_matrices
@@ -266,9 +266,14 @@ function collecting_stats_active_learning_experiments_regression(n_acq_steps, ex
 end
 
 function collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
-    performance_stats = Array{Any}(undef, 5, n_acq_steps)
+    performance_stats = Array{Float32}(undef, 6, n_acq_steps)
+	class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
+    cum_class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
+    performance_data = Array{Any}(undef, 11, n_acq_steps) #dims=(features, samples(i))
+    cum_class_dist_ent = Array{Float32}(undef, 1, n_acq_steps)
+
     for al_step = 1:n_acq_steps
-        data = Array{Any}(undef, 5, num_chains)
+        data = Array{Any}(undef, 6, num_chains)
         for i = 1:num_chains
             m = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", ',')
             data[:, i] = m[:, 2]
@@ -277,58 +282,34 @@ function collecting_stats_active_learning_experiments_classification(n_acq_steps
         d = mean(data, dims=2)
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", d)
         performance_stats[:, al_step] = d
-    end
 
-    class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
-    cum_class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
-
-    performance_data = Array{Any}(undef, 12, n_acq_steps) #dims=(features, samples(i))
-    cum_class_dist_ent = Array{Any}(undef, 1, n_acq_steps)
-    for al_step = 1:n_acq_steps
         m = readdlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
-        performance_data[1, al_step] = m[1, 2]#AcquisitionSize
+        performance_data[1, al_step] = m[1, 2] #AcquisitionSize
         cd = readdlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
-        performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
+        performance_data[2, al_step] = cd[1, 2] #ClassDistEntropy
         performance_data[3, al_step] = m[2, 2] #Accuracy Score
-        performance_data[13, al_step] = m[3, 2]#F1 
-
-        # ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
-        # ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
-        performance_data[4, al_step] = 0#ensemble_majority_avg
-        # rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
-
-        c = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", ',')
-
+        performance_data[4, al_step] = m[3, 2] #F1 
         performance_data[5, al_step] = acq_func
         performance_data[6, al_step] = temperature
         performance_data[7, al_step] = experiment
+        performance_data[8, al_step] = al_step == 1 ? m[1, 2] : performance_data[8, al_step-1] + m[1, 2] #Cumulative Training Size
+        performance_data[9, al_step] = prior_informativeness
+        performance_data[10, al_step] = prior_variance
+        performance_data[11, al_step] = likelihood_name
 
-        #Cumulative Training Size
-        if al_step == 1
-            performance_data[8, al_step] = m[1, 2]
-        else
-            performance_data[8, al_step] = performance_data[8, al_step-1] + m[1, 2]
-        end
-
-
-        performance_data[9, al_step], performance_data[10, al_step], performance_data[11, al_step], performance_data[12, al_step] = prior_informativeness, prior_variance, likelihood_name
-
-        for i = 1:n_output
+		for i in 1:n_output
             class_dist_data[i, al_step] = cd[i+1, 2]
-            if al_step == 1
-                cum_class_dist_data[i, al_step] = cd[i+1, 2]
-            elseif al_step > 1
-                cum_class_dist_data[i, al_step] = cum_class_dist_data[i, al_step-1] + cd[i+1, 2]
-            end
+            cum_class_dist_data[i, al_step] = al_step == 1 ? cd[i+1, 2] : cum_class_dist_data[i, al_step-1] + cd[i+1, 2]
         end
-        cum_class_dist_ent[1, al_step] = normalized_entropy(softmax(cum_class_dist_data[:, al_step]), n_output)
+        cum_class_dist_ent[1, al_step] = normalized_entropy(cum_class_dist_data[:, al_step] ./ sum(cum_class_dist_data[:, al_step]), n_output)
     end
     kpi = vcat(performance_data, class_dist_data, cum_class_dist_data, cum_class_dist_ent, performance_stats)
     writedlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", kpi, ',')
     return kpi
 end
 
-function running_active_learning_ensemble!(num_params, prior_std, pool, n_input, n_output, test, experiment, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, prior_variance, likelihood_name)
+
+function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, prior_variance, likelihood_name)
     # n_acq_steps = 10#round(Int, total_pool_samples / acquisition_size, RoundUp)
     prior = (zeros(num_params), prior_std)
     param_matrix, new_training_data = 0, 0
@@ -394,63 +375,71 @@ function running_active_learning_ensemble!(num_params, prior_std, pool, n_input,
             n_acq_steps = deepcopy(AL_iteration)
         end
     end
-    return nothing
+    return n_acq_steps
 end
 
 
-function mean_std_by_variable(group, measurable::Symbol, variable::Symbol)
-    mean_std = combine(groupby(i, variable), measurable => mean, measurable => std)
-    group_name = first(group.measurable)
-    CSV.write("./Experiments/$(experiment)/mean_std_$(group_name)_$(variable)_$(measurable).csv", mean_std)
+function mean_std_by_variable(group, group_by::Symbol, measurable::Symbol, variable::Symbol)
+    mean_std = DataFrames.combine(groupby(group, variable), measurable => mean, measurable => std)
+    group_name = first(group[!, group_by])
+	mean_std[!, group_by] = repeat([group_name], nrow(mean_std))
+    CSV.write("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", mean_std)
 end
 function mean_std_by_group(df_folds, group_by::Symbol, variable::Symbol; list_measurables=[:MSE, :Elapsed, :MAE, :AcceptanceRate, :NumericalErrors])
     for group in groupby(df_folds, group_by)
         for m in list_measurables
-            mean_std_by_variable(group, m, variable)
+            mean_std_by_variable(group, group_by, m, variable)
         end
     end
 end
 
-function auc_per_fold!(fold::Int, df::DataFrame, group_by::Symbol, measurement1::Symbol, measurement2::Symbol)
+function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement1::Symbol, measurement2::Symbol)
     aucs_acc = []
     aucs_t = []
     list_compared = []
     list_total_training_samples = []
     for i in groupby(df, group_by)
-        acc_ = i.measurement1
-        time_ = i.measurement2
+        acc_ = i[!, measurement1]
+        time_ = i[!, measurement2]
         # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
         n_aocs_samples = lastindex(acc_)
-        total_training_samples = i.:CumTrainedSize[end]
+        total_training_samples = last(i[!, :CumTrainedSize])
+		println(total_training_samples)
         push!(list_total_training_samples, total_training_samples)
         auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
         auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
-        push!(list_compared, first(i.group_by))
+        push!(list_compared, first(i[!, group_by]))
         append!(aucs_acc, (auc_acc))
         append!(aucs_t, auc_t)
     end
     min_total_samples = minimum(list_total_training_samples)
-    writedlm("./Experiments/$(experiment)/auc_acq_$(fold).txt", [list_compared min_total_samples .* (aucs_acc) min_total_samples .* aucs_t], ',')
+	df= DataFrame(group_by=>list_compared, measurement1=>min_total_samples .* (aucs_acc), measurement2=>min_total_samples .* aucs_t)
+    CSV.write("./Experiments/$(experiment)/auc_$(fold).csv", df)
 end
 function auc_mean(n_folds, experiment, group_by::Symbol, measurement1::Symbol, measurement2::Symbol)
     df = DataFrame()
-    for fold in 1:n_folds
-        df_ = CSV.read("./Experiments/$(experiment)/auc_acq_$(fold).txt", DataFrame, header=false)
+    for fold = 1:n_folds
+        df_ = CSV.read("./Experiments/$(experiment)/auc_$(fold).csv", DataFrame, header=1)
         df = vcat(df, df_)
     end
 
     mean_auc = combine(groupby(df, group_by), measurement1 => mean, measurement1 => std, measurement2 => mean, measurement2 => std)
 
-    CSV.write("./Experiments/$(experiment)/mean_auc.txt", mean_auc)
+    CSV.write("./Experiments/$(experiment)/mean_auc.csv", mean_auc)
 end
 
-function plotting_measurable_variable(experiment, list_group_names, dataset, variable::Symbol, measurable::Symbol, measurable_mean::Symbol, measurable_std::Symbol)
-	df = DataFrame()
-	for group_name in list_group_names
-		df_ = CSV.read("./Experiments/$(experiment)/mean_std_$(group_name)_$(variable)_$(measurable).csv", DataFrame, header=1)
-		df_[!, group_name] .= repeat(group_name, 5)
-		df = vcat(df, df_)
+function plotting_measurable_variable(experiment, groupby::Symbol, list_group_names, dataset, variable::Symbol, measurable::Symbol, measurable_mean::Symbol, measurable_std::Symbol, normalised_measurable::Bool)
+    df = DataFrame()
+    for group_name in list_group_names
+        df_ = CSV.read("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", DataFrame, header=1)
+        # df_[!, :AcquisitonFunction] .= repeat([group_name], nrow(df_))
+        df = vcat(df, df_)
+    end
+	if normalised_measurable
+		y_ticks = collect(0:0.1:1.0)
+    	fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon,  Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), yintercept=[0.5], Guide.yticks(ticks=y_ticks), Coord.cartesian(xmin=xmin = df[!, variable][1], ymin=0.0, ymax=1.0))
+	else
+    	fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)))
 	end
-	fig1a = Gadfly.plot(df, x=variable, y=measurable, color=group_name, ymin=df.measurable_mean - df.measurable_std, ymax=df.measurable_mean + df.measurable_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel(measurable), Guide.xlabel(variable), Coord.cartesian(xmin=xmin = df.variable[1], ymin=0.0, ymax=1.0))
-	fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+    fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=600)
 end

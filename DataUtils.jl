@@ -6,12 +6,12 @@ Input: n = the number of points needed per blob(class)
 Output: Tuple{Matrix, Matrix} = Input features X (coordinates in 2d space), Onehot labels of the blobs
 """
 function gen_3_clusters(n)
-    x1 = randn(Float64, 2, n)
-    x2 = randn(Float64, 2, n) .+ [2, 2]
-    x3 = randn(Float64, 2, n) .+ [-2, 2]
-    y1 = vcat(ones(Float64, n), zeros(Float64, 2 * n))
-    y2 = vcat(zeros(Float64, n), ones(Float64, n), zeros(Float64, n))
-    y3 = vcat(zeros(Float64, n), zeros(Float64, n), ones(Float64, n))
+    x1 = randn(Float32, 2, n)
+    x2 = randn(Float32, 2, n) .+ [2, 2]
+    x3 = randn(Float32, 2, n) .+ [-2, 2]
+    y1 = vcat(ones(Float32, n), zeros(Float32, 2 * n))
+    y2 = vcat(zeros(Float32, n), ones(Float32, n), zeros(Float32, n))
+    y3 = vcat(zeros(Float32, n), zeros(Float32, n), ones(Float32, n))
     return hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
 end
 
@@ -77,8 +77,8 @@ function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, mod
 		test_y = test[:, end] .- 1
     end
 
-    pool = (pool_x, pool_y)
-    test = (test_x, test_y)
+    pool = (permutedims(pool_x), permutedims(pool_y))
+    test = (permutedims(test_x), permutedims(test_y))
     return pool, test
 end
 

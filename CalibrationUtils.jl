@@ -56,7 +56,7 @@ function calibration_plot_maker(n_labels, label, n_bins, predicted_probs, true_l
     total_samples = lastindex(predicted_probs)
     ECE, MCE = ece_mce(df, total_samples)
 
-    writedlm("./Experiments/$(experiment_name)/ece_mce_for_label_$(label)_later_stage.txt", [["ECE", "MCE"] [ECE, MCE]], ',')
+    writedlm("./Experiments/$(experiment_name)/ece_mce_for_label_$(label)_later_stage.csv", [["ECE", "MCE"] [ECE, MCE]], ',')
 
 	reliability_diagram = plot(df, layer(x=:BinEnsembleMajority, y=:BinAccuracy, color=[colorant"blue"],  Geom.point, Geom.line),  layer(x->x, 1/n_labels, 1, color=[colorant"red"]), Guide.xlabel("EnsembleMajority"), Guide.ylabel("Accuracy"), Guide.title("$(n_bins) bins, ECE:$(ECE), MCE:$(MCE)"), Coord.cartesian(xmin=1/n_labels, xmax=1.0, ymin=0.0, ymax=1.0))
     reliability_diagram |> pdf("./Experiments/$(experiment_name)/reliability_diagram_for_$(label)_later_stage.pdf")

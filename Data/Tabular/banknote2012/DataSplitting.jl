@@ -4,7 +4,7 @@ PATH = @__DIR__
 cd(PATH)
 include("../../../DataUtils.jl")
 
-df = CSV.read("./data_banknote_authentication.txt", DataFrame, header=false)
+df = CSV.read("./data_banknote_authentication.csv", DataFrame, header=false)
 rename!(df, :Column5 => :label)
 df[df.label.==0, :label] .= 2
 

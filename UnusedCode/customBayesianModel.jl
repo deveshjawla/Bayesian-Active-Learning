@@ -107,7 +107,7 @@ mutable struct mydist{T1,T2} <: ContinuousUnivariateDistribution
     σ::T2
 end
 
-function logpdf(dist::mydist,data::Array{Float64,1})
+function logpdf(dist::mydist,data::Array{Float32,1})
     @unpack μ,σ=dist
     LL = 0.0
     for d in data

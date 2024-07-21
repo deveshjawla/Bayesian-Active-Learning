@@ -245,7 +245,7 @@ for dataset in datasets
 
         df = DataFrame(kpi_df, kpi_names)
         CSV.write("./Experiments/$(experiment_name)/df.csv", df)
-        writedlm("./Experiments/$(experiment_name)/auc_acq.txt", aocs, ',')
+        writedlm("./Experiments/$(experiment_name)/auc.csv", aocs, ',')
 
     end
 

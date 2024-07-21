@@ -15,14 +15,14 @@ cd(PATH)
 
 
 df = CSV.read("secom_data_preprocessed_moldovan2017.csv", DataFrame, header=false)
-labels = readdlm("secom_labels.txt", ' ')
+labels = readdlm("secom_labels.csv", ' ')
 println(describe(df))
 
 to_be_scaled = findall(x->minimum(x)>=0, eachcol(df))
 to_be_normalized = findall(x->minimum(x)<0, eachcol(df))
 a = mapcols(col-> StatsBase.standardize(UnitRangeTransform, col), select(df, to_be_scaled))
-# b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float64.(col)), select(df, to_be_normalized))
-b = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float64.(col), unit=false), select(df, to_be_normalized))
+# b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float32.(col)), select(df, to_be_normalized))
+b = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float32.(col), unit=false), select(df, to_be_normalized))
 
 float_features = hcat(a, b)
 

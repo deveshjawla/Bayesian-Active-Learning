@@ -43,4 +43,4 @@ end
 # 	CSV.write("./Groups/$(group_name)_test.csv", test)
 # end
 # group_names=collect.(keys(groups))
-# writedlm("./Groups/group_names.txt", group_names, ',')
+# writedlm("./Groups/group_names.csv", group_names, ',')

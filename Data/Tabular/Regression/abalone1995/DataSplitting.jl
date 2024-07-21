@@ -1,7 +1,7 @@
 using DataFrames, DelimitedFiles, CSV
 PATH = @__DIR__
 cd(PATH)
-df=CSV.read("./data.txt", DataFrame, header=1)
+df=CSV.read("./data.csv", DataFrame, header=1)
 rename!(df, :Rings => :label)
 df.label = minmaxscaling(df.label, 29, 1)
 groups = groupby(df, :Sex)
@@ -17,7 +17,7 @@ end
 tdf = transform(groups, :label => mean)
 tdf.Sex = tdf.label_mean
 names=collect.(keys(groups))
-writedlm("./Groups/names.txt", names, ',')
+writedlm("./Groups/names.csv", names, ',')
 
 train,test=split_data(group)
 mkpath("./Groups")

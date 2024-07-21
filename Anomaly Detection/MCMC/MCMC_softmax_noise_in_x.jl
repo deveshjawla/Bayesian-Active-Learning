@@ -55,7 +55,7 @@ function feedforward(θ::AbstractVector)
     return model
 end
 
-prior_std = Float64.(sqrt(2) .* vcat(sqrt(2 / (input_size + l1)) * ones(nl1),
+prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (input_size + l1)) * ones(nl1),
     sqrt(2 / (l1 + l2)) * ones(nl2),
     sqrt(2 / (l2 + output_size)) * ones(n_output_layer)))
 
@@ -77,22 +77,22 @@ Turing.setadbackend(:reversediff)
 N = 1000
 ch1_timed = @timed sample(bnnnn(X, Y, num_params, prior_std), NUTS(), N)
 ch1 = ch1_timed.value
-elapsed = Float64(ch1_timed.time)
+elapsed = Float32(ch1_timed.time)
 
 weights = MCMCChains.group(ch1, :θ).value #get posterior MCMC samples for network weights
 noises = MCMCChains.group(ch1, :noise).value #get posterior MCMC samples for network weights
-params_set = collect.(Float64, eachrow(weights[:, :, 1]))
+params_set = collect.(Float32, eachrow(weights[:, :, 1]))
 param_matrix = mapreduce(permutedims, vcat, params_set)
 
-noise_set = collect.(Float64, eachrow(noises[:, :, 1]))
+noise_set = collect.(Float32, eachrow(noises[:, :, 1]))
 noise_matrix = mapreduce(permutedims, vcat, noise_set)
 
 
 ŷ = pred_analyzer_multiclass(test_X, param_matrix, noise_set)[1,:]
 @info "Accuracy is" mean(test_Y.==ŷ)
 
-xs = Float64.(-5:0.1:5)
-ys = Float64.(-5:0.1:5)
+xs = Float32.(-5:0.1:5)
+ys = Float32.(-5:0.1:5)
 heatmap(xs, ys, (x, y) -> pred_analyzer_multiclass(reshape([x, y], (:, 1)), param_matrix, noise_set)[4]) #plots the outlier probabilities
 scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1")
 scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2")
