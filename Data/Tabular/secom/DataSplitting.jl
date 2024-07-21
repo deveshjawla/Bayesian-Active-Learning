@@ -33,8 +33,8 @@ float_features.labels[float_features.labels.==0] .= 2
 
 include("../../../DataUtils.jl")
 train, test = split_data(float_features)
-train = data_balancing(train, balancing="undersampling", positive_class_label=1, negative_class_label=2)
-# test = data_balancing(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+train = balance_binary_data(train, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+# test = balance_binary_data(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
 
 CSV.write("./train.csv", train)
 CSV.write("./test.csv", test)

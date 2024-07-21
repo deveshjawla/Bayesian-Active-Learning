@@ -33,10 +33,10 @@ using Distances
 # @everywhere using DistributionsAD
 
 include("./VIUtils.jl")
-include("./Query.jl")
-include("./DataUtils.jl")
-include("./ScoringFunctions.jl")
-include("./AcquisitionFunctions.jl")
+include("./../Query.jl")
+include("./../DataUtils.jl")
+include("./../ScoringFunctions.jl")
+include("./../AcquisitionFunctions.jl")
 
 for dataset in datasets
     aocs = []
@@ -62,7 +62,7 @@ for dataset in datasets
     _, read_dim_cols = size(test)
     n_input = read_dim_cols - 1
 
-    pool, test = pool_test_maker(pool, test, n_input)
+    pool, test = pool_test_to_matrix(pool, test, n_input, "MCMC")
     total_pool_samples = size(pool[1])[2]
 
     ###
@@ -108,7 +108,7 @@ for dataset in datasets
         # # parameters.
         # num_params = sum([i * o + i for (i, o, _) in network_shape])
 
-        include("./BayesianModel.jl")
+        include("./../BayesianModel.jl")
 
 
         using Bijectors
@@ -171,17 +171,30 @@ for dataset in datasets
                         last_improvement = AL_iteration
                     end
                     if AL_iteration == 1
-                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = bnn_query(prior, pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_epochs, acq_func)
-                    elseif lastindex(new_pool[2]) > acquisition_size
-                        # new_prior = (new_prior[1], sigma)
-                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = bnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, acquisition_size, num_mcsteps, num_epochs, acq_func)
-                        n_acq_steps = deepcopy(AL_iteration)
-                    elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
-                        # new_prior = (new_prior[1], sigma)
-                        new_pool, param_matrix, new_training_data, last_acc, last_elapsed = bnn_query(prior, new_pool, new_training_data, input_size, n_output, param_matrix, AL_iteration, test, experiment_name, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_epochs, acq_func)
-                        println("Trained on last few samples remaining in the Pool")
-                        n_acq_steps = deepcopy(AL_iteration)
-                    end
+						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
+						mcmc_init_params = deepcopy(location_posterior)
+						n_acq_steps = deepcopy(AL_iteration)
+					elseif lastindex(new_pool[2]) > acquisition_size
+						if prior_informativeness == "UnInformedPrior"
+							new_prior = prior
+						else
+							new_prior = (location_posterior, prior_std)
+						end
+						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
+						mcmc_init_params = deepcopy(location_posterior)
+						n_acq_steps = deepcopy(AL_iteration)
+					elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
+						if prior_informativeness == "UnInformedPrior"
+							new_prior = prior
+						else
+							new_prior = (location_posterior, prior_std)
+						end
+						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
+						mcmc_init_params = deepcopy(location_posterior)
+						println("Trained on last few samples remaining in the Pool")
+						n_acq_steps = deepcopy(AL_iteration)
+					end
+					# num_mcsteps += 500
                 end
 
                 class_dist_data = Array{Int}(undef, n_output, n_acq_steps)

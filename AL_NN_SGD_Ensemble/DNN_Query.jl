@@ -30,42 +30,9 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     pool = vcat(pool_x, pool_y)
     pool_size = lastindex(pool_y)
     sampled_indices = 0
-    if al_sampling == "Initial"
-        sampled_indices = 1:acq_size_
-    elseif al_sampling == "Random"
-        sampled_indices = random_acquisition(pool_size, acq_size_)
-    elseif al_sampling == "PowerBALD"
-        pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output; reconstruct = re)
-        pool_scores = mapslices(x -> bald(x, n_output), pool_prediction_matrix, dims=[1, 3])
-        bald_scores = map(x -> x[2], pool_scores[1, 1, :])
-        sampled_indices = power_acquisition(bald_scores, acq_size_)
-        # softmax_entropy = stochastic_acquisition(entropy_scores, acq_size_)
-        # var_ratio_scores = 1 .- pŷ_test
-    elseif al_sampling == "PowerEntropy"
-        pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output; reconstruct = re)
-        pool_scores = mapslices(x -> bald(x, n_output), pool_prediction_matrix, dims=[1, 3])
-        entropy_scores = map(x -> x[1], pool_scores[1, 1, :])
-        sampled_indices = power_acquisition(entropy_scores, acq_size_)
-    elseif al_sampling == "EnsembleUncertainty"
-        pool_prediction_matrix = pool_predictions(pool_x, param_matrix, n_output; reconstruct = re)
-        pool_scores = mapslices(x -> uncertainties(x, n_output), pool_prediction_matrix, dims=[1, 3])
-        aleatoric_uncertainties = map(x -> x[2], pool_scores[1, 1, :])
-        epistemic_uncertainties = map(x -> x[3], pool_scores[1, 1, :])
-        # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/aleatoric_uncertainties_$(al_step).csv", summary_stats(aleatoric_uncertainties), ',')
-        # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/epistemic_uncertainties_$(al_step).csv", summary_stats(epistemic_uncertainties), ',')
-        most_unambiguous_samples = top_k_acquisition(aleatoric_uncertainties, round(Int, acq_size_ * 0.2))
-        most_uncertain_samples = top_k_acquisition(epistemic_uncertainties, round(Int, acq_size_ * 0.8); descending=true, remove_zeros=true)
-        sampled_indices = union(most_unambiguous_samples, most_uncertain_samples)
-        # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/predictions/sampled_indices_$(al_step)_stats.csv", [aleatoric_uncertainties[sampled_indices] epistemic_uncertainties[sampled_indices] pool_y[sampled_indices]], ',')
-    elseif al_sampling == "Diversity"
-        error("Diversity Sampling NOT IMPLEMENTED YET")
-    elseif al_sampling == "PowerBayesian"
-        bayesian_scores = pred_analyzer_multiclass(re, pool_x, param_matrix)
-        sampled_indices = power_acquisition(bayesian_scores[2, :], acq_size_)
-    elseif al_sampling == "QBC"
-        bayesian_scores = pred_analyzer_multiclass(re, pool_x, param_matrix)
-        sampled_indices = top_k_acquisition(bayesian_scores[2, :], acq_size_; descending=false)
-    end
+    pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix)
+
+	sampled_indices = get_sampled_indices(acq_size_, pool_size, pool_prediction_matrix)
 
     acq_size_ = lastindex(sampled_indices)
     new_training_data = pool[:, sampled_indices]
@@ -122,12 +89,12 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
     if n_output == 2
-        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
+        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats_binary(test_y, ŷ_test)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, f1, mcc, fpr, prec, recall, threat, cm]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
         # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, f1, mcc, fpr, prec, recall, threat, cm]])
     else
-        # acc = accuracy_multiclass(test_y, ŷ_test)
+        
 		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')

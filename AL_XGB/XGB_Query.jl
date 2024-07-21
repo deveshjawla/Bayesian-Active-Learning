@@ -12,7 +12,7 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
     if al_sampling == "Initial"
         sampled_indices = 1:acq_size_
     elseif al_sampling == "Random"
-        sampled_indices = initial_random_acquisition(pool_size, acq_size_)
+        sampled_indices = random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerEntropy"
         #Scoring the pool and acquiring new samples
         pool_x = copy(permutedims(pool_x))
@@ -20,9 +20,9 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         entropy_scores = mapslices(x -> normalized_entropy(softmax(x), n_output), pool_prediction_matrix, dims=2)
         # var_ratio_scores = 1 .- pŷ_test
         # sampled_indices = random_acquisition(entropy_scores, acq_size_)
-        sampled_indices = power_acquisition(vec(entropy_scores), acq_size_)
+        sampled_indices = stochastic_acquisition(vec(entropy_scores), acq_size_)
     elseif al_sampling == "Diversity"
-        sampled_indices = initial_random_acquisition(pool_size, acq_size_)
+        sampled_indices = random_acquisition(pool_size, acq_size_)
     end
     #Using Diversity Sampling we acquire the initial set
 
@@ -92,11 +92,11 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
     # println("Checking if dimensions of test_y and ŷ_test are", size(test_y), size(ŷ_test))
     # pŷ_test = predictions[:,2]
     if n_output == 2
-        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats(test_y, ŷ_test)
+        acc, f1, mcc, fpr, prec, recall, threat, cm = performance_stats_binary(test_y, ŷ_test)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, elapsed, f1, mcc, fpr, prec, recall, threat, cm]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     else
-        # acc = accuracy_multiclass(test_y, ŷ_test)
+        
 		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "Elapsed", "MacroF1Score"] [acq_size_, acc, elapsed, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')

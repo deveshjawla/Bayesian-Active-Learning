@@ -59,10 +59,19 @@ mutable struct BernoulliNew <: DiscreteUnivariateDistribution
     pred
 end
 
+struct BernoulliN <: DiscreteUnivariateDistribution
+    preds::Array
+	function BernoulliNew(preds::Array)
+		return Bernoulli(preds)
+	end
+end
+
+BernoulliN(pred) = Bernoulli(pred)
+
 using Parameters
 import Distributions: logpdf
 function logpdf(dist::BernoulliNew, data::Array)
-	@unpack pred = dist
+	@unpack preds = dist
     LL = 0.0
     for i in 1:lastindex(data)
         LL += logpdf(Bernoulli(pred[i]), data[i])
@@ -73,7 +82,7 @@ end
 
 @model function bayes_nn(xs, ts, nparameters, reconstruct; alpha=0.01)
     # Create the weight and bias vector.
-    parameters ~ MvNormal(Zeros(nparameters), I / alpha)
+    parameters ~ MvNormal(zeros(nparameters), I / alpha)
 
     # Construct NN from parameters
     nn = reconstruct(parameters)
@@ -86,7 +95,7 @@ end
 
 using Turing
 # Perform inference.
-N = 5
+N = 100
 ch = sample(bayes_nn(hcat(xs...), ts, lastindex(parameters_initial), reconstruct), Turing.NUTS(), N)
 
 

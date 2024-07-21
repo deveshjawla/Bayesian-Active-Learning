@@ -30,9 +30,9 @@ set_default_plot_size(width, height)
 theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
 Gadfly.push_theme(theme)
 include("./XGB_Query.jl")
-include("./DataUtils.jl")
-include("./ScoringFunctions.jl")
-include("./AcquisitionFunctions.jl")
+include("./../DataUtils.jl")
+include("./../ScoringFunctions.jl")
+include("./../AcquisitionFunctions.jl")
 for experiment in experiments
     @everywhere experiment = $experiment
 

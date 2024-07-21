@@ -9,14 +9,14 @@ n_input = 30
 pool = CSV.read("train.csv", DataFrame, header=1)
 pool[pool.target.==-1, :target] .= 2
 # pool = select(pool, vcat(shap_importances.feature_name[1:n_input], "target"))
-pool = data_balancing(pool, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+pool = balance_binary_data(pool, balancing="undersampling", positive_class_label=1, negative_class_label=2)
 
 test = CSV.read("test.csv", DataFrame, header=1)
 test[test.target.==-1, :target] .= 2
 # test = select(test, vcat(shap_importances.feature_name[1:n_input], "target"))
-# test = data_balancing(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
+# test = balance_binary_data(test, balancing="undersampling", positive_class_label=1, negative_class_label=2)
 
-pool, test_set = pool_test_maker(pool, test, n_input)
+pool, test_set = pool_test_to_matrix(pool, test, n_input)
 total_pool_samples = size(pool[1])[2]
 
 input_size = size(pool[1])[1]

@@ -10,7 +10,7 @@ iris = iris[shuffle(axes(iris, 1)), :]
 pool, test_set = split_data(iris, at=0.8)
 n_input = 4
 
-pool, test_set = pool_test_maker(pool, test_set, n_input)
+pool, test_set = pool_test_to_matrix(pool, test_set, n_input)
 
 total_pool_samples = size(pool[1])[2]
 input_size = size(pool[1])[1]

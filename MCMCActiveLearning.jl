@@ -58,7 +58,6 @@ Gadfly.push_theme(theme)
 
 include("./MCMCUtils.jl")
 include("./Query.jl")
-include("./XGB_Query.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
@@ -88,370 +87,123 @@ for experiment in experiments
             test = CSV.read("./FiveFolds/test_$(fold).csv", DataFrame, header=1)
             # test = CSV.read("./test.csv", DataFrame, header=1)
 
-            pool, test = pool_test_maker(train, test, n_input)
+            pool, test = pool_test_to_matrix(train, test, n_input, "MCMC")
             total_pool_samples = size(pool[1])[2]
 
             # println("The number of input features are $n_input")
             # println("The number of outputs are $n_output")
-            class_names = Array{String}(undef, n_output)
-            for i = 1:n_output
-                class_names[i] = "$(i)"
+            if n_output == 1
+                kpi_df = Array{Any}(missing, 0, 15)
+            else
+                class_names = Array{String}(undef, n_output)
+                for i = 1:n_output
+                    class_names[i] = "$(i)"
+                end
+
+                kpi_df = Array{Any}(missing, 0, 18 + 2 * n_output)
             end
+            for prior_informativeness in list_prior_informativeness
+                @everywhere prior_informativeness = $prior_informativeness
+                for prior_variance in list_prior_variance
+                    @everywhere prior_variance = $prior_variance
+                    for likelihood_name in list_likelihood_name
+                        @everywhere likelihood_name = $likelihood_name
+                        for acq_func in acq_functions
+                            @everywhere acq_func = $acq_func
+                            for temperature in temperatures
+                                @everywhere temperature = $temperature
 
-            kpi_df = Array{Any}(missing, 0, 19 + 2 * n_output)
-            for class_balancing in list_class_balancing
-                @everywhere class_balancing = $class_balancing
-                for prior_informativeness in list_prior_informativeness
-                    @everywhere prior_informativeness = $prior_informativeness
-                    for prior_variance in list_prior_variance
-                        @everywhere prior_variance = $prior_variance
-                        for likelihood_name in list_likelihood_name
-                            @everywhere likelihood_name = $likelihood_name
-                            for acq_func in acq_functions
-                                @everywhere acq_func = $acq_func
-                                for temperature in temperatures
-                                    @everywhere temperature = $temperature
+                                @everywhere begin
+                                    n_input = $n_input
+                                    n_output = $n_output
+                                    using Flux, Turing
 
-                                    @everywhere begin
-                                        n_input = $n_input
-                                        n_output = $n_output
-                                        using Flux, Turing
+                                    ###
+                                    ### Dense Network specifications(Functional Model)
+                                    ###
+                                    include(PATH * "/Network.jl")
+                                    include("./BayesianModel.jl")
 
-                                        ###
-                                        ### Dense Network specifications(Functional Model)
-                                        ###
-                                        include(PATH * "/Network.jl")
+                                    # setprogress!(false)
+                                    # using Zygote
+                                    # Turing.setadbackend(:zygote)
+                                    using ReverseDiff
+                                    Turing.setadbackend(:reversediff)
 
-                                        # n_hidden = n_input > 30 ? 30 : n_input
-
-                                        # nn_initial = Chain(Dense(n_input, n_hidden, relu), Dense(n_hidden, n_hidden, relu), Dense(n_hidden, n_output), softmax)
-
-                                        # # Extract weights and a helper function to reconstruct NN from weights
-                                        # parameters_initial, destructured = Flux.destructure(nn_initial)
-
-                                        # feedforward(x, theta) = destructured(theta)(x)
-
-                                        # num_params = lastindex(parameters_initial) # number of paraemters in NN
-
-                                        # network_shape = []
-                                        #     (n_hidden, n_input, :relu),
-                                        #     (n_hidden, n_hidden, :relu),
-                                        #     (n_output, n_hidden, :relu)]
-
-                                        # # Regularization, parameter variance, and total number of
-                                        # # parameters.
-                                        # num_params = sum([i * o + i for (i, o, _) in network_shape])
-
-                                        include("./BayesianModel.jl")
-
-                                        # setprogress!(false)
-                                        # using Zygote
-                                        # Turing.setadbackend(:zygote)
-                                        using ReverseDiff
-                                        Turing.setadbackend(:reversediff)
-
-                                        #Here we define the Prior
-                                        if prior_variance isa Number
-                                            prior_std = prior_variance .* ones(num_params)
-                                        else
-                                            # GlorotNormal initialisation
-                                            prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer))
-                                            # prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
-                                        end
-                                    end
-
-                                    let
-                                        # for acquisition_size in acquisition_sizes
-                                        num_mcsteps = 1000
-
-                                        pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
-                                        # pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(num_chains)_$(num_mcsteps)"
-                                        # mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
-                                        # mkpath("./Experiments/$(experiment)/$(pipeline_name)/hyperpriors")
-                                        mkpath("./Experiments/$(experiment)/$(pipeline_name)/classification_performance")
-                                        mkpath("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics")
-                                        # mkpath("./Experiments/$(experiment)/$(pipeline_name)/independent_param_matrix_all_chains")
-                                        # mkpath("./Experiments/$(experiment)/$(pipeline_name)/log_distribution_changes")
-                                        mkpath("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions")
-
-                                        # n_acq_steps = 10#round(Int, total_pool_samples / acquisition_size, RoundUp)
-                                        prior = (zeros(num_params), prior_std)
-                                        param_matrix, new_training_data = 0, 0
-                                        map_matrix = 0
-                                        last_acc = 0
-                                        best_acc = 0.5
-                                        last_improvement = 0
-                                        last_elapsed = 0
-                                        benchmark_elapsed = 100.0
-                                        new_pool = 0
-                                        location_posterior = 0
-                                        mcmc_init_params = 0
-                                        for AL_iteration = 1:n_acq_steps
-                                            # if last_elapsed >= 2 * benchmark_elapsed
-                                            #     @warn(" -> Inference is taking a long time in proportion to Query Size, Increasing Query Size!")
-                                            #     acquisition_size = deepcopy(2 * acquisition_size)
-                                            #     benchmark_elapsed = deepcopy(last_elapsed)
-                                            # end
-                                            # if last_acc >= 0.999
-                                            #     @info(" -> Early-exiting: We reached our target accuracy of 99.9%")
-                                            #     acquisition_size = lastindex(new_pool[2])
-                                            # end
-                                            # If this is the best accuracy we've seen so far, save the model out
-                                            # if last_acc >= best_acc
-                                            #     @info(" -> New best accuracy! Logging improvement")
-                                            #     best_acc = last_acc
-                                            #     last_improvement = AL_iteration
-                                            # end
-                                            # # If we haven't seen improvement in 5 epochs, drop our learning rate:
-                                            # if AL_iteration - last_improvement >= 3 && lastindex(new_pool[2]) > 0
-                                            #     @warn(" -> Haven't improved in a while, Increasing Query Size!")
-                                            #     n_acq_steps = deepcopy(AL_iteration) - 1
-                                            #     break
-                                            #     acquisition_size = deepcopy(3 * acquisition_size)
-                                            #     benchmark_elapsed = deepcopy(last_elapsed)
-                                            #     # After dropping learning rate, give it a few epochs to improve
-                                            #     last_improvement = AL_iteration
-                                            # end
-
-
-                                            if AL_iteration == 1
-                                                new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
-                                                mcmc_init_params = deepcopy(location_posterior)
-                                                n_acq_steps = deepcopy(AL_iteration)
-                                            elseif lastindex(new_pool[2]) > acquisition_size
-                                                if prior_informativeness == "UnInformedPrior"
-                                                    new_prior = prior
-                                                else
-                                                    new_prior = (location_posterior, prior_std)
-                                                end
-                                                new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
-                                                mcmc_init_params = deepcopy(location_posterior)
-                                                n_acq_steps = deepcopy(AL_iteration)
-                                            elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
-                                                if prior_informativeness == "UnInformedPrior"
-                                                    new_prior = prior
-                                                else
-                                                    new_prior = (location_posterior, prior_std)
-                                                end
-                                                new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
-                                                mcmc_init_params = deepcopy(location_posterior)
-                                                println("Trained on last few samples remaining in the Pool")
-                                                n_acq_steps = deepcopy(AL_iteration)
-                                            end
-                                            # num_mcsteps += 500
-                                        end
-
-                                        begin
-                                            performance_stats = Array{Any}(undef, 5, n_acq_steps)
-                                            for al_step = 1:n_acq_steps
-                                                data = Array{Any}(undef, 5, num_chains)
-                                                for i = 1:num_chains
-                                                    m = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", ',')
-                                                    data[:, i] = m[:, 2]
-                                                    # rm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv")
-                                                end
-                                                d = mean(data, dims=2)
-                                                writedlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", d)
-                                                performance_stats[:, al_step] = d
-                                            end
-
-                                            class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
-                                            cum_class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
-                                            performance_data = Array{Any}(undef, 13, n_acq_steps) #dims=(features, samples(i))
-                                            cum_class_dist_ent = Array{Any}(undef, 1, n_acq_steps)
-                                            for al_step = 1:n_acq_steps
-                                                m = readdlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step).csv", ',')
-                                                performance_data[1, al_step] = m[1, 2]#AcquisitionSize
-                                                cd = readdlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$(al_step).csv", ',')
-                                                performance_data[2, al_step] = cd[1, 2]#ClassDistEntropy
-                                                performance_data[3, al_step] = m[2, 2] #Accuracy Score
-                                                performance_data[13, al_step] = m[3, 2]#F1 
-
-                                                # ensemble_majority_avg_ = readdlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv", ',')
-                                                # ensemble_majority_avg = mean(ensemble_majority_avg_[2, :])
-                                                performance_data[4, al_step] = 0#ensemble_majority_avg
-                                                # rm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$al_step.csv")
-
-                                                c = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", ',')
-
-                                                performance_data[5, al_step] = acq_func
-                                                performance_data[6, al_step] = temperature
-                                                performance_data[7, al_step] = experiment
-
-                                                #Cumulative Training Size
-                                                if al_step == 1
-                                                    performance_data[8, al_step] = m[1, 2]
-                                                else
-                                                    performance_data[8, al_step] = performance_data[8, al_step-1] + m[1, 2]
-                                                end
-
-
-                                                performance_data[9, al_step], performance_data[10, al_step], performance_data[11, al_step], performance_data[12, al_step] = class_balancing, prior_informativeness, prior_variance, likelihood_name
-
-                                                for i = 1:n_output
-                                                    class_dist_data[i, al_step] = cd[i+1, 2]
-                                                    if al_step == 1
-                                                        cum_class_dist_data[i, al_step] = cd[i+1, 2]
-                                                    elseif al_step > 1
-                                                        cum_class_dist_data[i, al_step] = cum_class_dist_data[i, al_step-1] + cd[i+1, 2]
-                                                    end
-                                                end
-                                                cum_class_dist_ent[1, al_step] = normalized_entropy(softmax(cum_class_dist_data[:, al_step]), n_output)
-                                            end
-                                            kpi = vcat(performance_data, class_dist_data, cum_class_dist_data, cum_class_dist_ent, performance_stats)
-                                            writedlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", kpi, ',')
-                                        end
-                                        kpi = readdlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", ',')
-                                        kpi_df = vcat(kpi_df, permutedims(kpi))
+                                    #Here we define the Prior
+                                    if prior_variance isa Number
+                                        prior_std = prior_variance .* ones(num_params)
+                                    else
+                                        # GlorotNormal initialisation
+                                        prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer))
+                                        # prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
                                     end
                                 end
+
+                                num_mcsteps = 1000
+                                pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
+                                # pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(num_chains)_$(num_mcsteps)"
+                                # mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
+                                # mkpath("./Experiments/$(experiment)/$(pipeline_name)/hyperpriors")
+                                mkpath("./Experiments/$(experiment)/$(pipeline_name)/classification_performance")
+                                mkpath("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics")
+                                # mkpath("./Experiments/$(experiment)/$(pipeline_name)/independent_param_matrix_all_chains")
+                                # mkpath("./Experiments/$(experiment)/$(pipeline_name)/log_distribution_changes")
+                                mkpath("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions")
+
+                                running_active_learning_ensemble!(num_params, prior_std, pool, n_input, n_output, test, experiment, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, prior_variance, likelihood_name)
+                                if n_output == 1
+                                    kpi = collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
+                                else
+                                    kpi = collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
+                                end
+                                # kpi = readdlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", ',')
+                                kpi_df = vcat(kpi_df, permutedims(kpi))
                             end
                         end
                     end
                 end
             end
-
-            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :Accuracy, :EnsembleMajority, :AcquisitionFunction, :Temperature, :Experiment, :CumTrainedSize, :ClassBalancing, :PriorInformativeness, :PriorVariance, :LikelihoodName, :F1], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS)
+            if n_output == 1
+                kpi_names = vcat([:AcquisitionSize, :MSE, :MAE, :AcquisitionFunction, :Temperature, :Experiment, :CumTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS)
+            else
+                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :Accuracy, :EnsembleMajority, :AcquisitionFunction, :Temperature, :Experiment, :CumTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName, :F1], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS)
+            end
 
             df = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df)
-            # CSV.write("./Experiments/$(experiment)/df.csv", df)
-
-            begin
-                aucs_acc = []
-                aucs_t = []
-                list_compared = []
-                list_total_training_samples = []
-                for i in groupby(df, :AcquisitionFunction)
-                    acc_ = i.:Accuracy
-                    time_ = i.:Elapsed
-                    # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
-                    n_aocs_samples = lastindex(acc_)
-                    total_training_samples = i.:CumTrainedSize[end]
-                    push!(list_total_training_samples, total_training_samples)
-                    auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
-                    auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
-                    push!(list_compared, first(i.:AcquisitionFunction))
-                    append!(aucs_acc, (auc_acc))
-                    append!(aucs_t, auc_t)
-                end
-                min_total_samples = minimum(list_total_training_samples)
-                writedlm("./Experiments/$(experiment)/auc_acq_$(fold).txt", [list_compared min_total_samples .* (aucs_acc) min_total_samples .* aucs_t], ',')
+            if n_output == 1
+                auc_per_fold!(fold, df, :PriorInformativeness, :MSE, :Elapsed)
+            else
+                auc_per_fold!(fold, df, :AcquisitionFunction, :Accuracy, :Elapsed)
             end
-
-            # df = CSV.read("./Experiments/$(experiment)/df.csv", DataFrame)
-            df_fold = CSV.read("./Experiments/$(experiment)/df_$(fold).csv", DataFrame)
+            # df_fold = CSV.read("./Experiments/$(experiment)/df_$(fold).csv", DataFrame)
             df_folds = vcat(df_folds, df_fold)
         end
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
-
-        for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
-            mean_std_acc = combine(groupby(i, :CumTrainedSize), :Accuracy => mean, :Accuracy => std)
-            mean_std_f1 = combine(groupby(i, :CumTrainedSize), :F1 => mean, :F1 => std)
-
-            mean_std_time = combine(groupby(i, :CumTrainedSize), :Elapsed => mean, :Elapsed => std)
-            mean_std_ensemble_majority = combine(groupby(i, :CumTrainedSize), :EnsembleMajority => mean, :EnsembleMajority => std)
-            mean_std_acceptance_rate = combine(groupby(i, :CumTrainedSize), :AcceptanceRate => mean, :AcceptanceRate => std)
-            mean_std_numerical_errors = combine(groupby(i, :CumTrainedSize), :NumericalErrors => mean, :NumericalErrors => std)
-            acquisition_function = i.AcquisitionFunction[1]
-            CSV.write("./Experiments/$(experiment)/mean_std_acc$(acquisition_function).csv", mean_std_acc)
-            CSV.write("./Experiments/$(experiment)/mean_std_f1$(acquisition_function).csv", mean_std_f1)
-
-            CSV.write("./Experiments/$(experiment)/mean_std_time$(acquisition_function).csv", mean_std_time)
-            CSV.write("./Experiments/$(experiment)/mean_std_ensemble_majority$(acquisition_function).csv", mean_std_ensemble_majority)
-            CSV.write("./Experiments/$(experiment)/mean_std_acceptance_rate$(acquisition_function).csv", mean_std_acceptance_rate)
-            CSV.write("./Experiments/$(experiment)/mean_std_numerical_errors$(acquisition_function).csv", mean_std_numerical_errors)
+        if n_output == 1
+            auc_mean(n_folds, experiment, :PriorInformativeness, :MSE, :Elapsed)
+            mean_std_by_group(df_folds, :LikelihoodName, :PriorVariance; list_measurables=[:MSE, :Elapsed, :AcceptanceRate, :NumericalErrors])
+        else
+            auc_mean(n_folds, experiment, :AcquisitionFunction, :Accuracy, :Elapsed)
+            mean_std_by_group(df_folds, :AcquisitionFunction, :CumTrainedSize; list_measurables=[:Accuracy, :Elapsed, :EnsembleMajority, :AcceptanceRate, :NumericalErrors])
         end
 
-        # df = CSV.read("./Experiments/$(experiment)/df.csv", DataFrame, header=1)
-
-        # df = filter(:AcquisitionFunction => !=("BayesianUncertainty"), df)
-
-        # begin
-        #     aucs_acc = []
-        #     aucs_t = []
-        #     list_compared = []
-        #     list_total_training_samples = []
-        #     for i in groupby(df, :PriorVariance)
-        #         acc_ = i.:Accuracy
-        #         time_ = i.:Elapsed
-        #         # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
-        #         n_aocs_samples = lastindex(acc_)
-        #         total_training_samples = i.:CumTrainedSize[end]
-        #         push!(list_total_training_samples, total_training_samples)
-        #         auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
-        #         auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
-        #         push!(list_compared, first(i.:PriorVariance))
-        #         append!(aucs_acc, (auc_acc))
-        #         append!(aucs_t, auc_t)
-        #     end
-        #     min_total_samples = minimum(list_total_training_samples)
-        #     writedlm("./Experiments/$(experiment)/auc_acq.txt", [list_compared min_total_samples .* (aucs_acc) min_total_samples .* aucs_t], ',')
-        # end
-
-        # # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
-        # fig1a = Gadfly.plot(df, x=:CumTrainedSize, y=:Accuracy, color=:PriorVariance, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
-
-        # fig1aa = Gadfly.plot(df, x=:CumTrainedSize, y=:EnsembleMajority, color=:PriorVariance, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.5, ymax=1.0))
-
-        # fig1b = Gadfly.plot(df, x=:CumTrainedSize, y=:Elapsed, color=:PriorVariance, Geom.point, Geom.line, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=0))
-
-        # fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment).pdf", dpi=600)
-        # fig1aa |> PDF("./Experiments/$(experiment)/EnsembleMajority_$(dataset)_$(experiment).pdf", dpi=600)
-        # fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment).pdf", dpi=600)
-
-        # fig1c = plot(df, x=:CumTrainedSize, y=:ClassDistEntropy, color=:PriorVariance, Geom.point, Geom.line, Guide.ylabel("Class Distribution Entropy"), Guide.xlabel(nothing), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
-
-        # fig1cc = plot(df, x=:CumTrainedSize, y=:CumCDE, color=:PriorVariance, Geom.point, Geom.line, Guide.ylabel("Cumulative CDE"), Guide.xlabel(nothing), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
-
-        # fig1c |> PDF("./Experiments/$(experiment)/ClassDistEntropy_$(dataset)_$(experiment).pdf", dpi=600)
-        # fig1cc |> PDF("./Experiments/$(experiment)/CumCDE_$(dataset)_$(experiment).pdf", dpi=600)
-
-        # # fig1d = plot(DataFrames.stack(filter(:Experiment => ==(acq_functions[1]), i), Symbol.(class_names)), x=:CumTrainedSize, y=:value, color=:variable, Guide.colorkey(title="Class", labels=class_names), Geom.point, Geom.line, Guide.ylabel(acq_functions[1]), Scale.color_discrete_manual("red", "purple", "green"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
-        # # end
-
-
-        ### Loops when using Cross Validation for AL
-        # begin
-        #     df_acc = DataFrame()
-        #     df_f1 = DataFrame()
-
-        #     df_time = DataFrame()
-        #     for acq_func in acq_functions
-        #         df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(acq_func).csv", DataFrame, header=1)
-        #         df_f1_ = CSV.read("./Experiments/$(experiment)/mean_std_f1$(acq_func).csv", DataFrame, header=1)
-
-        #         df_time_ = CSV.read("./Experiments/$(experiment)/mean_std_time$(acq_func).csv", DataFrame, header=1)
-
-        #         df_acc_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
-        #         df_f1_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
-
-        #         df_time_[!, "AcquisitionFunction"] .= repeat(acq_func, 5)
-
-        #         df_acc = vcat(df_acc, df_acc_)
-        #         df_f1 = vcat(df_f1, df_f1_)
-
-        #         df_time = vcat(df_time, df_time_)
-        #     end
-
-        #     fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
-        #     fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
-
-        #     fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
-
-        #     fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-        #     fig1aa |> PDF("./Experiments/$(experiment)/F1_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-
-        #     fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-
-        #     df = DataFrame()
-        #     for fold in 1:n_folds
-        #         df_ = CSV.read("./Experiments/$(experiment)/auc_acq_$(fold).txt", DataFrame, header=false)
-        #         df = vcat(df, df_)
-        #     end
-
-        #     mean_auc = combine(groupby(df, :Column1), :Column2 => mean, :Column2 => std, :Column3 => mean, :Column3 => std)
-        #     CSV.write("./Experiments/$(experiment)/mean_auc.txt", mean_auc, header=[:AcquisitionFunction, :AccAUC_mean, :AccAUC_std, :TimeAUC_mean, :TimeAUC_std])
-        # end
+        ## Loops when using Cross Validation for AL
+        if n_output == 1
+            list_plotting_measurables = [:MSE, :Elapsed]
+            list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
+            list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
+            for (i, j, k) in zip(list_plotting_measurables, list_plotting_measurables_mean, list_plotting_measurables_std)
+                plotting_measurable_variable(experiment, acq_functions, dataset, :CumTrainedSize, i, j, k)
+            end
+        else
+            list_plotting_measurables = [:Accuracy, :F1, :Elapsed]
+            list_plotting_measurables_mean = [:Accuracy_mean, :F1_mean, :Elapsed_mean]
+            list_plotting_measurables_std = [:Accuracy_std, :F1_std, :Elapsed_std]
+            for (i, j, k) in zip(list_plotting_measurables, list_plotting_measurables_mean, list_plotting_measurables_std)
+                plotting_measurable_variable(experiment, acq_functions, dataset, :CumTrainedSize, i, j, k)
+            end
+        end
     end
 end

@@ -15,7 +15,7 @@ acq_functions = ["Initial"] # "BayesianUncertainty", "Initial", "Random"
 temperatures = [nothing] # 1.0, 0.1, 0.001 or nothing
 using DelimitedFiles, DataFrames, CSV, Statistics
 
-col_names = [:Dataset, :Experiment, :OOB_Rhat, :AvgAcceptanceRate, :NumericalErrors, :ESS, :PSRF]
+col_names = [:Dataset, :Experiment, :OOB_Rhat, :AvgAcceptanceRate, :NumericalErrors, :ESS, :PSRF, :BalAcc, :MacroF1, :Time]
 convergence_stats = DataFrame([[] for _ in col_names], col_names)
 for (dataset, acquisition_size, n_folds, n_acq_steps) in zip(datasets, acquisition_sizes, list_n_folds, list_acq_steps)
     PATH = @__DIR__
@@ -35,15 +35,24 @@ for (dataset, acquisition_size, n_folds, n_acq_steps) in zip(datasets, acquisiti
                 for acq_func in acq_functions
                     for temperature in temperatures
                         for experiment in experiments
-                            stats_df = Array{Any}(undef, 5, n_folds)
+                            stats_df = Array{Any}(undef, 8, n_folds)
                             for fold in 1:n_folds
                                 num_mcsteps = 100
                                 num_chains = 2
                                 pipeline_name = "./Experiments/$(experiment)/$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)/convergence_statistics"
 
+                                pipeline_name2 = "./Experiments/$(experiment)/$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)/classification_performance"
+
+
                                 stats = readdlm("$(pipeline_name)/$(n_acq_steps)_chain.csv")
+                                results = readdlm("$(pipeline_name2)/$(n_acq_steps).csv", ',')
+                                elapsed = readdlm("./Experiments/$(experiment)/$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)/convergence_statistics/$(n_acq_steps)_chain.csv")
+
+
                                 psrf = readdlm("$(pipeline_name)/$(n_acq_steps)_max_psrf.csv")
-                                stats_df[:, fold] = vcat(stats[2:5], psrf)
+                                stats_df[1:5, fold] = vcat(stats[2:5], psrf)
+                                stats_df[6:8, fold] = vcat(results[2:3, 2], elapsed[1])
+
                             end
                             stats_df_avg = mean(stats_df, dims=2)
                             stats_df_std = std(stats_df, dims=2)
