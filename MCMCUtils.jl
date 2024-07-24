@@ -159,18 +159,36 @@ end
 
 	Returns: Matrix with Dims(6, Number of Samples) where 6 are the following quantitites = [pred_label, pred_prob, pred_std, aleatoric_uncertainties, epistemic_uncertainties, total_uncertainties]
 """
-function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array{Float32,2}; noise_set=nothing, reconstruct=nothing)::Array{Float32,2}
+function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array{Float32,2}; noise_set=nothing, noise_set_y=nothing, reconstruct=nothing, output_activation_function="Softplus")::Array{Float32,2}
     if isnothing(reconstruct)
         nets = map(feedforward, eachrow(param_matrix))
     else
         nets = map(reconstruct, eachrow(param_matrix))
     end
-    if isnothing(noise_set)
-        # predictions_nets = map(x -> softmax(x(test_xs)), nets)
-        predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
-    else
-        predictions_nets = map((net, noise) -> net(test_xs .+ noise) ./ sum(net(test_xs .+ noise), dims=1), nets, noise_set)
-    end
+
+	if output_activation_function == "Softmax"
+		if isnothing(noise_set) && isnothing(noise_set_y)
+			# predictions_nets = map(x -> softmax(x(test_xs)), nets)
+			predictions_nets = map(net -> softmax(net(test_xs); dims=1), nets)
+		elseif isnothing(noise_set_y)
+			predictions_nets = map((net, noise) -> softmax(net(test_xs .+ noise); dims=1), nets, noise_set)
+		elseif isnothing(noise_set)
+			predictions_nets = map((net, noise_y) -> softmax(net(test_xs) .+ noise_y; dims=1), nets, noise_set_y)
+		else
+			predictions_nets = map((net, noise, noise_y) -> softmax(net(test_xs .+ noise) .+noise_y; dims=1), nets, noise_set, noise_set_y)
+		end
+	elseif output_activation_function == "Softplus"
+		if isnothing(noise_set) && isnothing(noise_set_y)
+			# predictions_nets = map(x -> softmax(x(test_xs)), nets)
+			predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
+		elseif isnothing(noise_set_y)
+			predictions_nets = map((net, noise) -> net(test_xs .+ noise) ./ sum(net(test_xs .+ noise), dims=1), nets, noise_set)
+		elseif isnothing(noise_set)
+			predictions_nets = map((net, noise_y) -> net(test_xs) .+ noise_y ./ sum(net(test_xs) .+ noise_y, dims=1), nets, noise_set_y)
+		else
+			predictions_nets = map((net, noise, noise_y) -> (net(test_xs .+ noise) .+noise_y) ./ sum((net(test_xs .+ noise) .+noise_y), dims=1), nets, noise_set, noise_set_y)
+		end
+	end
 
     # Determine the size of the final 3D array
     num_matrices = lastindex(predictions_nets)
@@ -429,6 +447,12 @@ function auc_mean(n_folds, experiment, group_by::Symbol, measurement1::Symbol, m
 end
 
 function plotting_measurable_variable(experiment, groupby::Symbol, list_group_names, dataset, variable::Symbol, measurable::Symbol, measurable_mean::Symbol, measurable_std::Symbol, normalised_measurable::Bool)
+	width = 6inch
+	height = 6inch
+	set_default_plot_size(width, height)
+	theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
+	Gadfly.push_theme(theme)
+
     df = DataFrame()
     for group_name in list_group_names
         df_ = CSV.read("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", DataFrame, header=1)

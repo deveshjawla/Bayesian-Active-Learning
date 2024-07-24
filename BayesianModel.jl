@@ -55,3 +55,79 @@ end
         y[i] ~ Normal(preds[i], sigma)
     end
 end
+
+@model function softmax_bnn_noise_x(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    noise ~ MvNormal(zeros(2), ones(2))
+    preds = nn(x .+ noise)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical(softmax(preds[:, i]))
+    end
+end
+@model function softmax_bnn_noise_y(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    preds = nn(x)
+    noise_y ~ Gamma(0.1, 10)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical(softmax(preds[:, i] .+ noise_y))
+    end
+end
+@model function softmax_bnn_noise_xy(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    noise ~ MvNormal(zeros(2), ones(2))
+    preds = nn(x .+ noise)
+    noise_y ~ Product([Gamma(0.1, 10) for _ in 1:3])
+    # noise_y ~ MvNormal(zeros(3), ones(3))
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical(softmax(preds[:, i] .+ noise_y))
+    end
+end
+@model function softmax_bnn(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    preds = nn(x)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical(softmax(preds[:, i]))
+    end
+end
+
+@model function softplus_bnn_noise_x(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    noise ~ MvNormal(zeros(2), ones(2))
+    preds = nn(x .+ noise)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical((preds[:, i]) ./ sum(preds[:, i]))
+    end
+end
+@model function softplus_bnn_noise_y(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    preds = nn(x)
+    noise_y ~ Gamma(0.1, 10)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical((preds[:, i] .+ noise_y) ./ sum(preds[:, i] .+ noise_y))
+    end
+end
+@model function softplus_bnn_noise_xy(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    noise ~ MvNormal(zeros(2), ones(2))
+    preds = nn(x .+ noise)
+    noise_y ~ Product([Gamma(0.1, 10) for _ in 1:3])
+    # noise_y ~ MvNormal(zeros(3), ones(3))
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical((preds[:, i] .+ noise_y) ./ sum((preds[:, i] .+ noise_y)))
+    end
+end
+@model function softplus_bnn(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    preds = nn(x)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical(preds[:, i] ./ sum(preds[:, i]))
+    end
+end

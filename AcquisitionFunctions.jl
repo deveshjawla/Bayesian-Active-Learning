@@ -71,13 +71,14 @@ function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_
         sampled_indices = stochastic_acquisition(bald_scores, acq_size_; acquisition_type="Power")
     elseif al_sampling == "StochasticBALD"
         bald_scores = pool_prediction_matrix[5, :]
-        sampled_indices = stochastic_acquisition(bald_scores, acq_size_; acquisition_type="Stoachstic")
+        sampled_indices = stochastic_acquisition(bald_scores, acq_size_; acquisition_type="Stochastic")
     elseif al_sampling == "BayesianUncertainty"
         aleatoric_uncertainties = pool_prediction_matrix[4, :]
         epistemic_uncertainties = pool_prediction_matrix[5, :]
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/aleatoric_uncertainties_$(al_step).csv", summary_stats(aleatoric_uncertainties), ',')
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/epistemic_uncertainties_$(al_step).csv", summary_stats(epistemic_uncertainties), ',')
         most_unambiguous_samples = top_k_acquisition_no_duplicates(aleatoric_uncertainties, round(Int, acq_size_ * 0.2))
+        most_ambiguous_samples = top_k_acquisition_no_duplicates(aleatoric_uncertainties, round(Int, acq_size_ * 0.2); descending=true)
         most_uncertain_samples = top_k_acquisition_no_duplicates(epistemic_uncertainties, round(Int, acq_size_ * 0.8); descending=true, remove_zeros=true)
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/most_uncertain_samples_$(al_step).csv", most_uncertain_samples, ',')
         sampled_indices = union(most_unambiguous_samples, most_uncertain_samples)
@@ -89,7 +90,7 @@ function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_
         sampled_indices = stochastic_acquisition(entropy_scores, acq_size_; acquisition_type="Power")
     elseif al_sampling == "StochasticEntropy"
         entropy_scores = pool_prediction_matrix[6, :]
-        sampled_indices = stochastic_acquisition(entropy_scores, acq_size_; acquisition_type="Stoachstic")
+        sampled_indices = stochastic_acquisition(entropy_scores, acq_size_; acquisition_type="Stochastic")
     elseif al_sampling == "Diversity"
         error("Diversity Sampling NOT IMPLEMENTED YET")
     elseif al_sampling == "Confidence"

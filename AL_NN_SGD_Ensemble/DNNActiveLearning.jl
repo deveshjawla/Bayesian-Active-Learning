@@ -170,7 +170,7 @@ for experiment in experiments
 
                 end
             end
-            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :Accuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumTrainedSize, :F1], Symbol.(class_names), Symbol.(class_names), :CumCDE)
+            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumTrainedSize, :WeightedF1], Symbol.(class_names), Symbol.(class_names), :CumCDE)
             df = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df)
 
@@ -180,7 +180,7 @@ for experiment in experiments
                 list_compared = []
                 list_total_training_samples = []
                 for i in groupby(df, :AcquisitionFunction)
-                    acc_ = i.:Accuracy
+                    acc_ = i.:WeightedAccuracy
                     time_ = i.:Elapsed
                     # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
                     n_aocs_samples = lastindex(acc_)
@@ -203,8 +203,8 @@ for experiment in experiments
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
 
         for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
-            mean_std_acc = combine(groupby(i, :CumTrainedSize), :Accuracy => mean, :Accuracy => std)
-            mean_std_f1 = combine(groupby(i, :CumTrainedSize), :F1 => mean, :F1 => std)
+            mean_std_acc = combine(groupby(i, :CumTrainedSize), :WeightedAccuracy => mean, :WeightedAccuracy => std)
+            mean_std_f1 = combine(groupby(i, :CumTrainedSize), :WeightedF1 => mean, :WeightedF1 => std)
             mean_std_time = combine(groupby(i, :CumTrainedSize), :Elapsed => mean, :Elapsed => std)
             mean_std_ensemble_majority = combine(groupby(i, :CumTrainedSize), :EnsembleMajority => mean, :EnsembleMajority => std)
             acquisition_function = i.AcquisitionFunction[1]
@@ -233,8 +233,8 @@ for experiment in experiments
                 df_time = vcat(df_time, df_time_)
             end
 
-            fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:Accuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
-            fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:F1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+            fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:WeightedAccuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+            fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:WeightedF1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
 
             fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
 

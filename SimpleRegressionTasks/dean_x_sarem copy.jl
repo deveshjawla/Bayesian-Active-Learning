@@ -10,10 +10,10 @@ experiment = "synthetic_data"
 
 using Random
 # f(x,z) = 3*x + 4*z^2
-x_test = collect(Float32, 4:0.05:4.95) .+ rand(MersenneTwister(0), Float32, 20)
-z_test = collect(Float32, 1:0.03:1.57) .+ rand(MersenneTwister(0), Float32, 20)
-x_train = collect(Float32, 3:0.05:3.95) .+ rand(MersenneTwister(1), Float32, 20)
-z_train = collect(Float32, 0:0.03:0.57) .+ rand(MersenneTwister(1), Float32, 20)
+x_test = collect(Float32, 4:0.05:4.95) .+ rand(Xoshiro(1234), Float32, 20)
+z_test = collect(Float32, 1:0.03:1.57) .+ rand(Xoshiro(1234), Float32, 20)
+x_train = collect(Float32, 3:0.05:3.95) .+ rand(Xoshiro(1234), Float32, 20)
+z_train = collect(Float32, 0:0.03:0.57) .+ rand(Xoshiro(1234), Float32, 20)
 y(x, z) = 3 * x + 4 * z^2
 y_train = [y(x, z) for (x, z) in zip(x_train, z_train)]
 y_test = [y(x, z) for (x, z) in zip(x_test, z_test)]

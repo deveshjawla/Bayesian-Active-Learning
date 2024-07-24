@@ -5,15 +5,22 @@ and labels for each blob
 Input: n = the number of points needed per blob(class)
 Output: Tuple{Matrix, Matrix} = Input features X (coordinates in 2d space), Onehot labels of the blobs
 """
-function gen_3_clusters(n)
-    x1 = randn(Float32, 2, n)
-    x2 = randn(Float32, 2, n) .+ [2, 2]
-    x3 = randn(Float32, 2, n) .+ [-2, 2]
+function gen_3_clusters(n; cluster_centers = [[0,0],[2,2],[2,-2]])
+    x1 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[1]
+    x2 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[2]
+    x3 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[3]
     y1 = vcat(ones(Float32, n), zeros(Float32, 2 * n))
     y2 = vcat(zeros(Float32, n), ones(Float32, n), zeros(Float32, n))
     y3 = vcat(zeros(Float32, n), zeros(Float32, n), ones(Float32, n))
     return hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
 end
+
+function gen_1_clusters(n; cluster_center = [2,-1])
+    x1 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_center
+    y1 = ones(Float32, n)
+    return hcat(x1), permutedims(y1)
+end
+
 
 using Random
 function balance_binary_data(data_xy::DataFrame; balancing="undersampling", positive_class_label=1, negative_class_label=2)::DataFrame

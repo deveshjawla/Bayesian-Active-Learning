@@ -171,7 +171,7 @@ for dataset in datasets
                         last_improvement = AL_iteration
                     end
                     if AL_iteration == 1
-						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
+						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, prior_informativeness, prior_variance, likelihood_name)
 						mcmc_init_params = deepcopy(location_posterior)
 						n_acq_steps = deepcopy(AL_iteration)
 					elseif lastindex(new_pool[2]) > acquisition_size
@@ -180,7 +180,7 @@ for dataset in datasets
 						else
 							new_prior = (location_posterior, prior_std)
 						end
-						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
+						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, prior_variance, likelihood_name)
 						mcmc_init_params = deepcopy(location_posterior)
 						n_acq_steps = deepcopy(AL_iteration)
 					elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
@@ -189,7 +189,7 @@ for dataset in datasets
 						else
 							new_prior = (location_posterior, prior_std)
 						end
-						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, class_balancing, prior_informativeness, prior_variance, likelihood_name)
+						new_pool, param_matrix, map_matrix, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, map_matrix, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, nothing, temperature, prior_informativeness, prior_variance, likelihood_name)
 						mcmc_init_params = deepcopy(location_posterior)
 						println("Trained on last few samples remaining in the Pool")
 						n_acq_steps = deepcopy(AL_iteration)
@@ -241,7 +241,7 @@ for dataset in datasets
                 # end
             end
         end
-        kpi_names = vcat([:AcquisitionFunction, :EnsembleMajority, :CumTrainedSize, :AcquisitionSize, :ClassDistEntropy, :Accuracy, :Elapsed], Symbol.(class_names))
+        kpi_names = vcat([:AcquisitionFunction, :EnsembleMajority, :CumTrainedSize, :AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :Elapsed], Symbol.(class_names))
 
         df = DataFrame(kpi_df, kpi_names)
         CSV.write("./Experiments/$(experiment_name)/df.csv", df)
@@ -258,7 +258,7 @@ for dataset in datasets
     df = CSV.read("./Experiments/$(experiment_name)/df.csv", DataFrame, header=1)
     Gadfly.push_theme(theme)
     # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
-    fig1a = plot(df, x=:CumTrainedSize, y=:Accuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
+    fig1a = plot(df, x=:CumTrainedSize, y=:WeightedAccuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
     fig1aa = plot(df, x=:CumTrainedSize, y=:EnsembleMajority, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
 
 

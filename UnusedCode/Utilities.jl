@@ -7,7 +7,7 @@ Utility functions for the random forest
 
 using DataFrames
 
-check_random_state(seed::Int) = MersenneTwister(seed)
+check_random_state(seed::Int) = Xoshiro(seed)
 check_random_state(rng::AbstractRNG) = rng
 
 # https://en.wikipedia.org/wiki/Histogram
