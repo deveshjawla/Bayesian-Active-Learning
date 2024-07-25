@@ -120,10 +120,10 @@ for experiment in experiments
                                     include("./BayesianModel.jl")
 
                                     # setprogress!(false)
-                                    # using Zygote
-                                    # Turing.setadbackend(:zygote)
+                                    
+                                    
                                     using ReverseDiff
-                                    Turing.setadbackend(:reversediff)
+                                    
 
                                     #Here we define the Prior
                                     if prior_variance isa Number

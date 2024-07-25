@@ -1,16 +1,16 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, map_matrix, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, prior_std_name, likelihood_name)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Array{Float32,2},Float32,Float32,Vector}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, noise_x, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Array{Float32,2},Float32,Float32,Vector}
     println("$(al_sampling) with query no. ", al_step)
     # sigma, num_params = prior
     pool_x, pool_y = pool
     pool_size = lastindex(pool_y)
     sampled_indices = 0
-	pool_prediction_matrix = 0
-	if typeof(param_matrix) == Array{Float32, 2}
-    	pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix)
-	end
+    pool_prediction_matrix = 0
+    if typeof(param_matrix) == Array{Float32,2}
+        pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix; noise_set=noise_x)
+    end
     sampled_indices = get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix)
 
     pool = vcat(pool_x, pool_y)
@@ -92,9 +92,9 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 
     #Training on Acquired Samples and logging classification_performance
     if isnothing(mcmc_init_params)
-        independent_param_matrix, elapsed = vi_inference(prior, training_data_xy, nsteps, n_epochs, al_step, experiment, pipeline_name)
+        independent_param_matrix, independent_noise_x, elapsed = vi_inference(prior, training_data_xy, nsteps, n_epochs, al_step, experiment, pipeline_name)
     else
-        independent_param_matrix, elapsed, independent_map_params = mcmc_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)
+        independent_param_matrix, independent_noise_x, elapsed = mcmc_inference(prior, training_data_xy, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)
     end
     test_x, test_y = test_data
 
@@ -103,7 +103,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/$(al_step)_map.csv", predictions_map, ',')
     # println("Checking if dimensions of test_y and ŷ_test are same", size(test_y), size(ŷ_test))
     if n_output == 1
-        predictions_mean, predictions_std = pred_analyzer_regression(test_x, independent_param_matrix)
+        predictions_mean, predictions_std = pred_analyzer_regression(test_x, independent_param_matrix; noise_set=independent_noise_x)
 
         ŷ_test = permutedims(predictions_mean)
 
@@ -111,8 +111,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
         acc = mse
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "MSE", "MAE"] [acq_size_, mse, mae]], ',')
     else
-        predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
-        # predictions_map = pred_analyzer_multiclass(test_x, independent_map_params)
+        predictions = pred_analyzer_multiclass(test_x, independent_param_matrix; noise_set=independent_noise_x)
 
         ŷ_test = permutedims(Int.(predictions[1, :]))
         # ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
@@ -140,5 +139,5 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     # println("size of training data is: ",size(training_data))
     # println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
     new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
-    return new_pool_tuple, independent_param_matrix, independent_map_params, training_data, acc, elapsed, param_matrix_mean
+    return new_pool_tuple, independent_param_matrix, independent_noise_x, training_data, acc, elapsed, param_matrix_mean
 end

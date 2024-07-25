@@ -94,10 +94,10 @@ end
 
 # using ReverseDiff
 # # Set the backend.
-# Turing.setadbackend(:reversediff)
-# # using Zygote
+# 
+# 
 # # # Set the backend.
-# # Turing.setadbackend(:zygote)
+# 
 
 # # Perform inference.
 # num_samples = 1000

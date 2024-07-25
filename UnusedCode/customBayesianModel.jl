@@ -8,7 +8,7 @@ using LinearAlgebra
 using Random
 
 # Use reverse_diff due to the number of parameters in neural networks.
-Turing.setadbackend(:reversediff)
+
 
 # Number of points to generate.
 N = 80
