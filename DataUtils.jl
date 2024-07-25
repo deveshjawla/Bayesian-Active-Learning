@@ -5,7 +5,7 @@ and labels for each blob
 Input: n = the number of points needed per blob(class)
 Output: Tuple{Matrix, Matrix} = Input features X (coordinates in 2d space), Onehot labels of the blobs
 """
-function gen_3_clusters(n; cluster_centers = [[0,0],[2,2],[2,-2]])
+function gen_3_clusters(n; cluster_centers = [[0,0],[2,2],[-2,2]])
     x1 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[1]
     x2 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[2]
     x3 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[3]
@@ -19,6 +19,19 @@ function gen_1_clusters(n; cluster_center = [2,-1])
     x1 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_center
     y1 = ones(Float32, n)
     return hcat(x1), permutedims(y1)
+end
+
+function pairs_to_matrix(X1, X2)
+	n_pairs = lastindex(X1) * lastindex(X2)
+	test_x_area = Matrix{Float32}(undef, 2, n_pairs)
+	count = 1
+	for x1 in X1
+		for x2 in X2
+			test_x_area[:, count] = [x1, x2]
+			count += 1
+		end
+	end
+	return test_x_area
 end
 
 
@@ -120,16 +133,16 @@ end
 
 using StatisticalMeasures: macro_f1score, accuracy
 using StatsBase: countmap
-function performance_stats_multiclass(a, b)
-    a = deepcopy(Int.(vec(a)))
-    b = deepcopy(Int.(vec(b)))
-    weights_ = countmap(a)
+function performance_stats_multiclass(ground_truths, predictions)
+    ground_truths = deepcopy(Int.(vec(ground_truths)))
+    predictions = deepcopy(Int.(vec(predictions)))
+    weights_ = countmap(ground_truths)
     keys_, values_ = keys(weights_), values(weights_)
     n_classes = lastindex(collect(keys(weights_)))
-    weights = map(x -> lastindex(a) / (n_classes * x), values_)
+    weights = map(x -> lastindex(ground_truths) / (n_classes * x), values_)
     class_weights = Dict(keys_ .=> weights)
-    f1 = macro_f1score(b, a, class_weights)
-    acc = accuracy(b, a, class_weights)
+    f1 = macro_f1score(predictions, ground_truths, class_weights)
+    acc = accuracy(predictions, ground_truths, class_weights)
     return acc, f1
 end
 

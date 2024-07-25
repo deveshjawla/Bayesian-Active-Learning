@@ -4,7 +4,7 @@
 #### Automatically makes the weight matrices which are to be modified by Variational Inference.
 #### 
 
-using Flux, Parameters:@with_kw
+using Flux, Parameters
 
 @with_kw struct DenseParams
     indim::Int = 128

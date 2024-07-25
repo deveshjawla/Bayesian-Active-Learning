@@ -92,7 +92,7 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
         @everywhere model = classweightedBNN(train_x, train_y, location, scale, sample_weights)
     else
         nothing
-        # @everywhere model = BNN(train_x, train_y, location, scale)
+        # @everywhere model = softmax_bnn_noise_x(train_x, train_y, location, scale)
     end
 
     if al_step == 1 || prior_informativeness == "NoInit"
@@ -177,14 +177,14 @@ function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array
 		else
 			predictions_nets = map((net, noise, noise_y) -> softmax(net(test_xs .+ noise) .+noise_y; dims=1), nets, noise_set, noise_set_y)
 		end
-	elseif output_activation_function == "Softplus"
+	elseif output_activation_function == "Relu"
 		if isnothing(noise_set) && isnothing(noise_set_y)
 			# predictions_nets = map(x -> softmax(x(test_xs)), nets)
 			predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
 		elseif isnothing(noise_set_y)
 			predictions_nets = map((net, noise) -> net(test_xs .+ noise) ./ sum(net(test_xs .+ noise), dims=1), nets, noise_set)
 		elseif isnothing(noise_set)
-			predictions_nets = map((net, noise_y) -> net(test_xs) .+ noise_y ./ sum(net(test_xs) .+ noise_y, dims=1), nets, noise_set_y)
+			predictions_nets = map((net, noise_y) -> (net(test_xs) .+ noise_y) ./ sum(net(test_xs) .+ noise_y, dims=1), nets, noise_set_y)
 		else
 			predictions_nets = map((net, noise, noise_y) -> (net(test_xs .+ noise) .+noise_y) ./ sum((net(test_xs .+ noise) .+noise_y), dims=1), nets, noise_set, noise_set_y)
 		end

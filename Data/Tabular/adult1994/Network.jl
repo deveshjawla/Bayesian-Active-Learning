@@ -1,7 +1,7 @@
 l1, l2 = 12, 12 
 nl1 = 4 * l1 + l1
 nl2 = l1 * l2 + l2
-n_output_layer = l2 * n_output + n_output
+n_output_layer = l2 * n_output
 
 total_num_params = nl1 + nl2 + n_output_layer
 

@@ -1,7 +1,7 @@
 l1, l2 = 30, 30
 nl1 = input_size * l1 + l1
 nl2 = l1 * l2 + l2
-n_output_layer = l2 * n_output + n_output
+n_output_layer = l2 * n_output
 
 total_num_params = nl1 + nl2 + n_output_layer
 
@@ -16,8 +16,7 @@ function feedforward(θ::AbstractVector)
 	model = Chain(
 		Dense(W0, b0, relu),
 		Dense(W1, b1, relu),
-		Dense(W2, b2),
-		softmax
+		Dense(W2, false)
 	)
 	return model
 end
@@ -33,8 +32,7 @@ function feedforward(θ_input::AbstractVector, θ_hidden::AbstractVector)
 	model = Chain(
 		Dense(W0, b0, relu),
 		Dense(W1, b1, relu),
-		Dense(W2, b2),
-		softmax
+		Dense(W2, false)
 	)
 	return model
 end

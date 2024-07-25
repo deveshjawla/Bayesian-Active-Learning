@@ -76,17 +76,20 @@ parameters_initial, destructured = Flux.destructure(nn_initial)
 feedforward(x, theta) = destructured(theta)(x)
 
 # General Turing specification for a BNN model.
-@model bayes_nn_general(xs, y, network_shape, num_params, warn=true) = begin
+@model bayes(xs, y, network_shape, num_params, warn=true) = begin
     θ ~ MvNormal(zeros(num_params), ones(num_params))
     # θ ~ filldist(Normal(), num_params)
     # preds = nn_forward(xs, θ, network_shape)
     preds = feedforward(xs, θ)
 	# preds = deepcopy(vec(permutedims(preds)))
-    for i = 1:lastindex(y)
-		y[i] ~ Bernoulli(preds[i])
-	end
+    # for i = 1:lastindex(y)
+	# 	y[i] ~ Bernoulli(preds[i])
+	# end
 	# y ~ Product(Bernoulli.(preds))
-	# y ~ arraydist(BroadcastArray(Bernoulli, preds))
+	# y[:] ~ arraydist(BroadcastArray(Bernoulli, preds[:]))
+	# y ~ arraydist(BernoulliLogit(theta[p] - beta[i]))
+	# y ~ arraydist(BroadcastArray(BernoulliLogit, theta[p] - beta[i]))
+	y[:] ~ arraydist(LazyArray(@~ Bernoulli.(preds[:])))
 end
 
 # using ReverseDiff
@@ -107,7 +110,7 @@ end
 using Bijectors
 using Turing: Variational
 
-m = bayes_nn_general(xs, ts, network_shape, num_params)
+m = bayes(xs, ts, network_shape, num_params)
 
 q = Variational.meanfield(m)
 

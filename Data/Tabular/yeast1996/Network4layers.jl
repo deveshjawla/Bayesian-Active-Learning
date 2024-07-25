@@ -3,7 +3,7 @@ nl1 = 8 * l1 + l1
 nl2 = l1 * l2 + l2
 nl3 = l2 * l3 + l3
 nl4 = l3 * l4 + l4
-n_output_layer = l4 * n_output + n_output
+n_output_layer = l4 * n_output
 
 num_params = nl1 + nl2 + nl3 + nl4 + n_output_layer
 
@@ -17,14 +17,12 @@ function feedforward(θ::AbstractVector)
 	W3 = reshape(θ[217:280], 8, 8)
 	b3 = θ[281:288]
 	W4 = reshape(θ[289:368], 10, 8)
-	b4 = θ[369:378]
 	model = Chain(
 		Dense(W0, b0, relu),
 		Dense(W1, b1, relu),
 		Dense(W2, b2, relu),
 		Dense(W3, b3, relu),
-		Dense(W4, b4),
-		softmax
+		Dense(W4, false)
 	)
 	return model
 end
