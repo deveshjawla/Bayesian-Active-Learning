@@ -55,12 +55,7 @@ for experiment in experiments
             ###
             # include(PATH * "/Network.jl")
             using Statistics: mean
-            function logitcrossentropyweighted(ŷ::AbstractArray, y::AbstractArray, sample_weights::AbstractArray; dims=1)
-                if size(ŷ) != size(y)
-                    error("logitcrossentropyweighted(ŷ, y), sizes of (ŷ, y) are not the same")
-                end
-                mean(.-sum(sample_weights .* (y .* logsoftmax(ŷ; dims=dims)); dims=dims))
-            end
+
         end
 
         ###

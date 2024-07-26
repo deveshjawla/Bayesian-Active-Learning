@@ -1,11 +1,9 @@
-using EvidentialFlux
 using Flux #Deep learning
 using Plots
 using LaplaceRedux
 
 PATH = @__DIR__
 cd(PATH)
-
 
 # Generate data
 n = 200
@@ -19,8 +17,7 @@ function train(input_size, output_size)
 	m = Chain(
 		Dense(input_size => 8, relu),
 		Dense(8 => 8, relu),
-		# Dense(8 => output_size),
-		DIR(8 => output_size)
+		Dense(8 => output_size),
 	)
 
 	_, re = Flux.destructure(m)
@@ -78,28 +75,28 @@ la = Laplace(m; likelihood=:classification, subset_of_weights=:last_layer)
 fit!(la, zip(collect(eachcol(X)), y))
 optimize_prior!(la; verbose=true, n_steps=100)
 
-# _labels = sort(unique(argmax.(eachcol(y))))
-# plt_list = []
-# for target in _labels
-#     plt = plot(la, X, argmax.(eachcol(y)); target=target, clim=(0,1))
-#     push!(plt_list, plt)
-# end
-# plot(plt_list...)
+_labels = sort(unique(argmax.(eachcol(y))))
+plt_list = []
+for target in _labels
+    plt = plot(la, X, argmax.(eachcol(y)); target=target, clim=(0,1))
+    push!(plt_list, plt)
+end
+plot(plt_list...)
 
-# _labels = sort(unique(argmax.(eachcol(y))))
-# plt_list = []
-# for target in _labels
-#     plt = plot(la, X, argmax.(eachcol(y)); target=target, clim=(0,1), link_approx=:plugin, markersize = 2)
-#     push!(plt_list, plt)
-# end
-# plot(plt_list...)
-# savefig("./Relu_LA.pdf")
+_labels = sort(unique(argmax.(eachcol(y))))
+plt_list = []
+for target in _labels
+    plt = plot(la, X, argmax.(eachcol(y)); target=target, clim=(0,1), link_approx=:plugin, markersize = 2)
+    push!(plt_list, plt)
+end
+plot(plt_list...)
+savefig("./Relu_LA.pdf")
 
 
-# predict_la = LaplaceRedux.predict(la, X, link_approx=:probit)
-# mapslices(argmax, predict_la, dims=1)
-# mapslices(x->1-maximum(x), predict_la, dims=1)
-# entropies = mapslices(x -> normalized_entropy(x, output_size), predict_la, dims=1)
+predict_la = LaplaceRedux.predict(la, X, link_approx=:probit)
+mapslices(argmax, predict_la, dims=1)
+mapslices(x->1-maximum(x), predict_la, dims=1)
+entropies = mapslices(x -> normalized_entropy(x, output_size), predict_la, dims=1)
 
 
 xs = -7.0f0:0.10f0:7.0f0

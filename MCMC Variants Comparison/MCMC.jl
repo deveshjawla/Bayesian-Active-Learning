@@ -10,7 +10,7 @@ using FillArrays
 using CSV
 PATH = @__DIR__
 cd(PATH)
-include("./../../DirichletLayer.jl")
+include("./../DirichletLayer.jl")
 using Random
 list_noise_x = [false, true]
 list_noise_y = [false, true]
@@ -31,7 +31,7 @@ let
                         for noise_y in list_noise_y
                             mkpath("./Experiments/Compile_ReverseDiff=$(compile_reversediff)/NumClusters=$(num_clusters)/Training_Size=$(n)/$(output_activation_function)/noise_x=$(noise_x)_noise_y=$(noise_y)")
                             # Generate data
-                            include("./../../DataUtils.jl")
+                            include("./../DataUtils.jl")
                             if num_clusters == 3
                                 X, y = gen_3_clusters(n)
                                 Y = argmax.(eachcol(y))
@@ -75,7 +75,7 @@ let
                             num_params = lastindex(prior_std)
                             using ReverseDiff
 
-                            include("./../../BayesianModel.jl")
+                            include("./../BayesianModel.jl")
                             if compile_reversediff
                                 if output_activation_function == "Softmax"
                                     if noise_x
@@ -149,8 +149,8 @@ let
                             end
 
                             using Distributed
-                            include("./../../MCMCUtils.jl")
-                            include("./../../ScoringFunctions.jl")
+                            include("./../MCMCUtils.jl")
+                            include("./../ScoringFunctions.jl")
                             if noise_x
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set=noise_set; output_activation_function=output_activation_function)
                             elseif noise_y
