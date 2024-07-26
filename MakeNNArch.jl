@@ -41,5 +41,5 @@ function make_nn_arch(nn_arch, input_size, output_size)
             Dense(5 => output_size; init=Flux.glorot_normal()),
         )
     end
-	return nn
+    return nn
 end

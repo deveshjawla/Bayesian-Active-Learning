@@ -11,7 +11,6 @@
             Turing.@addlogprob!(loglik)
         end
     else
-
         for i = 1:lastindex(y)
             loglik = loglikelihood(Categorical(preds[:, i]), y[i]) / Temp
             Turing.@addlogprob!(loglik)

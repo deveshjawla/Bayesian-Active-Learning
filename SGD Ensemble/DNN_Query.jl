@@ -2,25 +2,7 @@
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
 function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, ensemble_size::Int, al_sampling::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Float32,Float32}
-    nn = Chain(
-            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
-			# Dropout(0.2),
-            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
-			# Dropout(0.2),
-            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
-			# Dropout(0.2),
-            Dense(input_size => input_size, relu; init=Flux.glorot_normal()),
-			# Dropout(0.2),
-            Dense(input_size => n_output; init=Flux.glorot_normal()),
-    		softmax
-        )
-
-		# trainmode!(nn)
-    # nn = Chain(
-    #     Parallel(vcat, Dense(input_size => input_size, relu), Dense(input_size => input_size, relu), Dense(input_size => input_size, relu), Dense(input_size => input_size, relu)),
-    #     Parallel(vcat, Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu), Dense(4 * input_size => input_size, relu)),
-    #     Dense(4 * input_size => n_output),
-    #     softmax)
+    nn = make_nn_arch()
 
     init_params, re = Flux.destructure(nn)
     num_params = lastindex(init_params)
