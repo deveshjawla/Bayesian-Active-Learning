@@ -1,5 +1,5 @@
 using Clustering
-using Plots
+using StatsPlots
 using CSV, DataFrames, Printf
 using Statistics
 using Flux, ParameterSchedulers

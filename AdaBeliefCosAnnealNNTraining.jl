@@ -6,9 +6,10 @@ function logitcrossentropyweighted(ŷ::AbstractArray, y::AbstractArray, sample_
 end
 
 include("./MakeNNArch.jl")
-function network_training(nn_arch, input_size, output_size, n_epochs; train_loader=false, sample_weights_loader=false, data=false, loss_function=false)::Tuple{Vector{Float32},Any}
+using ParameterSchedulers
+function network_training(nn_arch::String, input_size::Int, output_size::Int, n_epochs::Int; train_loader=nothing, sample_weights_loader=nothing, data=nothing, loss_function=false, lambda=0.0)::Tuple{Vector{Float32},Any}
 
-	nn = make_nn_arch(nn_arch, input_size, output_size)
+    nn = make_nn_arch(nn_arch, input_size, output_size)
 
     opt = OptimiserChain(WeightDecay(lambda), AdaBelief())
     s = ParameterSchedulers.Stateful(CosAnneal(0.1, 1e-6, 100))
@@ -25,7 +26,7 @@ function network_training(nn_arch, input_size, output_size, n_epochs; train_load
         loss = 0.0
         Flux.adjust!(opt_state, ParameterSchedulers.next!(s))
 
-        if train_loader && loss_function == dirloss
+        if !isnothing(train_loader) && loss_function == dirloss
             for (x, y) in train_loader
                 # Compute the loss and the gradients:
                 local l = 0.0
@@ -34,14 +35,14 @@ function network_training(nn_arch, input_size, output_size, n_epochs; train_load
                 # Accumulate the mean loss, just for logging:
                 loss += l / lastindex(train_loader)
             end
-        elseif sample_weights_loader && train_loader
+        elseif !isnothing(sample_weights_loader) && !isnothing(train_loader)
             for ((x, y), sample_weights) in zip(train_loader, sample_weights_loader)
                 local l = 0.0
                 l, grad = Flux.withgradient(m -> logitcrossentropyweighted(m(x), y, sample_weights), nn)
                 Flux.update!(opt_state, nn, grad[1])
                 loss += l / lastindex(train_loader)
             end
-        elseif data
+        elseif !isnothing(data)
             x, y = data
             loss, grad = Flux.withgradient(m -> loss_function(m(x), y), nn)
             Flux.update!(opt_state, nn, grad[1])
@@ -49,8 +50,8 @@ function network_training(nn_arch, input_size, output_size, n_epochs; train_load
 
         trnlosses[e] = loss
 
-        if !isfinite(l)
-            # @warn "loss is $loss" epoch_idx
+        if !isfinite(loss)
+            @warn "loss is $loss" e
             continue
         end
 

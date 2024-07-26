@@ -1,7 +1,7 @@
 List_TotalCategories = [3]
 List_TotalSamples = [10, 11, 12, 13, 14, 15, 20, 30, 40, 50]
 using CSV, DelimitedFiles, DataFrames
-using Plots
+using StatsPlots
 using MLJ
 Cases = [1.0, 2.0, 3.0] #:Correct_Maj, :Correct_Min, :Correct_Eq
 for case in Cases

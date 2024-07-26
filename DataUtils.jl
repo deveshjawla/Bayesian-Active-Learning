@@ -5,7 +5,7 @@ and labels for each blob
 Input: n = the number of points needed per blob(class)
 Output: Tuple{Matrix, Matrix} = Input features X (coordinates in 2d space), Onehot labels of the blobs
 """
-function gen_3_clusters(n; cluster_centers = [[0,0],[2,2],[-2,2]])
+function gen_3_clusters(n; cluster_centers=[[0, 0], [2, 2], [-2, 2]])
     x1 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[1]
     x2 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[2]
     x3 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_centers[3]
@@ -15,23 +15,23 @@ function gen_3_clusters(n; cluster_centers = [[0,0],[2,2],[-2,2]])
     return hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
 end
 
-function gen_1_clusters(n; cluster_center = [2,-1])
+function gen_1_clusters(n; cluster_center=[2, -1])
     x1 = randn(Xoshiro(1234), Float32, 2, n) .+ cluster_center
     y1 = ones(Float32, n)
     return hcat(x1), permutedims(y1)
 end
 
 function pairs_to_matrix(X1, X2)
-	n_pairs = lastindex(X1) * lastindex(X2)
-	test_x_area = Matrix{Float32}(undef, 2, n_pairs)
-	count = 1
-	for x1 in X1
-		for x2 in X2
-			test_x_area[:, count] = [x1, x2]
-			count += 1
-		end
-	end
-	return test_x_area
+    n_pairs = lastindex(X1) * lastindex(X2)
+    test_x_area = Matrix{Float32}(undef, 2, n_pairs)
+    count = 1
+    for x1 in X1
+        for x2 in X2
+            test_x_area[:, count] = [x1, x2]
+            count += 1
+        end
+    end
+    return test_x_area
 end
 
 
@@ -93,8 +93,8 @@ function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, mod
         pool_y = pool[:, end]
         test_y = test[:, end]
     elseif model_type == "XGB"
-		pool_y = pool[:, end] .- 1
-		test_y = test[:, end] .- 1
+        pool_y = pool[:, end] .- 1
+        test_y = test[:, end] .- 1
     end
 
     pool = (permutedims(pool_x), permutedims(pool_y))
@@ -151,10 +151,10 @@ function split_data(df; at=0.70)
     r = size(df, 1)
     shuffled_indices = shuffle(1:r)
     index = Int(round(r * at))
-    
+
     pool_indices = shuffled_indices[1:index]
     test_indices = shuffled_indices[(index+1):end]
-    
+
     pool = df[pool_indices, :]
     test = df[test_indices, :]
 
@@ -166,11 +166,11 @@ function train_validate_test(df; v=0.6, t=0.8)
     shuffled_indices = shuffle(1:r)
     val_index = Int(round(r * v))
     test_index = Int(round(r * t))
-    
+
     train_indices = shuffled_indices[1:val_index]
     validate_indices = shuffled_indices[(val_index+1):test_index]
     test_indices = shuffled_indices[(test_index+1):end]
-    
+
     train = df[train_indices, :]
     validate = df[validate_indices, :]
     test = df[test_indices, :]

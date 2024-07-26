@@ -1,5 +1,5 @@
 using CSV, DelimitedFiles, DataFrames
-using Plots
+using StatsPlots
 using MLJ
 List_TotalCategories = [2, 3, 4, 5, 6]
 List_TotalSamples = [10, 11, 12, 13, 14, 15, 20, 30, 40, 50, 100, 1000]

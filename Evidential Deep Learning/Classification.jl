@@ -1,6 +1,6 @@
 using EvidentialFlux
 using Flux
-using Plots
+using StatsPlots
 PATH = @__DIR__
 cd(PATH)
 

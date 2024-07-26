@@ -1,7 +1,7 @@
 using Statistics, DataFrames
 using StaticArrays
 using CSV, DataFrames, ProgressMeter
-using Plots
+using StatsPlots
 using DelimitedFiles
 
 function fast_var_aleatoric(AvgEntropyCorrect::Float16, AvgEntropyInCorrect::Float16, PctCorrectByMembers::SMatrix, TotalSamples::Int)::Float16

@@ -19,7 +19,7 @@ theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_
 Gadfly.push_theme(theme)
 
 for (dataset, acquisition_size, max_training_size) in zip(datasets, acquisition_sizes, minimum_training_sizes)
-	x_ticks = collect(acquisition_size:acquisition_size:max_training_size)
+    x_ticks = collect(acquisition_size:acquisition_size:max_training_size)
 
     println(dataset)
     PATH = @__DIR__
@@ -37,8 +37,8 @@ for (dataset, acquisition_size, max_training_size) in zip(datasets, acquisition_
         df_acc_ = CSV.read("./Experiments/$(experiment)/mean_std_acc$(sub_experiment).csv", DataFrame, header=1)
         df_f1_ = CSV.read("./Experiments/$(experiment)/mean_std_f1$(sub_experiment).csv", DataFrame, header=1)
 
-		insertcols!(df_acc_, :Experiment => experiment)
-		insertcols!(df_f1_, :Experiment => experiment)
+        insertcols!(df_acc_, :Experiment => experiment)
+        insertcols!(df_f1_, :Experiment => experiment)
 
         df_acc = vcat(df_acc, df_acc_)
         df_f1 = vcat(df_f1, df_f1_)

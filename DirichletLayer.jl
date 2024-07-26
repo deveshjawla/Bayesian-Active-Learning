@@ -28,17 +28,17 @@ The weight matrix and/or the bias vector (of length `out`) may also be provided 
 - `init`: The function to use to initialise the weight matrix.
 - `bias`: Whether to include a trainable bias vector.
 """
-struct DIR{M <: AbstractMatrix, B, F}
+struct DIR{M<:AbstractMatrix,B,F}
     W::M
     b::B
-	σ::F
-    function DIR(W::M, b = true, σ::F = softplus) where {M <: AbstractMatrix, F}
+    σ::F
+    function DIR(W::M, b=true, σ::F=softplus) where {M<:AbstractMatrix,F}
         b = Flux.create_bias(W, b, size(W, 1))
-        return new{M, typeof(b), F}(W, b, σ)
+        return new{M,typeof(b),F}(W, b, σ)
     end
 end
 
-function DIR((in, out)::Pair{<:Integer, <:Integer}, σ = softplus; init = Flux.glorot_uniform, bias = true)
+function DIR((in, out)::Pair{<:Integer,<:Integer}, σ=softplus; init=Flux.glorot_uniform, bias=true)
     DIR(init(out, in), bias, σ)
 end
 

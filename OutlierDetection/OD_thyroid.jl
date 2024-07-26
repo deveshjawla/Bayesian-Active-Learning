@@ -3,7 +3,7 @@ using OutlierDetection
 using OutlierDetectionNeighbors
 using OutlierDetectionData: ODDS
 using StatisticalMeasures: area_under_curve
-using Plots
+using StatsPlots
 PATH = @__DIR__
 cd(PATH)
 

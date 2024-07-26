@@ -1,5 +1,5 @@
 using Flux
-using Plots
+using StatsPlots
 using Distributions
 
 using Turing

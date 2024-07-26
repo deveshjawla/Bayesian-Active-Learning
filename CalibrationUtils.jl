@@ -5,16 +5,16 @@ function conf_bin_indices_bayesian(n_labels, n_bins, predicted_probs, true_label
     bins = Dict{Int,Vector}()
     df = DataFrame(Bin=Int[], BinSize=Int[], BinAccuracy=Float32[], BinEnsembleMajority=Float32[], CalibrationGap=Float32[])
 
-	n = n_bins # Specify the number of bins
-	interval = (1/n_labels, 1) # Specify the interval
-	bin_width = (interval[2] - interval[1])/n  # Calculate the width of each bin
+    n = n_bins # Specify the number of bins
+    interval = (1 / n_labels, 1) # Specify the interval
+    bin_width = (interval[2] - interval[1]) / n  # Calculate the width of each bin
     for i = 1:n_bins
-        lower = interval[1]+(bin_width*(i-1))
-        upper = interval[1]+(bin_width*i)
+        lower = interval[1] + (bin_width * (i - 1))
+        upper = interval[1] + (bin_width * i)
         # println(lower, upper)
-		bin_size, mean_acc_, mean_conf_, calibration_gap = 0, 0, 0, 0
+        bin_size, mean_acc_, mean_conf_, calibration_gap = 0, 0, 0, 0
         bin = findall(x -> x > lower && x <= upper, predicted_probs)
-		bin_size = lastindex(bin)
+        bin_size = lastindex(bin)
         bins[i] = bin
         if lastindex(predictions[bin]) > 1
             mean_acc_ = mean(true_labels[bin] .== predictions[bin])
@@ -25,7 +25,7 @@ function conf_bin_indices_bayesian(n_labels, n_bins, predicted_probs, true_label
         end
         # println(lastindex(predictions[bin]), ' ', mean_acc_)
         calibration_gap = abs(mean_acc_ - mean_conf_)
-		push!(df, [i bin_size mean_acc_ mean_conf_ calibration_gap])
+        push!(df, [i bin_size mean_acc_ mean_conf_ calibration_gap])
     end
     return df
 end
@@ -58,7 +58,7 @@ function calibration_plot_maker(n_labels, label, n_bins, predicted_probs, true_l
 
     writedlm("./Experiments/$(experiment_name)/ece_mce_for_label_$(label)_later_stage.csv", [["ECE", "MCE"] [ECE, MCE]], ',')
 
-	reliability_diagram = plot(df, layer(x=:BinEnsembleMajority, y=:BinAccuracy, color=[colorant"blue"],  Geom.point, Geom.line),  layer(x->x, 1/n_labels, 1, color=[colorant"red"]), Guide.xlabel("EnsembleMajority"), Guide.ylabel("Accuracy"), Guide.title("$(n_bins) bins, ECE:$(ECE), MCE:$(MCE)"), Coord.cartesian(xmin=1/n_labels, xmax=1.0, ymin=0.0, ymax=1.0))
+    reliability_diagram = plot(df, layer(x=:BinEnsembleMajority, y=:BinAccuracy, color=[colorant"blue"], Geom.point, Geom.line), layer(x -> x, 1 / n_labels, 1, color=[colorant"red"]), Guide.xlabel("EnsembleMajority"), Guide.ylabel("Accuracy"), Guide.title("$(n_bins) bins, ECE:$(ECE), MCE:$(MCE)"), Coord.cartesian(xmin=1 / n_labels, xmax=1.0, ymin=0.0, ymax=1.0))
     reliability_diagram |> pdf("./Experiments/$(experiment_name)/reliability_diagram_for_$(label)_later_stage.pdf")
 end
 
@@ -79,10 +79,10 @@ end
 
 # pred_conf and labels are on the dataset which we use for calibration
 function _loss_binary(a, b, pred_conf, labels_)
-	if 2 in unique(labels_)
-		labels= deepcopy(labels_)
-		labels[labels.==2] .= 0
-	end
+    if 2 in unique(labels_)
+        labels = deepcopy(labels_)
+        labels[labels.==2] .= 0
+    end
     return -sum(labels .* log.(platt.(pred_conf .* a .+ b)) + (1.0 .- labels) .* log.(1.0 .- platt.(pred_conf .* a .+ b)))
 end
 

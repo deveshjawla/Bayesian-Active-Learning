@@ -96,9 +96,9 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
     end
 
     if al_step == 1 || prior_informativeness == "NoInit"
-        chain_timed = @timed sample(model, NUTS(;adtype=AutoReverseDiff()), MCMCDistributed(), nsteps, n_chains, progress=false)
+        chain_timed = @timed sample(model, NUTS(; adtype=AutoReverseDiff()), MCMCDistributed(), nsteps, n_chains, progress=false)
     else
-        chain_timed = @timed sample(model, NUTS(;adtype=AutoReverseDiff()), MCMCDistributed(), nsteps, n_chains, init_params=repeat([mcmc_init_params], n_chains), progress=false)
+        chain_timed = @timed sample(model, NUTS(; adtype=AutoReverseDiff()), MCMCDistributed(), nsteps, n_chains, init_params=repeat([mcmc_init_params], n_chains), progress=false)
     end
     chains = chain_timed.value
     elapsed = Float32(chain_timed.time)
@@ -107,7 +107,7 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
     θ = MCMCChains.group(chains, :θ).value
     noise = MCMCChains.group(chains, :noise).value
 
-	StatsBase.autocor(chains, [10, 50, 100])#TODO
+    StatsBase.autocor(chains, [10, 50, 100])#TODO
 
     burn_in = 0#Int(0.6 * nsteps)
     n_indep_samples = Int((nsteps - burn_in) / mc_autocor_lag)
@@ -134,12 +134,12 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
 
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", [["elapsed", "oob_rhat", "avg_acceptance_rate", "total_numerical_error", "avg_ess", "max_psrf"] [elapsed, oob_rhat, avg_acceptance_rate, total_numerical_error, avg_ess, max_psrf]], ',')
 
-        # # lPlot = Plots.plot(chains[:lp], title="Log Posterior", label=:none)
+        # # lPlot = plot(chains[:lp], title="Log Posterior", label=:none)
         # df = DataFrame(chains)
         # df[!, :chain] = categorical(df.chain)
         # lPlot = Gadfly.plot(df, y=:lp, x=:iteration, Geom.line, color=:chain, Guide.title("Log Posterior"), Coord.cartesian(xmin=df.iteration[1], xmax=df.iteration[1] + nsteps)) # need to change :acceptance_rate to Log Posterior
-        # # plt= Plots.plot(lPlot, size=(1600, 600))
-        # # Plots.savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).pdf")
+        # # plt= plot(lPlot, size=(1600, 600))
+        # # savefig(plt, "./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/chain_$(i).pdf")
         # lPlot |> PDF("./Experiments/$(experiment_name)/$(pipeline_name)/convergence_statistics/$(al_step)_lp.pdf", 800pt, 600pt)
 
         # lp, maxInd = findmax(chains[:lp])
@@ -174,29 +174,29 @@ function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array
         nets = map(reconstruct, eachrow(param_matrix))
     end
 
-	if output_activation_function == "Softmax"
-		if isnothing(noise_set) && isnothing(noise_set_y)
-			# predictions_nets = map(x -> softmax(x(test_xs)), nets)
-			predictions_nets = map(net -> softmax(net(test_xs); dims=1), nets)
-		elseif isnothing(noise_set_y)
-			predictions_nets = map((net, noise) -> softmax(net(test_xs .+ noise); dims=1), nets, noise_set)
-		elseif isnothing(noise_set)
-			predictions_nets = map((net, noise_y) -> softmax(net(test_xs) .+ noise_y; dims=1), nets, noise_set_y)
-		else
-			predictions_nets = map((net, noise, noise_y) -> softmax(net(test_xs .+ noise) .+noise_y; dims=1), nets, noise_set, noise_set_y)
-		end
-	elseif output_activation_function == "Relu"
-		if isnothing(noise_set) && isnothing(noise_set_y)
-			# predictions_nets = map(x -> softmax(x(test_xs)), nets)
-			predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
-		elseif isnothing(noise_set_y)
-			predictions_nets = map((net, noise) -> net(test_xs .+ noise) ./ sum(net(test_xs .+ noise), dims=1), nets, noise_set)
-		elseif isnothing(noise_set)
-			predictions_nets = map((net, noise_y) -> (net(test_xs) .+ noise_y) ./ sum(net(test_xs) .+ noise_y, dims=1), nets, noise_set_y)
-		else
-			predictions_nets = map((net, noise, noise_y) -> (net(test_xs .+ noise) .+noise_y) ./ sum((net(test_xs .+ noise) .+noise_y), dims=1), nets, noise_set, noise_set_y)
-		end
-	end
+    if output_activation_function == "Softmax"
+        if isnothing(noise_set) && isnothing(noise_set_y)
+            # predictions_nets = map(x -> softmax(x(test_xs)), nets)
+            predictions_nets = map(net -> softmax(net(test_xs); dims=1), nets)
+        elseif isnothing(noise_set_y)
+            predictions_nets = map((net, noise) -> softmax(net(test_xs .+ noise); dims=1), nets, noise_set)
+        elseif isnothing(noise_set)
+            predictions_nets = map((net, noise_y) -> softmax(net(test_xs) .+ noise_y; dims=1), nets, noise_set_y)
+        else
+            predictions_nets = map((net, noise, noise_y) -> softmax(net(test_xs .+ noise) .+ noise_y; dims=1), nets, noise_set, noise_set_y)
+        end
+    elseif output_activation_function == "Relu"
+        if isnothing(noise_set) && isnothing(noise_set_y)
+            # predictions_nets = map(x -> softmax(x(test_xs)), nets)
+            predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
+        elseif isnothing(noise_set_y)
+            predictions_nets = map((net, noise) -> net(test_xs .+ noise) ./ sum(net(test_xs .+ noise), dims=1), nets, noise_set)
+        elseif isnothing(noise_set)
+            predictions_nets = map((net, noise_y) -> (net(test_xs) .+ noise_y) ./ sum(net(test_xs) .+ noise_y, dims=1), nets, noise_set_y)
+        else
+            predictions_nets = map((net, noise, noise_y) -> (net(test_xs .+ noise) .+ noise_y) ./ sum((net(test_xs .+ noise) .+ noise_y), dims=1), nets, noise_set, noise_set_y)
+        end
+    end
 
     # Determine the size of the final 3D array
     num_matrices = lastindex(predictions_nets)
@@ -293,7 +293,7 @@ end
 
 function collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
     performance_stats = Array{Float32}(undef, 6, n_acq_steps)
-	class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
+    class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
     cum_class_dist_data = Array{Int}(undef, n_output, n_acq_steps)
     performance_data = Array{Any}(undef, 11, n_acq_steps) #dims=(features, samples(i))
     cum_class_dist_ent = Array{Float32}(undef, 1, n_acq_steps)
@@ -323,7 +323,7 @@ function collecting_stats_active_learning_experiments_classification(n_acq_steps
         performance_data[10, al_step] = prior_variance
         performance_data[11, al_step] = likelihood_name
 
-		for i in 1:n_output
+        for i in 1:n_output
             class_dist_data[i, al_step] = cd[i+1, 2]
             cum_class_dist_data[i, al_step] = al_step == 1 ? cd[i+1, 2] : cum_class_dist_data[i, al_step-1] + cd[i+1, 2]
         end
@@ -377,7 +377,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
 
 
         if AL_iteration == 1
-            new_pool, param_matrix, noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, noise_x, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, prior_informativeness,  likelihood_name)
+            new_pool, param_matrix, noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, noise_x, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, prior_informativeness, likelihood_name)
             mcmc_init_params = deepcopy(location_posterior)
             n_acq_steps = deepcopy(AL_iteration)
         elseif lastindex(new_pool[2]) > acquisition_size
@@ -386,7 +386,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
             else
                 new_prior = (location_posterior, prior_std)
             end
-            new_pool, param_matrix, noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, noise_x, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness,  likelihood_name)
+            new_pool, param_matrix, noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, noise_x, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name)
             mcmc_init_params = deepcopy(location_posterior)
             n_acq_steps = deepcopy(AL_iteration)
         elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
@@ -395,7 +395,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
             else
                 new_prior = (location_posterior, prior_std)
             end
-            new_pool, param_matrix, noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, noise_x, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness,  likelihood_name)
+            new_pool, param_matrix, noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, noise_x, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name)
             mcmc_init_params = deepcopy(location_posterior)
             println("Trained on last few samples remaining in the Pool")
             n_acq_steps = deepcopy(AL_iteration)
@@ -408,7 +408,7 @@ end
 function mean_std_by_variable(group, group_by::Symbol, measurable::Symbol, variable::Symbol)
     mean_std = DataFrames.combine(groupby(group, variable), measurable => mean, measurable => std)
     group_name = first(group[!, group_by])
-	mean_std[!, group_by] = repeat([group_name], nrow(mean_std))
+    mean_std[!, group_by] = repeat([group_name], nrow(mean_std))
     CSV.write("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", mean_std)
 end
 function mean_std_by_group(df_folds, group_by::Symbol, variable::Symbol; list_measurables=[:MSE, :Elapsed, :MAE, :AcceptanceRate, :NumericalErrors])
@@ -430,7 +430,7 @@ function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement1::
         # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
         n_aocs_samples = lastindex(acc_)
         total_training_samples = last(i[!, :CumTrainedSize])
-		println(total_training_samples)
+        println(total_training_samples)
         push!(list_total_training_samples, total_training_samples)
         auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
         auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
@@ -439,7 +439,7 @@ function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement1::
         append!(aucs_t, auc_t)
     end
     min_total_samples = minimum(list_total_training_samples)
-	df= DataFrame(group_by=>list_compared, measurement1=>min_total_samples .* (aucs_acc), measurement2=>min_total_samples .* aucs_t)
+    df = DataFrame(group_by => list_compared, measurement1 => min_total_samples .* (aucs_acc), measurement2 => min_total_samples .* aucs_t)
     CSV.write("./Experiments/$(experiment)/auc_$(fold).csv", df)
 end
 function auc_mean(n_folds, experiment, group_by::Symbol, measurement1::Symbol, measurement2::Symbol)
@@ -455,11 +455,11 @@ function auc_mean(n_folds, experiment, group_by::Symbol, measurement1::Symbol, m
 end
 
 function plotting_measurable_variable(experiment, groupby::Symbol, list_group_names, dataset, variable::Symbol, measurable::Symbol, measurable_mean::Symbol, measurable_std::Symbol, normalised_measurable::Bool)
-	width = 6inch
-	height = 6inch
-	set_default_plot_size(width, height)
-	theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
-	Gadfly.push_theme(theme)
+    width = 6inch
+    height = 6inch
+    set_default_plot_size(width, height)
+    theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
+    Gadfly.push_theme(theme)
 
     df = DataFrame()
     for group_name in list_group_names
@@ -467,11 +467,11 @@ function plotting_measurable_variable(experiment, groupby::Symbol, list_group_na
         # df_[!, :AcquisitonFunction] .= repeat([group_name], nrow(df_))
         df = vcat(df, df_)
     end
-	if normalised_measurable
-		y_ticks = collect(0:0.1:1.0)
-    	fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon,  Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), yintercept=[0.5], Guide.yticks(ticks=y_ticks), Coord.cartesian(xmin=xmin = df[!, variable][1], ymin=0.0, ymax=1.0))
-	else
-    	fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)))
-	end
+    if normalised_measurable
+        y_ticks = collect(0:0.1:1.0)
+        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), yintercept=[0.5], Guide.yticks(ticks=y_ticks), Coord.cartesian(xmin=xmin = df[!, variable][1], ymin=0.0, ymax=1.0))
+    else
+        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)))
+    end
     fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=600)
 end

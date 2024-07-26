@@ -15,7 +15,7 @@ using ProgressMeter
 using CSV
 
 using Flux
-include("./../SimpleRegressionTasks/MakeData.jl")
+include("./../Functional Prior - Simple Regression Tasks/MakeData.jl")
 include("./../AdaBeliefCosAnnealNNTraining.jl")
 
 for function_name in function_names
@@ -41,6 +41,21 @@ for function_name in function_names
     fit!(la, data)
     optimize_prior!(la)
     preds = predict(la, permutedims(Xline), link_approx=:mc)
+
+	fμ, fvar = la(_x)
+	fμ = vec(fμ)
+	fσ = vec(sqrt.(fvar))
+	pred_std = sqrt.(fσ .^ 2 .+ la.σ^2)
+	plot!(
+		x_range,
+		fμ;
+		color=2,
+		label="yhat",
+		ribbon=(1.96 * pred_std, 1.96 * pred_std),
+		lw=lw,
+		kwargs...
+	)   # the specific values 1.96 are used here to create a 95% confidence interval
+	
     plt = plot(la, Xline, preds, fillalpha=0.7, ylim=[-2, 2], legend=:none, label="Laplace Approximation", fmt=:pdf, size=(600, 400), dpi=600)
 
     plot!(Xline, map(x -> f(x, function_name), Xline), label="Truth", color=:green)

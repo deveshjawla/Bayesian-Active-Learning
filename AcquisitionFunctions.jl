@@ -28,7 +28,7 @@ function top_k_acquisition_no_duplicates(pool_scores::Vector, acquisition_size::
     sorted_df = sort(cut_df, :Scores, rev=descending)
     # CSV.write("./top_k_acquisition_$(descending).csv", sorted_df)
     # Handling zero scores if required
-	if remove_zeros
+    if remove_zeros
         non_zero_scores = filter(row -> row.Scores > sensitivity, sorted_df)
         top_k = non_zero_scores[1:min(acquisition_size, nrow(non_zero_scores)), :Sample_indices]
     else
@@ -50,19 +50,19 @@ Optional Arguements:
 """
 function stochastic_acquisition(pool_scores::Vector, acquisition_size::Int; acquisition_type="Stochastic", β=1.0, descending=true)
     gumbel_dist = Gumbel(0, β^-1)
-	# n = lastindex(pool_scores)
+    # n = lastindex(pool_scores)
     # gumbel_noise = -log.(-log.(rand(n))) * β #faster version of Gumbel Distribution
-	if acquisition_type == "Power"
-		scores = log.(pool_scores) .+ rand(gumbel_dist, lastindex(pool_scores))
-	elseif acquisition_type == "Stochastic"
-    	scores = pool_scores .+ rand(gumbel_dist, lastindex(pool_scores))
-	end
-	indices = partialsortperm(scores, 1:acquisition_size, rev=descending)
+    if acquisition_type == "Power"
+        scores = log.(pool_scores) .+ rand(gumbel_dist, lastindex(pool_scores))
+    elseif acquisition_type == "Stochastic"
+        scores = pool_scores .+ rand(gumbel_dist, lastindex(pool_scores))
+    end
+    indices = partialsortperm(scores, 1:acquisition_size, rev=descending)
     return indices
 end
 
 function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; reconstruct=nothing)
-	if al_sampling == "Initial"
+    if al_sampling == "Initial"
         sampled_indices = 1:acq_size_
     elseif al_sampling == "Random"
         sampled_indices = random_acquisition(pool_size, acq_size_)
@@ -100,5 +100,5 @@ function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_
         scores = pool_prediction_matrix[3, :]
         sampled_indices = top_k_acquisition_no_duplicates(scores, acq_size_; descending=true)
     end
-	return sampled_indices
+    return sampled_indices
 end

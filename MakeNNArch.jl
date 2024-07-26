@@ -1,4 +1,4 @@
-function make_nn_arch(nn_arch, input_size, output_size)
+function make_nn_arch(nn_arch::String, input_size::Int, output_size::Int; dropout_rate=0.2)
     if nn_arch == "Conv"
         nn = Chain(
             # First convolution, operating upon a 28x28 image
@@ -14,8 +14,7 @@ function make_nn_arch(nn_arch, input_size, output_size)
             # which is where we get the 288 in the `Dense` layer below:
             x -> reshape(x, :, size(x, 4)),
             Dense(72 => 10, relu),
-            Dense(10 => output_size),
-            # DIR(10 => output_size)
+            Dense(10 => output_size; bias=false,)
         )
     elseif nn_arch == "Evidential"
         # Define model
@@ -30,15 +29,21 @@ function make_nn_arch(nn_arch, input_size, output_size)
             Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
             Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
             Parallel(vcat, Dense(4 * input_size => input_size, identity; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal()), Dense(4 * input_size => input_size, tanh; init=Flux.glorot_normal())),
-            Dense(4 * input_size => output_size)
+            Dense(4 * input_size => output_size; bias=false)
         )
     elseif nn_arch == "DroputNN2Layers"
         nn = Chain(
             Dense(input_size => 5, tanh; init=Flux.glorot_normal()),
-            # Dropout(dropout_rate),
+            Dropout(dropout_rate),
             Dense(5 => 5, tanh; init=Flux.glorot_normal()),
-            # Dropout(dropout_rate),
-            Dense(5 => output_size; init=Flux.glorot_normal()),
+            Dropout(dropout_rate),
+            Dense(5 => output_size; bias=false, init=Flux.glorot_normal()),
+        )
+    elseif nn_arch == "Relu2Layers"
+        nn = Chain(
+            Dense(input_size => 5, relu; init=Flux.glorot_normal()),
+            Dense(5 => 5, relu; init=Flux.glorot_normal()),
+            Dense(5 => output_size; bias=false, init=Flux.glorot_normal()),
         )
     end
     return nn
