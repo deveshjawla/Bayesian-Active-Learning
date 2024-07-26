@@ -39,12 +39,12 @@ using Random
 function balance_binary_data(data_xy::DataFrame; balancing="undersampling", positive_class_label=1, negative_class_label=2)::DataFrame
     negative_class = data_xy[data_xy[:, end].==negative_class_label, :]
     positive_class = data_xy[data_xy[:, end].==positive_class_label, :]
-    size_positive_class = size(positive_class)[1]
-    size_negative_class = size(negative_class)[1]
+    size_positive_class = size(positive_class, 1)
+    size_negative_class = size(negative_class, 1)
     multiplier = div(size_negative_class, size_positive_class)
     leftover = mod(size_negative_class, size_positive_class)
     if balancing == "undersampling"
-        data_xy = vcat(negative_class[1:size(positive_class)[1], :], positive_class)
+        data_xy = vcat(negative_class[1:size(positive_class, 1), :], positive_class)
         data_xy = data_xy[shuffle(axes(data_xy, 1)), :]
         leftover_samples = vcat(negative_class[Not(1:maximum_per_class), :], positive_class[Not(1:maximum_per_class), :])
     elseif balancing == "generative"

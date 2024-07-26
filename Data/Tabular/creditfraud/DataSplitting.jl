@@ -26,7 +26,7 @@ Random.seed!(1234)
 df = df[shuffle(axes(df, 1)), :]
 train_size = 40
 n_folds = 5
-fold_size = div(size(df)[1], n_folds)
+fold_size = div(size(df, 1), n_folds)
 
 mkpath("./FiveFolds")
 #generate five folds and save them as train/test split in the 5 Folds Folder

@@ -43,7 +43,7 @@ Random.seed!(1234)
 df = float_features[shuffle(axes(float_features, 1)), :]
 train_size = 100
 n_folds = 3
-fold_size = div(size(df)[1], n_folds)
+fold_size = div(size(df, 1), n_folds)
 
 mkpath("./FiveFolds")
 #generate five folds and save them as train/test split in the 5 Folds Folder

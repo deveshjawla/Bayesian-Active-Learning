@@ -9,8 +9,8 @@ cd(PATH)
 n = 200
 X, y = gen_3_clusters(n)
 
-input_size = size(X)[1]
-output_size = size(y)[1]
+input_size = size(X, 1)
+output_size = size(y, 1)
 
 l1, l2 = 8, 8
 nl1 = input_size * l1 + l1

@@ -72,7 +72,7 @@ for experiment in experiments
             test = CSV.read("./FiveFolds/test_$(fold).csv", DataFrame, header=1)
 
             pool, test = pool_test_to_matrix(train, test, n_input, "MCMC")
-            total_pool_samples = size(pool[1])[2]
+            total_pool_samples = size(pool[1], 2)
 
             class_names = Array{String}(undef, n_output)
             for i = 1:n_output

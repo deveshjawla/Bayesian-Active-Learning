@@ -83,7 +83,7 @@ for experiment in experiments
             # test = CSV.read("./test.csv", DataFrame, header=1)
 
             pool, test = pool_test_to_matrix(train, test, n_input, "MCMC")
-            total_pool_samples = size(pool[1])[2]
+            total_pool_samples = size(pool[1], 2)
 
             # println("The number of input features are $n_input")
             # println("The number of outputs are $n_output")

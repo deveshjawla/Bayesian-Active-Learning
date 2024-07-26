@@ -63,13 +63,13 @@ for dataset in datasets
     n_input = read_dim_cols - 1
 
     pool, test = pool_test_to_matrix(pool, test, n_input, "MCMC")
-    total_pool_samples = size(pool[1])[2]
+    total_pool_samples = size(pool[1], 2)
 
     ###
     ### Dense Network specifications(Functional Model)
     ###
 
-    input_size = size(pool[1])[1]
+    input_size = size(pool[1], 1)
     n_output = lastindex(unique(pool[2]))
     # println("The number of input features are $input_size")
     # println("The number of outputs are $n_output")

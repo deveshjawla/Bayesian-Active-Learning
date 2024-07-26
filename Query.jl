@@ -21,7 +21,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     #     new_training_data, leftovers = balance_binary_data(new_training_data, positive_class_label=1, negative_class_label=2)
     #     if leftovers !== nothing
     #         new_pool = hcat(new_pool, leftovers)
-    #         new_acq_size_ = new_acq_size_ - size(leftovers)[2]
+    #         new_acq_size_ = new_acq_size_ - size(leftovers, 2)
     #     end
     # end
 
@@ -35,7 +35,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
         #     new_training_data, leftovers = balance_binary_data(new_training_data, positive_class_label=1, negative_class_label=2)
         #     if leftovers !== nothing
         #         new_pool = hcat(new_pool, leftovers)
-        #         acq_size_ = acq_size_ - size(leftovers)[2]
+        #         acq_size_ = acq_size_ - size(leftovers, 2)
         #     end
         # end
     else

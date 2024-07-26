@@ -12,8 +12,8 @@ n_input = 4
 
 pool, test_set = pool_test_to_matrix(pool, test_set, n_input)
 
-total_pool_samples = size(pool[1])[2]
-input_size = size(pool[1])[1]
+total_pool_samples = size(pool[1], 2)
+input_size = size(pool[1], 1)
 n_output = lastindex(unique(pool[2]))
 
 # X=copy(transpose(pool[1]))

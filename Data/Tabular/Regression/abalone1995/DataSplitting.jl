@@ -12,7 +12,7 @@ for (k, g) in pairs(groups)
 	# println(describe(g))
 	# group.label = minmaxscaling(group.label, 29, 1)
 	println(mean(group.label))
-	# group[!, :group_weight] = ones(size(group)[1]) * mean(group.label)
+	# group[!, :group_weight] = ones(size(group, 1)) * mean(group.label)
 end
 tdf = transform(groups, :label => mean)
 tdf.Sex = tdf.label_mean

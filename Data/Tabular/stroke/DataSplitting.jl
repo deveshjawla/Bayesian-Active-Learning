@@ -40,7 +40,7 @@ for (i, k) in enumerate(test_keys)
 	# train_group = select(train_groups[k], Not([:sex, :occupation, :race, :native_country]))
 	if k ∈ keys(train_keys)
 	test_group = select(test_groups[k], Not(["id", "gender", "ever_married", "work_type", "Residence_type", "smoking_status", "hypertension", "heart_disease"]))
-	test_group[!, :group_weight] = ones(size(test_group)[1]) .* train_keys[k]
+	test_group[!, :group_weight] = ones(size(test_group, 1)) .* train_keys[k]
 	# println(describe(test_group))
 	empty_df = vcat(empty_df, test_group)
 end
@@ -74,7 +74,7 @@ Random.seed!(1234)
 df = df[shuffle(axes(df, 1)), :]
 train_size = 40
 n_folds = 5
-fold_size = div(size(df)[1], n_folds)
+fold_size = div(size(df, 1), n_folds)
 
 mkpath("./FiveFolds")
 #generate five folds and save them as train/test split in the 5 Folds Folder

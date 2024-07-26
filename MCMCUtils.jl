@@ -147,8 +147,8 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Array{Float32,2},Arra
         # bestParams = map(x -> chains[x].data[maxInd], params[1:nparameters])
         # map_params_accumulated[i, :] = bestParams
         # println(oob_rhat)
-        param_matrices_accumulated[(i-1)*size(independent_param_matrix)[1]+1:i*size(independent_param_matrix)[1], :] = independent_param_matrix
-        noise_vectors_accumulated[(i-1)*size(independent_noise_matrix)[1]+1:i*size(independent_noise_matrix)[1], :] = independent_noise_matrix
+        param_matrices_accumulated[(i-1)*size(independent_param_matrix, 1)+1:i*size(independent_param_matrix, 1), :] = independent_param_matrix
+        noise_vectors_accumulated[(i-1)*size(independent_noise_matrix, 1)+1:i*size(independent_noise_matrix, 1), :] = independent_noise_matrix
     end
     # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$(al_step)_MAP.csv", mean(map_params_accumulated, dims=1), ',')
     # writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/independent_param_matrix_all_chains/$al_step.csv", param_matrices_accumulated, ',')
