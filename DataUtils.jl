@@ -133,16 +133,16 @@ end
 
 using StatisticalMeasures: macro_f1score, accuracy
 using StatsBase: countmap
-function performance_stats_multiclass(ground_truths, predictions)
+function performance_stats_multiclass(ground_truths, predictions_)
     ground_truths = deepcopy(Int.(vec(ground_truths)))
-    predictions = deepcopy(Int.(vec(predictions)))
+    predictions_ = deepcopy(Int.(vec(predictions_)))
     weights_ = countmap(ground_truths)
     keys_, values_ = keys(weights_), values(weights_)
     n_classes = lastindex(collect(keys(weights_)))
     weights = map(x -> lastindex(ground_truths) / (n_classes * x), values_)
     class_weights = Dict(keys_ .=> weights)
-    f1 = macro_f1score(predictions, ground_truths, class_weights)
-    acc = accuracy(predictions, ground_truths, class_weights)
+    f1 = macro_f1score(predictions_, ground_truths, class_weights)
+    acc = accuracy(predictions_, ground_truths, class_weights)
     return acc, f1
 end
 

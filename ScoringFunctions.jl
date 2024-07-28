@@ -17,12 +17,6 @@ function majority_voting(predictions::AbstractVector)::Vector{Float32}
     return [prediction, 1 - pred_probability] # 1 - pred_probability => give the uncertainty
 end
 
-
-"""
-EDLC Uncertainty
-"""
-edlc_uncertainty(α) = first(size(α)) ./ sum(α, dims=1)
-
 function normalized_entropy(prob_vec::Vector, n_output)::Float32
     sum_probs = sum(prob_vec)
     if any(i -> i == 0, prob_vec)

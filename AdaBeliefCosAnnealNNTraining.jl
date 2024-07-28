@@ -5,6 +5,13 @@ function logitcrossentropyweighted(ŷ::AbstractArray, y::AbstractArray, sample_
     mean(.-sum(sample_weights .* (y .* logsoftmax(ŷ; dims=dims)); dims=dims))
 end
 
+function pred_analyzer_multiclass(preds::Matrix)::Array{Float32,2}
+	pred_label = map(argmax, eachcol(preds))
+    pred_prob = map(maximum, eachcol(preds))
+    pred_plus_std = vcat(permutedims(pred_label), permutedims(1 .- pred_prob))
+	return pred_plus_std
+end
+
 include("./MakeNNArch.jl")
 using ParameterSchedulers
 function network_training(nn_arch::String, input_size::Int, output_size::Int, n_epochs::Int; train_loader=nothing, sample_weights_loader=nothing, data=nothing, loss_function=false, lambda=0.0)::Tuple{Vector{Float32},Any}
@@ -26,7 +33,7 @@ function network_training(nn_arch::String, input_size::Int, output_size::Int, n_
         loss = 0.0
         Flux.adjust!(opt_state, ParameterSchedulers.next!(s))
 
-        if !isnothing(train_loader) && loss_function == dirloss
+        if !isnothing(train_loader) && nn_arch == "Evidential Classification"
             for (x, y) in train_loader
                 # Compute the loss and the gradients:
                 local l = 0.0
@@ -35,6 +42,15 @@ function network_training(nn_arch::String, input_size::Int, output_size::Int, n_
                 # Accumulate the mean loss, just for logging:
                 loss += l / lastindex(train_loader)
             end
+		elseif !isnothing(train_loader) && nn_arch != "Evidential Classification"
+				for (x, y) in train_loader
+					# Compute the loss and the gradients:
+					local l = 0.0
+					l, grad = Flux.withgradient(m -> loss_function(m(x), y), nn)
+					Flux.update!(opt_state, nn, grad[1])
+					# Accumulate the mean loss, just for logging:
+					loss += l / lastindex(train_loader)
+				end
         elseif !isnothing(sample_weights_loader) && !isnothing(train_loader)
             for ((x, y), sample_weights) in zip(train_loader, sample_weights_loader)
                 local l = 0.0
@@ -42,9 +58,13 @@ function network_training(nn_arch::String, input_size::Int, output_size::Int, n_
                 Flux.update!(opt_state, nn, grad[1])
                 loss += l / lastindex(train_loader)
             end
-        elseif !isnothing(data)
+        elseif !isnothing(data) && nn_arch != "Evidential Classification"
             x, y = data
             loss, grad = Flux.withgradient(m -> loss_function(m(x), y), nn)
+            Flux.update!(opt_state, nn, grad[1])
+		elseif !isnothing(data) && nn_arch == "Evidential Classification"
+            x, y = data
+            loss, grad = Flux.withgradient(m -> dirloss(y, m(x), e), nn)
             Flux.update!(opt_state, nn, grad[1])
         end
 

@@ -10,7 +10,7 @@ using FillArrays
 using CSV
 PATH = @__DIR__
 cd(PATH)
-include("./../DirichletLayer.jl")
+include("./../Evidential Deep Learning/DirichletLayer.jl")
 using Random
 list_noise_x = [false, true]
 list_noise_y = [false, true]
@@ -68,9 +68,7 @@ let
                             end
 
 
-                            prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (input_size + l1)) * ones(nl1),
-                                sqrt(2 / (l1 + l2)) * ones(nl2),
-                                sqrt(2 / (l2 + output_size)) * ones(n_output_layer)))
+                            prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (input_size + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + output_size)) * ones(n_output_layer)))
 
                             num_params = lastindex(prior_std)
                             using ReverseDiff
@@ -131,18 +129,18 @@ let
                             param_matrix = mapreduce(permutedims, vcat, params_set)
 
                             if noise_x
-                                noises = MCMCChains.group(ch1, :noise).value #get posterior MCMC samples for network weights
-                                noise_set = collect.(Float32, eachrow(noises[:, :, 1]))
-                                noise_matrix = mapreduce(permutedims, vcat, noise_set)
+                                noises = MCMCChains.group(ch1, :noise_x).value #get posterior MCMC samples for network weights
+                                noise_set_x = collect.(Float32, eachrow(noises[:, :, 1]))
+                                noise_matrix = mapreduce(permutedims, vcat, noise_set_x)
                             elseif noise_y
                                 noises_y = MCMCChains.group(ch1, :noise_y).value
                                 noise_set_y = collect.(Float32, eachrow(noises_y[:, :, 1]))
                                 noise_matrix_y = mapreduce(permutedims, vcat, noise_set_y)
                             elseif noise_y && noise_x
-                                noises = MCMCChains.group(ch1, :noise).value #get posterior MCMC samples for network weights
+                                noises = MCMCChains.group(ch1, :noise_x).value #get posterior MCMC samples for network weights
                                 noises_y = MCMCChains.group(ch1, :noise_y).value
-                                noise_set = collect.(Float32, eachrow(noises[:, :, 1]))
-                                noise_matrix = mapreduce(permutedims, vcat, noise_set)
+                                noise_set_x = collect.(Float32, eachrow(noises[:, :, 1]))
+                                noise_matrix = mapreduce(permutedims, vcat, noise_set_x)
 
                                 noise_set_y = collect.(Float32, eachrow(noises_y[:, :, 1]))
                                 noise_matrix_y = mapreduce(permutedims, vcat, noise_set_y)
@@ -152,11 +150,11 @@ let
                             include("./../MCMCUtils.jl")
                             include("./../ScoringFunctions.jl")
                             if noise_x
-                                ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set=noise_set; output_activation_function=output_activation_function)
+                                ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set_x=noise_set_x; output_activation_function=output_activation_function)
                             elseif noise_y
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set_y=noise_set_y; output_activation_function=output_activation_function)
                             elseif noise_y && noise_x
-                                ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set=noise_set, noise_set_y=noise_set_y; output_activation_function=output_activation_function)
+                                ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set_x=noise_set_x, noise_set_y=noise_set_y; output_activation_function=output_activation_function)
                             else
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix; output_activation_function=output_activation_function)
                             end
@@ -167,7 +165,7 @@ let
 
                             stats_matrix = vcat(stats_matrix, [compile_reversediff num_clusters n output_activation_function noise_x noise_y acc f1 elapsed])
 
-                            # test = pred_analyzer_multiclass(reshape([0.0f0,0.0f0], (:, 1)), param_matrix, noise_set = noise_set, noise_set_y = noise_set_y)
+                            # test = pred_analyzer_multiclass(reshape([0.0f0,0.0f0], (:, 1)), param_matrix, noise_set_x = noise_set_x, noise_set_y = noise_set_y)
 
                             using StatsPlots
                             X1 = Float32.(-4:0.1:4)
@@ -176,11 +174,11 @@ let
                             test_x_area = pairs_to_matrix(X1, X2)
 
                             if noise_x
-                                ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set=noise_set, output_activation_function=output_activation_function)
+                                ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set_x=noise_set_x, output_activation_function=output_activation_function)
                             elseif noise_y
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set_y=noise_set_y, output_activation_function=output_activation_function)
                             elseif noise_y && noise_x
-                                ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set=noise_set, noise_set_y=noise_set_y, output_activation_function=output_activation_function)
+                                ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set_x=noise_set_x, noise_set_y=noise_set_y, output_activation_function=output_activation_function)
                             else
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, output_activation_function=output_activation_function)
                             end

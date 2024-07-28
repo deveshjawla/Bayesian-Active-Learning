@@ -30,7 +30,7 @@ function feedforward(nn_params::AbstractVector)
 	model = Chain(
 		Parallel(vcat, Dense(w10, b10,relu), Dense(w11, b11, relu), Dense(w12, b12, relu), Dense(w13, b13, relu)), 
 		Parallel(vcat, Dense(w20, b20,relu), Dense(w21, b21, relu), Dense(w22, b22, relu), Dense(w23, b23, relu)), 
-		Dense(w31, b31), softmax)
+		Dense(w31, false))
 	return model
 end
 

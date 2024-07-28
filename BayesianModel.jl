@@ -25,13 +25,24 @@ weights is a vector of the sample weights according to their importance or propo
     θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
     # θ ~ Product([Laplace(0,1) for _ in 1:num_params])
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     for i = 1:lastindex(y)
         loglik = loglikelihood(Categorical(softmax(preds[:, i])), y[i]) * weights_vector[i]
         Turing.@addlogprob!(loglik)
     end
 end
+
+# @model function classweightedBNN(x, y, μ_Gaussian, Σ_Gaussian, weights_vector)
+#     θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
+#     # θ ~ Product([Laplace(0,1) for _ in 1:num_params])
+#     nn = feedforward(θ)
+#     preds = nn(x)
+#     for i = 1:lastindex(y)
+#         loglik = loglikelihood(Categorical(softmax(preds[:, i])), y[i]) * weights_vector[i]
+#         Turing.@addlogprob!(loglik)
+#     end
+# end
 
 @model function BNN(x, y, μ_Gaussian, Σ_Gaussian)
     θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
@@ -39,16 +50,15 @@ end
     nn = feedforward(θ)
     preds = nn(x)
     for i = 1:lastindex(y)
-        y[i] ~ Categorical(preds[:, i])
+        y[i] ~ Categorical(softmax(preds[:, i]))
     end
     # y[:] ~ arraydist(BroadcastArray(Categorical, collect.(eachcol(preds))))
 end
 
 @model function regressionBNN(x, y, μ_Gaussian, Σ_Gaussian; α_Gamma=0.1, θ_Gamma=10)
-    θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
+    θ ~ MvNormal(zeros(μ_Gaussian), Σ_Gaussian)
     nn = feedforward(θ)
     preds = nn(x)
-
     sigma ~ Gamma(α_Gamma, θ_Gamma) # Prior for the variance
     for i = 1:lastindex(y)
         y[i] ~ Normal(preds[i], sigma)
@@ -56,11 +66,22 @@ end
     # y ~ MvNormal(preds, sigma * I)
 end
 
+# @model function regressionBNN(x, y, μ_Gaussian, Σ_Gaussian)
+#     θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
+#     nn = feedforward(θ)
+#     noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+#     preds = nn(x .+ noise_x)
+#     for i = 1:lastindex(y)
+#         y[i] ~ Normal(preds[i], sigma)
+#     end
+#     # y ~ MvNormal(preds, sigma * I)
+# end
+
 @model function softmax_bnn_noise_x(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     for i = 1:lastindex(y)
         y[i] ~ Categorical(softmax(preds[:, i]))
     end
@@ -78,8 +99,8 @@ end
 @model function softmax_bnn_noise_xy(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     noise_y ~ Product([Gamma(0.1, 10) for _ in 1:size(preds, 1)])
     # noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
     # noise_y ~ MvNormal(zeros(3), ones(3))
@@ -99,8 +120,8 @@ end
 @model function softplus_bnn_noise_x(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     for i = 1:lastindex(y)
         y[i] ~ Categorical((preds[:, i]) ./ sum(preds[:, i]))
     end
@@ -117,8 +138,8 @@ end
 @model function softplus_bnn_noise_xy(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     # noise_y ~ Product([Gamma(0.1, 10) for _ in 1:size(preds, 1)])
     noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
     # noise_y ~ MvNormal(zeros(3), ones(3))
@@ -140,8 +161,8 @@ end
 @model function fast_softmax_bnn_noise_x(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     y[:] ~ arraydist(BroadcastArray(Categorical, collect.(eachcol(softmax(preds, dims=1)))))
 end
 @model function fast_softmax_bnn_noise_y(x, y, num_params, scale)
@@ -154,8 +175,8 @@ end
 @model function fast_softmax_bnn_noise_xy(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     noise_y ~ Product([Gamma(0.1, 10) for _ in 1:size(preds, 1)])
     # noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
     # noise_y ~ MvNormal(zeros(3), ones(3))
@@ -171,8 +192,8 @@ end
 @model function fast_softplus_bnn_noise_x(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     y[:] ~ arraydist(BroadcastArray(Categorical, collect.(eachcol((preds) ./ sum(preds, dims=1)))))
 end
 @model function fast_softplus_bnn_noise_y(x, y, num_params, scale)
@@ -185,8 +206,8 @@ end
 @model function fast_softplus_bnn_noise_xy(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
-    noise ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     # noise_y ~ Product([Gamma(0.1, 10) for _ in 1:size(preds, 1)])
     noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
     # noise_y ~ MvNormal(zeros(3), ones(3))

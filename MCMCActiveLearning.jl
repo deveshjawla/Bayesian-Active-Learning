@@ -135,7 +135,7 @@ for experiment in experiments
                                     end
                                 end
 
-                                num_mcsteps = 100
+                                num_mcsteps = 101
                                 pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
                                 # pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(num_chains)_$(num_mcsteps)"
                                 # mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
@@ -146,7 +146,7 @@ for experiment in experiments
                                 # mkpath("./Experiments/$(experiment)/$(pipeline_name)/log_distribution_changes")
                                 mkpath("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions")
 
-                                n_acq_steps = running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, prior_variance, likelihood_name)
+                                n_acq_steps = running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name)
                                 if n_output == 1
                                     kpi = collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
                                 else

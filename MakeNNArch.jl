@@ -16,7 +16,7 @@ function make_nn_arch(nn_arch::String, input_size::Int, output_size::Int; dropou
             Dense(72 => 10, relu),
             Dense(10 => output_size; bias=false,)
         )
-    elseif nn_arch == "Evidential"
+    elseif nn_arch == "Evidential Classification"
         # Define model
         nn = Chain(
             Dense(input_size => 8, relu; bias=true),
