@@ -10,7 +10,7 @@ list_n_folds = [5, 5, 3, 5, 5, 5, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 list_prior_informativeness = ["UnInformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood", "Regression"
-acq_functions = ["Initial"] # "BayesianUncertainty", "Initial", "Random"
+acq_functions = ["Initial"] # "BayesianUncertainty0.8", "Initial", "Random"
 # temperature = nothing, or a Float or list of nothing and Floats, nothing invokes a non-customised Likelihood in the @model
 temperatures = [nothing] # 1.0, 0.1, 0.001 or nothing
 using DelimitedFiles, DataFrames, CSV, Statistics

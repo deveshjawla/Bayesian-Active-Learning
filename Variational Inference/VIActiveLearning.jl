@@ -241,7 +241,7 @@ for dataset in datasets
                 # end
             end
         end
-        kpi_names = vcat([:AcquisitionFunction, :EnsembleMajority, :CumTrainedSize, :AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :Elapsed], Symbol.(class_names))
+        kpi_names = vcat([:AcquisitionFunction, :EnsembleMajority, :CumulativeTrainedSize, :AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :Elapsed], Symbol.(class_names))
 
         df = DataFrame(kpi_df, kpi_names)
         CSV.write("./Experiments/$(experiment_name)/df.csv", df)
@@ -258,17 +258,17 @@ for dataset in datasets
     df = CSV.read("./Experiments/$(experiment_name)/df.csv", DataFrame, header=1)
     Gadfly.push_theme(theme)
     # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
-    fig1a = plot(df, x=:CumTrainedSize, y=:WeightedAccuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
-    fig1aa = plot(df, x=:CumTrainedSize, y=:EnsembleMajority, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
+    fig1a = plot(df, x=:CumulativeTrainedSize, y=:WeightedAccuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
+    fig1aa = plot(df, x=:CumulativeTrainedSize, y=:EnsembleMajority, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=acquisition_sizes[1], xmax=total_pool_samples, ymin=0.5, ymax=1.0))
 
 
-    fig1b = plot(df, x=:CumTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples))
+    fig1b = plot(df, x=:CumulativeTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples))
 
-    #     fig1c = plot(i, x=:CumTrainedSize, y=:ClassDistEntropy, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Class Distribution Entropy"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples))
+    #     fig1c = plot(i, x=:CumulativeTrainedSize, y=:ClassDistEntropy, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Class Distribution Entropy"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples))
 
-    #     fig1d = plot(DataFrames.stack(filter(:AcquisitionFunction => ==(acq_functions[1]), i), Symbol.(class_names)), x=:CumTrainedSize, y=:value, color=:variable, Guide.colorkey(title="Class", labels=class_names), Geom.point, Geom.line, Guide.ylabel(acq_functions[1]), Scale.color_discrete_manual("red", "purple", "green"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
+    #     fig1d = plot(DataFrames.stack(filter(:AcquisitionFunction => ==(acq_functions[1]), i), Symbol.(class_names)), x=:CumulativeTrainedSize, y=:value, color=:variable, Guide.colorkey(title="Class", labels=class_names), Geom.point, Geom.line, Guide.ylabel(acq_functions[1]), Scale.color_discrete_manual("red", "purple", "green"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
 
-    #     fig1e = plot(DataFrames.stack(filter(:AcquisitionFunction => ==(acq_functions[2]), i), Symbol.(class_names)), x=:CumTrainedSize, y=:value, color=:variable, Geom.point, Geom.line, Guide.ylabel(acq_functions[2]), Guide.colorkey(title="Class", labels=class_names), Guide.xlabel("Cumulative Training Size"), Scale.color_discrete_manual("red", "purple", "green"), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
+    #     fig1e = plot(DataFrames.stack(filter(:AcquisitionFunction => ==(acq_functions[2]), i), Symbol.(class_names)), x=:CumulativeTrainedSize, y=:value, color=:variable, Geom.point, Geom.line, Guide.ylabel(acq_functions[2]), Guide.colorkey(title="Class", labels=class_names), Guide.xlabel("Cumulative Training Size"), Scale.color_discrete_manual("red", "purple", "green"), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
 
     #     vstack(fig1a, fig1b, fig1c, fig1d, fig1e) |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name).png")
     fig1a |> PNG("./Experiments/$(experiment_name)/Experiments/$(experiment_name).png")

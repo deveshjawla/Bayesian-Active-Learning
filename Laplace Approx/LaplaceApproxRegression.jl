@@ -56,7 +56,7 @@ for function_name in function_names
 		kwargs...
 	)   # the specific values 1.96 are used here to create a 95% confidence interval
 	
-    plt = plot(la, Xline, preds, fillalpha=0.7, ylim=[-2, 2], legend=:none, label="Laplace Approximation", fmt=:pdf, size=(600, 400), dpi=600)
+    plt = plot(la, Xline, preds, fillalpha=0.7, ylim=[-2, 2], legend=:none, label="Laplace Approximation", fmt=:pdf, size=(600, 400), dpi=300)
 
     plot!(Xline, map(x -> f(x, function_name), Xline), label="Truth", color=:green)
     scatter!(xs, ys, color=:green, label="Training data", markerstrokecolor=:green)

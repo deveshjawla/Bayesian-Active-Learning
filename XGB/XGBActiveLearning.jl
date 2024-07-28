@@ -12,7 +12,7 @@ list_acq_steps = [10, 10]
 list_inout_dims = [(4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
 list_n_folds = [5, 5]#5, 5, 5, 5, 5, 3, 5, 5
-acq_functions = ["Random"] #, "BayesianUncertainty"
+acq_functions = ["Random"] #, "BayesianUncertainty0.8"
 
 using DataFrames
 using CSV
@@ -173,7 +173,7 @@ for experiment in experiments
                     kpi_df = vcat(kpi_df, permutedims(kpi))
                 end
             end
-            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumTrainedSize, :WeightedF1], Symbol.(class_names), Symbol.(class_names), :CumCDE)
+            kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :EnsembleMajority, :Elapsed, :AcquisitionFunction, :Experiment, :CumulativeTrainedSize, :WeightedF1], Symbol.(class_names), Symbol.(class_names), :CumCDE)
             df = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df)
 
@@ -188,7 +188,7 @@ for experiment in experiments
                     time_ = i.:Elapsed
                     # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
                     n_aocs_samples = lastindex(acc_)
-                    total_training_samples = i.:CumTrainedSize[end]
+                    total_training_samples = i.:CumulativeTrainedSize[end]
                     push!(list_total_training_samples, total_training_samples)
                     auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
                     auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
@@ -206,10 +206,10 @@ for experiment in experiments
         end
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
 		for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
-            mean_std_acc = combine(groupby(i, :CumTrainedSize), :WeightedAccuracy => mean, :WeightedAccuracy => std)
-            mean_std_f1 = combine(groupby(i, :CumTrainedSize), :WeightedF1 => mean, :WeightedF1 => std)
-            mean_std_time = combine(groupby(i, :CumTrainedSize), :Elapsed => mean, :Elapsed => std)
-            mean_std_ensemble_majority = combine(groupby(i, :CumTrainedSize), :EnsembleMajority => mean, :EnsembleMajority => std)
+            mean_std_acc = combine(groupby(i, :CumulativeTrainedSize), :WeightedAccuracy => mean, :WeightedAccuracy => std)
+            mean_std_f1 = combine(groupby(i, :CumulativeTrainedSize), :WeightedF1 => mean, :WeightedF1 => std)
+            mean_std_time = combine(groupby(i, :CumulativeTrainedSize), :Elapsed => mean, :Elapsed => std)
+            mean_std_ensemble_majority = combine(groupby(i, :CumulativeTrainedSize), :EnsembleMajority => mean, :EnsembleMajority => std)
             acquisition_function = i.AcquisitionFunction[1]
             CSV.write("./Experiments/$(experiment)/mean_std_acc$(acquisition_function).csv", mean_std_acc)
             CSV.write("./Experiments/$(experiment)/mean_std_f1$(acquisition_function).csv", mean_std_f1)
@@ -230,7 +230,7 @@ for experiment in experiments
 
         # # df = CSV.read("./Experiments/$(experiment)/df.csv", DataFrame, header=1)
 
-        # # df = filter(:AcquisitionFunction => !=("BayesianUncertainty"), df)
+        # # df = filter(:AcquisitionFunction => !=("BayesianUncertainty0.8"), df)
 
         # begin
         #     aucs_acc = []
@@ -242,7 +242,7 @@ for experiment in experiments
         #         time_ = i.:Elapsed
         #         # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
         #         n_aocs_samples = lastindex(acc_)
-        #         total_training_samples = i.:CumTrainedSize[end]
+        #         total_training_samples = i.:CumulativeTrainedSize[end]
         #         push!(list_total_training_samples, total_training_samples)
         #         auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
         #         auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
@@ -255,24 +255,24 @@ for experiment in experiments
         # end
 
         # # for (j, i) in enumerate(groupby(df, :AcquisitionSize))
-        # fig1a = Gadfly.plot(df, x=:CumTrainedSize, y=:WeightedAccuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
+        # fig1a = Gadfly.plot(df, x=:CumulativeTrainedSize, y=:WeightedAccuracy, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
 
-        # fig1aa = Gadfly.plot(df, x=:CumTrainedSize, y=:EnsembleMajority, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.5, ymax=1.0))
+        # fig1aa = Gadfly.plot(df, x=:CumulativeTrainedSize, y=:EnsembleMajority, color=:AcquisitionFunction, Geom.point, Geom.line, yintercept=[0.5], Geom.hline(color=["red"], size=[1mm]), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.5, ymax=1.0))
 
-        # fig1b = Gadfly.plot(df, x=:CumTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=0))
+        # fig1b = Gadfly.plot(df, x=:CumulativeTrainedSize, y=:Elapsed, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=0))
 
-        # fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment).pdf", dpi=600)
-        # fig1aa |> PDF("./Experiments/$(experiment)/EnsembleMajority_$(dataset)_$(experiment).pdf", dpi=600)
-        # fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment).pdf", dpi=600)
+        # fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment).pdf", dpi=300)
+        # fig1aa |> PDF("./Experiments/$(experiment)/EnsembleMajority_$(dataset)_$(experiment).pdf", dpi=300)
+        # fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment).pdf", dpi=300)
 
-        # fig1c = plot(df, x=:CumTrainedSize, y=:ClassDistEntropy, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Class Distribution Entropy"), Guide.xlabel(nothing), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
+        # fig1c = plot(df, x=:CumulativeTrainedSize, y=:ClassDistEntropy, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Class Distribution Entropy"), Guide.xlabel(nothing), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
 
-        # fig1cc = plot(df, x=:CumTrainedSize, y=:CumCDE, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Cumulative CDE"), Guide.xlabel(nothing), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
+        # fig1cc = plot(df, x=:CumulativeTrainedSize, y=:CumCDE, color=:AcquisitionFunction, Geom.point, Geom.line, Guide.ylabel("Cumulative CDE"), Guide.xlabel(nothing), Coord.cartesian(xmin=df.AcquisitionSize[1], ymin=0.0, ymax=1.0))
 
-        # fig1c |> PDF("./Experiments/$(experiment)/ClassDistEntropy_$(dataset)_$(experiment).pdf", dpi=600)
-        # fig1cc |> PDF("./Experiments/$(experiment)/CumCDE_$(dataset)_$(experiment).pdf", dpi=600)
+        # fig1c |> PDF("./Experiments/$(experiment)/ClassDistEntropy_$(dataset)_$(experiment).pdf", dpi=300)
+        # fig1cc |> PDF("./Experiments/$(experiment)/CumCDE_$(dataset)_$(experiment).pdf", dpi=300)
 
-        #     fig1d = plot(DataFrames.stack(filter(:Experiment => ==(acq_functions[1]), i), Symbol.(class_names)), x=:CumTrainedSize, y=:value, color=:variable, Guide.colorkey(title="Class", labels=class_names), Geom.point, Geom.line, Guide.ylabel(acq_functions[1]), Scale.color_discrete_manual("red", "purple", "green"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
+        #     fig1d = plot(DataFrames.stack(filter(:Experiment => ==(acq_functions[1]), i), Symbol.(class_names)), x=:CumulativeTrainedSize, y=:value, color=:variable, Guide.colorkey(title="Class", labels=class_names), Geom.point, Geom.line, Guide.ylabel(acq_functions[1]), Scale.color_discrete_manual("red", "purple", "green"), Guide.xlabel(nothing), Coord.cartesian(xmin=0, xmax=total_pool_samples, ymin=0, ymax=10))
         # end
         ### Loops when using Cross Validation for AL
         begin
@@ -293,15 +293,15 @@ for experiment in experiments
                 df_time = vcat(df_time, df_time_)
             end
 
-            fig1a = Gadfly.plot(df_acc, x=:CumTrainedSize, y=:WeightedAccuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumTrainedSize[1], ymin=0.0, ymax=1.0))
-            fig1aa = Gadfly.plot(df_f1, x=:CumTrainedSize, y=:WeightedF1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumTrainedSize[1], ymin=0.0, ymax=1.0))
+            fig1a = Gadfly.plot(df_acc, x=:CumulativeTrainedSize, y=:WeightedAccuracy_mean, color=:AcquisitionFunction, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_acc.CumulativeTrainedSize[1], ymin=0.0, ymax=1.0))
+            fig1aa = Gadfly.plot(df_f1, x=:CumulativeTrainedSize, y=:WeightedF1_mean, color=:AcquisitionFunction, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, yintercept=[0.5], Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Coord.cartesian(xmin=df_f1.CumulativeTrainedSize[1], ymin=0.0, ymax=1.0))
 
 
-            fig1b = Gadfly.plot(df_time, x=:CumTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumTrainedSize[1]))
+            fig1b = Gadfly.plot(df_time, x=:CumulativeTrainedSize, y=:Elapsed_mean, color=:AcquisitionFunction, ymin=df_time.Elapsed_mean - df_time.Elapsed_std, ymax=df_time.Elapsed_mean + df_time.Elapsed_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Training (seconds)"), Guide.xlabel(nothing), Coord.cartesian(xmin=df_time.CumulativeTrainedSize[1]))
 
-            fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-            fig1aa |> PDF("./Experiments/$(experiment)/F1_$(dataset)_$(experiment)_folds.pdf", dpi=600)
-            fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+            fig1a |> PDF("./Experiments/$(experiment)/Accuracy_$(dataset)_$(experiment)_folds.pdf", dpi=300)
+            fig1aa |> PDF("./Experiments/$(experiment)/F1_$(dataset)_$(experiment)_folds.pdf", dpi=300)
+            fig1b |> PDF("./Experiments/$(experiment)/TrainingTime_$(dataset)_$(experiment)_folds.pdf", dpi=300)
 
             df = DataFrame()
             for fold in 1:n_folds

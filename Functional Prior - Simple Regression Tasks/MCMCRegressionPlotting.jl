@@ -24,7 +24,7 @@ function make_mcmc_regression_plots(experiment, pipeline_name, weights, sigmas, 
     pp_full_lower = mapslices(x -> quantile(x, 0.05), posterior_predictive_full_samples, dims=2)[:]
     pp_full_upper = mapslices(x -> quantile(x, 0.95), posterior_predictive_full_samples, dims=2)[:]
 
-    plt = plot(Xline[:], pp_mean, ribbon=(pp_mean .- pp_full_lower, pp_full_upper .- pp_mean), legend=:none, label="Full posterior predictive distribution", fmt=:pdf, size=(600, 400), dpi=600)
+    plt = plot(Xline[:], pp_mean, ribbon=(pp_mean .- pp_full_lower, pp_full_upper .- pp_mean), legend=:none, label="Full posterior predictive distribution", fmt=:pdf, size=(600, 400), dpi=300)
 
     plot!(Xline[:], pp_mean, ribbon=(pp_mean .- pp_mean_lower, pp_mean_upper .- pp_mean), label="Posterior predictive mean distribution (epistemic uncertainty)")
 

@@ -15,27 +15,29 @@
 
 using Distributed
 using Turing
-num_chains = 3
+num_chains = 8
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
 experiments = ["Test"]
 variable_of_comparison = :AcquisitionFunction
-x_variable = :CumTrainedSize
-datasets = ["iris1988"]#20, 20, 10, 10, 20, 20, 10, 40
-# acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-minimum_training_sizes = [30] #60, 60, 40, 40, 80, 100, 30, 296
+x_variable = :CumulativeTrainedSize
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+minimum_training_sizes = [60, 60, 40, 40, 80, 100, 30, 296] #60, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, minimum_training_sizes ./ 5)
+# acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
 list_acq_steps = repeat([5], 8)
 
-list_inout_dims = [(4, 3)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = repeat([1], 8)#[5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+
+num_mcsteps = 100
 
 list_prior_informativeness = ["UnInformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood", "Regression"
-acq_functions = ["Initial"] # "BayesianUncertainty", "Initial", "Random"
+acq_functions = ["Initial", "BALD", "StdConfidence", "BayesianUncertainty0.8"] # "BayesianUncertainty0.8", "Initial", "Random"
 # temperature = nothing, or a Float or list of nothing and Floats, nothing invokes a non-customised Likelihood in the @model
 temperatures = ["CWL"] # 1.0, 0.1, 0.001 or "CWL"
 
@@ -135,7 +137,7 @@ for experiment in experiments
                                     end
                                 end
 
-                                num_mcsteps = 101
+                                
                                 pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
                                 # pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(num_chains)_$(num_mcsteps)"
                                 # mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
@@ -160,9 +162,9 @@ for experiment in experiments
                 end
             end
             if n_output == 1
-                kpi_names = vcat([:AcquisitionSize, :MSE, :MAE, :AcquisitionFunction, :Temperature, :Experiment, :CumTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+                kpi_names = vcat([:AcquisitionSize, :MSE, :MAE, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
             else
-                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :WeightedF1, :AcquisitionFunction, :Temperature, :Experiment, :CumTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :WeightedF1, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
             end
 
             df_fold = DataFrame(kpi_df, kpi_names; makeunique=true)

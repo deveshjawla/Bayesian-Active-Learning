@@ -12,7 +12,7 @@ function activations_weighted_sums(test_xs::Array{Float32,1}, params_set::Array{
         weights_df = vcat(weights_df, activations_weights[i][2])
     end
     activations_weights_plot = plot_maker_activations_weights(activations_df, weights_df)
-    activations_weights_plot |> PDF("$(directory_plots)/activations_weights.pdf", dpi=600)
+    activations_weights_plot |> PDF("$(directory_plots)/activations_weights.pdf", dpi=300)
     return nothing
 end
 
@@ -106,23 +106,25 @@ function mcmc_inference(prior::Tuple, training_data::Tuple{Matrix{Float32}, Matr
     θ = MCMCChains.group(chains, :θ).value
     noise_x = MCMCChains.group(chains, :noise_x).value
 
-	acr_lags = [5, 10, 50, 100]
-    acr = MCMCChains.autocor(chains, lags=acr_lags)
-	autocorrelations_df = DataFrame(acr)
-	means_acr = map(mean, eachcol(autocorrelations_df[:, 2:end]))
+	# acr_lags = [5, 10, 50, 100]
+    # acr = MCMCChains.autocor(chains, lags=acr_lags)
+	# autocorrelations_df = DataFrame(acr)
+	# means_acr = map(mean, eachcol(autocorrelations_df[:, 2:end]))
 
-	min_acr = Inf
-	min_acr_idx=1
-	for (i,j) in enumerate(means_acr)
-		if j < min_acr && j > 0
-			println(i,j, min_acr)
-			min_acr = j
-			min_acr_idx = i
-		end
-	end
+	# min_acr = Inf
+	# min_acr_idx=1
+	# for (i,j) in enumerate(means_acr)
+	# 	if j < min_acr && j > 0
+	# 		# println(i,j, min_acr)
+	# 		min_acr = j
+	# 		min_acr_idx = i
+	# 	end
+	# end
 
-	mc_autocor_lag = acr_lags[min_acr_idx]
-	@info "Autocorrelation IDX" means_acr
+	# mc_autocor_lag = acr_lags[min_acr_idx]
+	# @info "Autocorrelation IDX" means_acr
+
+	mc_autocor_lag=2
 
     burn_in = 0#Int(0.6 * nsteps)
     n_indep_samples = round(Int, (nsteps - burn_in) / mc_autocor_lag)
@@ -445,7 +447,7 @@ function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement1::
         time_ = i[!, measurement2]
         # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
         n_aocs_samples = lastindex(acc_)
-        total_training_samples = last(i[!, :CumTrainedSize])
+        total_training_samples = last(i[!, :CumulativeTrainedSize])
         println(total_training_samples)
         push!(list_total_training_samples, total_training_samples)
         auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
@@ -474,7 +476,7 @@ function plotting_measurable_variable(experiment, groupby::Symbol, list_group_na
     width = 6inch
     height = 6inch
     set_default_plot_size(width, height)
-    theme = Theme(major_label_font_size=16pt, minor_label_font_size=14pt, key_title_font_size=14pt, key_label_font_size=12pt, key_position=:none, colorkey_swatch_shape=:circle, key_swatch_size=12pt)
+    theme = Theme(major_label_font_size=10pt, minor_label_font_size=8pt, key_title_font_size=10pt, key_label_font_size=8pt, key_position=:inside, colorkey_swatch_shape=:circle, key_swatch_size=10pt)
     Gadfly.push_theme(theme)
 
     df = DataFrame()
@@ -485,9 +487,9 @@ function plotting_measurable_variable(experiment, groupby::Symbol, list_group_na
     end
     if normalised_measurable
         y_ticks = collect(0:0.1:1.0)
-        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Geom.hline(color=["red"], size=[0.5mm]), Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), yintercept=[0.5], Guide.yticks(ticks=y_ticks), Coord.cartesian(xmin=xmin = df[!, variable][1], ymin=0.0, ymax=1.0))
+        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), Guide.yticks(ticks=y_ticks), Coord.cartesian(xmin=xmin = df[!, variable][1], ymin=0.0, ymax=1.0))
     else
-        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)))
+        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), Coord.cartesian(xmin=xmin = df[!, variable][1]))
     end
-    fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=600)
+    fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=300)
 end

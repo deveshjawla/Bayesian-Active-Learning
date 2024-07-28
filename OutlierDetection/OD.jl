@@ -43,7 +43,7 @@ oodd_probs = OutlierDetection.transform(oodd_probas, X)[2] #probability of being
 
 xs = -7:0.1:7
 ys = -7:0.1:7
-heatmap(xs, ys, (x, y) -> OutlierDetection.transform(oodd_probas, reshape([x, y], (:, 1)))[2][1], colorbar_title="Uncertainty", xlabel="x", ylabel="y", dpi=600, size=(800, 800)) #plots the outlier probabilities
+heatmap(xs, ys, (x, y) -> OutlierDetection.transform(oodd_probas, reshape([x, y], (:, 1)))[2][1], colorbar_title="Uncertainty", xlabel="x", ylabel="y", dpi=300, size=(800, 800)) #plots the outlier probabilities
 scatter!(X[1, y[1, :].==1], X[2, y[1, :].==1], color=:red, label="1", markerstrokewidth=0.1)
 scatter!(X[1, y[2, :].==1], X[2, y[2, :].==1], color=:green, label="2", markerstrokewidth=0.1)
 scatter!(X[1, y[3, :].==1], X[2, y[3, :].==1], color=:blue, label="3", markerstrokewidth=0.1)
