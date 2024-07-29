@@ -6,30 +6,15 @@ n_output_layer = l2 * n_output
 total_num_params = nl1 + nl2 + n_output_layer
 
 function feedforward(nn_params::AbstractVector)
-	w10	= reshape(nn_params[1:24], 3, 8)
-	b10 = reshape(nn_params[25:27], 3)
-	w11 = reshape(nn_params[28:51], 3, 8)
-	b11 = reshape(nn_params[52:54], 3)
-	w12 = reshape(nn_params[55:78], 3, 8)
-	b12 = reshape(nn_params[79:81], 3)
-	w13 = reshape(nn_params[82:105], 3, 8)
-	b13 = reshape(nn_params[106:108], 3)
+	w10	= reshape(nn_params[1:96], 12, 8)
+	b10 = reshape(nn_params[197:108], 12)
 
-	w20 = reshape(nn_params[109:144], 3, 12)
-	b20 = reshape(nn_params[145:147], 3)
-	w21 = reshape(nn_params[148:183], 3, 12)
-	b21 = reshape(nn_params[184:186], 3)
-	w22 = reshape(nn_params[187:222], 3, 12)
-	b22 = reshape(nn_params[223:225], 3)
-	w23 = reshape(nn_params[226:261], 3, 12)
-	b23 = reshape(nn_params[262:264], 3)
+	w20 = reshape(nn_params[109:252], 12, 12)
+	b20 = reshape(nn_params[253:264], 12)
 
 	w31 = reshape(nn_params[265:384], 10, 12)
 
-	model = Chain(
-		Parallel(vcat, Dense(w10, b10,relu), Dense(w11, b11, relu), Dense(w12, b12, relu), Dense(w13, b13, relu)), 
-		Parallel(vcat, Dense(w20, b20,relu), Dense(w21, b21, relu), Dense(w22, b22, relu), Dense(w23, b23, relu)), 
-		Dense(w31, false))
+	model = Chain(Dense(w10, b10,relu), Dense(w20, b20,relu), Dense(w31, false))
 	return model
 end
 

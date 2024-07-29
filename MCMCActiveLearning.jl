@@ -19,20 +19,20 @@ num_chains = 8
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
-experiments = ["Test"]
+experiments = ["ActiveLearning"]
 variable_of_comparison = :AcquisitionFunction
 x_variable = :CumulativeTrainedSize
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-minimum_training_sizes = [60, 60, 40, 40, 80, 100, 30, 296] #60, 60, 40, 40, 80, 100, 30, 296
-acquisition_sizes = round.(Int, minimum_training_sizes ./ 5)
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+list_maximum_pool_size = [40, 120, 40, 40, 80, 100, 30, 296] #40, 120, 40, 40, 80, 100, 30, 296
+acquisition_sizes = round.(Int, list_maximum_pool_size ./ 5)
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
 list_acq_steps = repeat([5], 8)
 
 list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = repeat([1], 8)#[5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = repeat([5], 8)#[5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
-num_mcsteps = 100
+num_mcsteps = 1000
 
 list_prior_informativeness = ["UnInformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
@@ -137,7 +137,7 @@ for experiment in experiments
                                     end
                                 end
 
-                                
+
                                 pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
                                 # pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(num_chains)_$(num_mcsteps)"
                                 # mkpath("./Experiments/$(experiment)/$(pipeline_name)/predictions")
@@ -196,7 +196,7 @@ for experiment in experiments
             list_plotting_measurables = [:WeightedAccuracy, :WeightedF1, :Elapsed]
             list_plotting_measurables_mean = [:WeightedAccuracy_mean, :WeightedF1_mean, :Elapsed_mean]
             list_plotting_measurables_std = [:WeightedAccuracy_std, :WeightedF1_std, :Elapsed_std]
-            list_normalised_or_not = [true, true, false]
+            list_normalised_or_not = [true, false, false]
         end
 
         mean_std_by_group(df_folds, variable_of_comparison, x_variable; list_measurables=list_plotting_measurables)

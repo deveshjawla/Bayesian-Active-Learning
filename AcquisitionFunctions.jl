@@ -71,7 +71,7 @@ function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_
         sampled_indices = stochastic_acquisition(bald_scores, acq_size_; acquisition_type="Power")
 	elseif al_sampling == "BALD"
         epistemic_uncertainties = pool_prediction_matrix[5, :]
-        most_uncertain_samples = top_k_acquisition_no_duplicates(epistemic_uncertainties, acq_size_; descending=true)
+        sampled_indices = top_k_acquisition_no_duplicates(epistemic_uncertainties, acq_size_; descending=true)
     elseif al_sampling == "StochasticBALD"
         bald_scores = pool_prediction_matrix[5, :]
         sampled_indices = stochastic_acquisition(bald_scores, acq_size_; acquisition_type="Stochastic")
