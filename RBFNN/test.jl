@@ -11,20 +11,11 @@ include("computeCentroids.jl")
 include("computeRBFActivations.jl")
 include("computeWeights.jl")
 include("trainRBF.jl")
-
-function gendata(n)
-    x1 = randn(Float32, 2, n)
-    x2 = randn(Float32, 2, n) .+ [2, 2]
-    x3 = randn(Float32, 2, n) .+ [-2, 2]
-    y1 = vcat(ones(Float32, n), zeros(Float32, 2 * n))
-    y2 = vcat(zeros(Float32, n), ones(Float32, n), zeros(Float32, n))
-    y3 = vcat(zeros(Float32, n), zeros(Float32, n), ones(Float32, n))
-    hcat(x1, x2, x3), permutedims(hcat(y1, y2, y3))
-end
+include("./../DataUtils.jl")
 
 # Generate data
 n = 200
-X, y = gendata(n)
+X, y = gen_3_clusters(n)
 X = permutedims(X)
 y = Flux.onecold(y)
 
@@ -32,13 +23,7 @@ gridSize = 100
 u = range(-10.0f0, 10.0f0, length=gridSize)
 v = range(-10.0f0, 10.0f0, length=gridSize)
 
-#count = 100
-#t = zeros(count, 1)
-#for timingIndex = 1:count
-#	tic();
 (Centers, betas, Theta, nn) = trainRbf(X, y, 10, false)
-#	t[timingIndex] = toc();
-#end
 
 ########################################
 # Let's test

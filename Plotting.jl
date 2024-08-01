@@ -45,8 +45,8 @@ for (dataset, acquisition_size, max_training_size) in zip(datasets, acquisition_
     end
 
 
-    fig1a = Gadfly.plot(df_acc, x=:CumulativeTrainedSize, y=:WeightedAccuracy_mean, color=:Experiment, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_acc.CumulativeTrainedSize[1], ymin=0.0, ymax=1.0))
-    fig1aa = Gadfly.plot(df_f1, x=:CumulativeTrainedSize, y=:WeightedF1_mean, color=:Experiment, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_f1.CumulativeTrainedSize[1], ymin=0.0, ymax=1.0))
+    fig1a = Gadfly.plot(df_acc, x=:CumulativeTrainedSize, y=:BalancedAccuracy_mean, color=:Experiment, ymin=df_acc.Accuracy_mean - df_acc.Accuracy_std, ymax=df_acc.Accuracy_mean + df_acc.Accuracy_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("Accuracy"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_acc.CumulativeTrainedSize[1], ymin=0.0, ymax=1.0))
+    fig1aa = Gadfly.plot(df_f1, x=:CumulativeTrainedSize, y=:F1Score_mean, color=:Experiment, ymin=df_f1.F1_mean - df_f1.F1_std, ymax=df_f1.F1_mean + df_f1.F1_std, Geom.point, Geom.line, Geom.ribbon, Guide.ylabel("F1"), Guide.xlabel("Cumulative Training Size"), Guide.yticks(ticks=y_ticks), Guide.xticks(ticks=x_ticks), Coord.cartesian(xmin=df_f1.CumulativeTrainedSize[1], ymin=0.0, ymax=1.0))
 
     fig1a |> PDF("./Experiments/Model_comparison_Accuracy_$(dataset).pdf", dpi=300)
     fig1aa |> PDF("./Experiments/Model_comparison_F1_$(dataset).pdf", dpi=300)

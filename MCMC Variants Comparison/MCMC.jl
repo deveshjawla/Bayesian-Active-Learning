@@ -202,7 +202,7 @@ let
         end
     end
 
-    df = DataFrame(stats_matrix, [:CompileReverseDiff, :NumClusters, :TrainingSize, :OutputActivationFunction, :NoiseX, :NoiseY, :WeightedAccuracy, :WeightedF1, :Elapsed])
+    df = DataFrame(stats_matrix, [:CompileReverseDiff, :NumClusters, :TrainingSize, :OutputActivationFunction, :NoiseX, :NoiseY, :BalancedAccuracy, :F1Score, :Elapsed])
     CSV.write("./Experiments/stats.csv", df)
 end
 
@@ -210,10 +210,10 @@ df = CSV.read("./Experiments/stats.csv", DataFrame, header=1)
 names(df)
 
 groupby(df, [:CompileReverseDiff, :TrainingSize])
-println(combine(groupby(df, [:CompileReverseDiff, :TrainingSize, :OutputActivationFunction]), :WeightedAccuracy => mean, :WeightedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
-println(combine(groupby(df, [:CompileReverseDiff, :NoiseX, :NoiseY, :TrainingSize, :OutputActivationFunction]), :WeightedAccuracy => mean, :WeightedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
+println(combine(groupby(df, [:CompileReverseDiff, :TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
+println(combine(groupby(df, [:CompileReverseDiff, :NoiseX, :NoiseY, :TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
 
 filtered_df = filter([:CompileReverseDiff, :NoiseX] => (x, y) -> x == false && y == true, df)
-println(combine(groupby(filtered_df, [:TrainingSize, :OutputActivationFunction]), :WeightedAccuracy => mean, :WeightedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
+println(combine(groupby(filtered_df, [:TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
 
 Best = "Compile_ReverseDiff = false, NoiseX =true, NoiseY =false, OutputActivationFunction=Softmax and we conclude that the Aleatoric Uncertainty is just the inverse of Predicted Probability, and the Epistemic Uncertainty is proportional to Std Predicted Probability, More data samples will reduce the epistemic uncertainty in that space."

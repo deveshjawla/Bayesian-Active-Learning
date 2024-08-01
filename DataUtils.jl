@@ -131,23 +131,28 @@ function performance_stats_regression(ground_truth_, predictions_)
     return mse, mae
 end
 
-using StatisticalMeasures: macro_f1score, accuracy
+using StatisticalMeasures: recall
+function average_accuracy_HM(true_labels, predicted_labels)
+	
+end
+
+using StatisticalMeasures: f1score, balanced_accuracy, MulticlassTruePositiveRate
 using StatsBase: countmap
 function performance_stats_multiclass(true_labels, predicted_labels)
 	true_labels = vec(true_labels)
 	predicted_labels = vec(predicted_labels)
-	missing_labels = setdiff(predicted_labels, true_labels)
-	for missing_label in missing_labels
-		true_labels_indices_with_missing_label = findall(!=(missing_label), true_labels)
-		predicted_labels_indices_with_missing_label = findall(!=(missing_label), predicted_labels)
-		if lastindex(true_labels_indices_with_missing_label) < lastindex(predicted_labels_indices_with_missing_label)
-			true_labels = true_labels[true_labels_indices_with_missing_label]
-			predicted_labels = predicted_labels[true_labels_indices_with_missing_label]
-		else
-			true_labels = true_labels[predicted_labels_indices_with_missing_label]
-			predicted_labels = predicted_labels[predicted_labels_indices_with_missing_label]
-		end
-	end
+	# missing_labels = setdiff(predicted_labels, true_labels)
+	# for missing_label in missing_labels
+	# 	true_labels_indices_with_missing_label = findall(!=(missing_label), true_labels)
+	# 	predicted_labels_indices_with_missing_label = findall(!=(missing_label), predicted_labels)
+	# 	if lastindex(true_labels_indices_with_missing_label) < lastindex(predicted_labels_indices_with_missing_label)
+	# 		true_labels = true_labels[true_labels_indices_with_missing_label]
+	# 		predicted_labels = predicted_labels[true_labels_indices_with_missing_label]
+	# 	else
+	# 		true_labels = true_labels[predicted_labels_indices_with_missing_label]
+	# 		predicted_labels = predicted_labels[predicted_labels_indices_with_missing_label]
+	# 	end
+	# end
 
 	writedlm("./test.csv", [true_labels predicted_labels])
 
@@ -157,21 +162,28 @@ function performance_stats_multiclass(true_labels, predicted_labels)
     levels!(predicted_labels, levels(true_labels))
 
     # Calculate class weights
-    label_dist = sort(countmap(true_labels))
-	pct_labels = collect(values(label_dist)) ./ sum(collect(values(label_dist)))
-    pct_labels = Dict(keys(label_dist) .=> pct_labels)
-	@info "Distribution of Classes" pct_labels
+    # label_dist = sort(countmap(true_labels))
+	# pct_labels = collect(values(label_dist)) ./ sum(collect(values(label_dist)))
+    # pct_labels = Dict(keys(label_dist) .=> pct_labels)
+	# @info "Distribution of Classes" pct_labels
 
-    n_total = length(true_labels)
-    n_classes = length(label_dist)
-    weights = n_total ./ (n_classes .* (collect(values(label_dist))))
+    # n_total = length(true_labels)
+    n_classes = lastindex(levels(true_labels))
+    # weights = n_total ./ (n_classes .* (collect(values(label_dist))))
     
     # Create a dictionary of class weights
-    class_weights = sort(Dict(keys(label_dist) .=> weights))
-	@info "Class Weights" class_weights
+    # class_weights = sort(Dict(keys(label_dist) .=> weights))
+	# @info "Class Weights" class_weights
     # Calculate F1 score and accuracy
-    acc = accuracy(predicted_labels, true_labels, class_weights)
-    f1 = macro_f1score(predicted_labels, true_labels, class_weights)
+	if n_classes == 2
+		acc = balanced_accuracy(predicted_labels, true_labels)
+		f1 = f1score(predicted_labels, true_labels)
+	else
+		acc = balanced_accuracy(predicted_labels, true_labels)
+		mul_recall = MulticlassTruePositiveRate(;average=NoAvg(), levels=levels(true_labels))
+		recalls = values(mul_recall(predicted_labels, true_labels))
+		f1 = 1 / ((1/n_classes)*(1 ./ recalls))
+	end
     @info "Acc and f1" acc f1
     return acc, f1
 end

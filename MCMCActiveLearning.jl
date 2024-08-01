@@ -19,10 +19,9 @@ num_chains = 8
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
-experiments = ["ActiveLearning"]
 variable_of_comparison = :AcquisitionFunction
 x_variable = :CumulativeTrainedSize
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
 list_maximum_pool_size = [40, 120, 40, 40, 80, 100, 30, 296] #40, 120, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, list_maximum_pool_size ./ 5)
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
@@ -30,9 +29,11 @@ list_acq_steps = repeat([5], 8)
 
 list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = repeat([5], 8)#[5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
 num_mcsteps = 1000
+experiments = ["ActiveLearning"]
+
 
 list_prior_informativeness = ["UnInformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
@@ -163,8 +164,10 @@ for experiment in experiments
             end
             if n_output == 1
                 kpi_names = vcat([:AcquisitionSize, :MSE, :MAE, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
-            else
-                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :WeightedAccuracy, :WeightedF1, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+			elseif n_output == 2
+                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :F1Score, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+			else
+                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
             end
 
             df_fold = DataFrame(kpi_df, kpi_names; makeunique=true)
@@ -173,7 +176,7 @@ for experiment in experiments
             if n_output == 1
                 auc_per_fold(fold, df_fold, variable_of_comparison, :MSE, :Elapsed)
             else
-                auc_per_fold(fold, df_fold, variable_of_comparison, :WeightedAccuracy, :Elapsed)
+                auc_per_fold(fold, df_fold, variable_of_comparison, :BalancedAccuracy, :Elapsed)
             end
             df_folds = vcat(df_folds, df_fold)
         end
@@ -182,7 +185,7 @@ for experiment in experiments
         if n_output == 1
             auc_mean(n_folds, experiment, variable_of_comparison, :MSE, :Elapsed)
         else
-            auc_mean(n_folds, experiment, variable_of_comparison, :WeightedAccuracy, :Elapsed)
+            auc_mean(n_folds, experiment, variable_of_comparison, :BalancedAccuracy, :Elapsed)
         end
 
         df_folds = CSV.read("./Experiments/$(experiment)/df_folds.csv", DataFrame)
@@ -191,12 +194,17 @@ for experiment in experiments
             list_plotting_measurables = [:MSE, :Elapsed]
             list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
             list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
-            list_normalised_or_not = [true, false]
-        else
-            list_plotting_measurables = [:WeightedAccuracy, :WeightedF1, :Elapsed]
-            list_plotting_measurables_mean = [:WeightedAccuracy_mean, :WeightedF1_mean, :Elapsed_mean]
-            list_plotting_measurables_std = [:WeightedAccuracy_std, :WeightedF1_std, :Elapsed_std]
-            list_normalised_or_not = [true, false, false]
+            list_normalised_or_not = [false, false]
+		elseif n_output == 2
+            list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed, :AvgESS]
+            list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
+            list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
+            list_normalised_or_not = [false, false, false, false]
+		else
+			list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed, :AvgESS]
+            list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean, :AvgESS_mean]
+            list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std, :AvgESS_std]
+            list_normalised_or_not = [false, false, false, false]
         end
 
         mean_std_by_group(df_folds, variable_of_comparison, x_variable; list_measurables=list_plotting_measurables)

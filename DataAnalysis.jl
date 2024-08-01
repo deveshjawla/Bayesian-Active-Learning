@@ -15,7 +15,7 @@ acq_functions = ["Initial"] # "BayesianUncertainty0.8", "Initial", "Random"
 temperatures = [nothing] # 1.0, 0.1, 0.001 or nothing
 using DelimitedFiles, DataFrames, CSV, Statistics
 
-col_names = [:Dataset, :Experiment, :OOB_Rhat, :AvgAcceptanceRate, :NumericalErrors, :ESS, :PSRF, :WeightedAccuracy, :MacroF1, :Time]
+col_names = [:Dataset, :Experiment, :OOB_Rhat, :AvgAcceptanceRate, :NumericalErrors, :ESS, :PSRF, :BalancedAccuracy, :MacroF1, :Time]
 convergence_stats = DataFrame([[] for _ in col_names], col_names)
 for (dataset, acquisition_size, n_folds, n_acq_steps) in zip(datasets, acquisition_sizes, list_n_folds, list_acq_steps)
     PATH = @__DIR__

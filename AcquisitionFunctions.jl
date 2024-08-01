@@ -61,7 +61,7 @@ function stochastic_acquisition(pool_scores::Vector, acquisition_size::Int; acqu
     return indices
 end
 
-function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; reconstruct=nothing, pct_epistemic_samples = 0.8)
+function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; reconstruct=nothing, pct_epistemic_samples = 0.8)::Vector{Int}
     if al_sampling == "Initial"
         sampled_indices = 1:acq_size_
     elseif al_sampling == "Random"
@@ -84,7 +84,8 @@ function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_
         most_ambiguous_samples = top_k_acquisition_no_duplicates(aleatoric_uncertainties, round(Int, acq_size_ * (1 - pct_epistemic_samples)); descending=true)
         most_uncertain_samples = top_k_acquisition_no_duplicates(epistemic_uncertainties, round(Int, acq_size_ * pct_epistemic_samples); descending=true)
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/most_uncertain_samples_$(al_step).csv", most_uncertain_samples, ',')
-        sampled_indices = union(most_ambiguous_samples, most_uncertain_samples)
+		ambiguous_samples_not_in_unceratain_samples = setdiff(most_ambiguous_samples, most_uncertain_samples)
+		sampled_indices = vcat(most_uncertain_samples, ambiguous_samples_not_in_unceratain_samples[1:round(Int, acq_size_ * (1 - pct_epistemic_samples))])
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/samplsampled_indices_$(al_step).csv",sampled_indices, ',')
         #saving the uncertainties associated with the queried samples and their labels
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/predictions/sampled_indices_$(al_step)_stats.csv", [aleatoric_uncertainties[sampled_indices] epistemic_uncertainties[sampled_indices] pool_y[sampled_indices]], ',')
@@ -105,9 +106,10 @@ function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_
 	elseif al_sampling == "BayesianUncertainty$(pct_epistemic_samples)"
         aleatoric_uncertainties = pool_prediction_matrix[2, :]
         epistemic_uncertainties = pool_prediction_matrix[5, :]
-        most_ambiguous_samples = top_k_acquisition_no_duplicates(aleatoric_uncertainties, round(Int, acq_size_ * (1 - pct_epistemic_samples)); descending=false)
+        most_ambiguous_samples = top_k_acquisition_no_duplicates(aleatoric_uncertainties, acq_size_; descending=false)
         most_uncertain_samples = top_k_acquisition_no_duplicates(epistemic_uncertainties, round(Int, acq_size_ * pct_epistemic_samples); descending=true)
-        sampled_indices = union(most_ambiguous_samples, most_uncertain_samples)
+        ambiguous_samples_not_in_unceratain_samples = setdiff(most_ambiguous_samples, most_uncertain_samples)
+		sampled_indices = vcat(most_uncertain_samples, ambiguous_samples_not_in_unceratain_samples[1:round(Int, acq_size_ * (1 - pct_epistemic_samples))])
     end
     return sampled_indices
 end
