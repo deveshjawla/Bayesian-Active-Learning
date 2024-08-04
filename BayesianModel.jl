@@ -44,19 +44,28 @@ end
 #     end
 # end
 
-@model function BNN(x, y, μ_Gaussian, Σ_Gaussian)
-    θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
-    # @code_warntype feedforward(θ)
+@model function BNN(x, y, μ, Σ)
+    θ ~ MvNormal(μ, Σ)
     nn = feedforward(θ)
-    preds = nn(x)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
     for i = 1:lastindex(y)
         y[i] ~ Categorical(softmax(preds[:, i]))
     end
-    # y[:] ~ arraydist(BroadcastArray(Categorical, collect.(eachcol(preds))))
+end
+
+@model function softmax_bnn_noise_x(x, y, num_params, scale)
+    θ ~ MvNormal(zeros(num_params), scale)
+    nn = feedforward(θ)
+    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+    preds = nn(x .+ noise_x)
+    for i = 1:lastindex(y)
+        y[i] ~ Categorical(softmax(preds[:, i]))
+    end
 end
 
 @model function regressionBNN(x, y, μ_Gaussian, Σ_Gaussian; α_Gamma=0.1, θ_Gamma=10)
-    θ ~ MvNormal(zeros(μ_Gaussian), Σ_Gaussian)
+    θ ~ MvNormal(μ_Gaussian, Σ_Gaussian)
     nn = feedforward(θ)
     preds = nn(x)
     sigma ~ Gamma(α_Gamma, θ_Gamma) # Prior for the variance
@@ -77,15 +86,6 @@ end
 #     # y ~ MvNormal(preds, sigma * I)
 # end
 
-@model function softmax_bnn_noise_x(x, y, num_params, scale)
-    θ ~ MvNormal(zeros(num_params), scale)
-    nn = feedforward(θ)
-    noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
-    preds = nn(x .+ noise_x)
-    for i = 1:lastindex(y)
-        y[i] ~ Categorical(softmax(preds[:, i]))
-    end
-end
 
 @model function softmax_bnn_noise_y(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)

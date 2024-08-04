@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, noise_x, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Vector{Vector{Float32}},Array{Float32,2},Float32,Float32,Vector}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, noise_x, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Vector{Vector{Float32}},Array{Float32,2},Float32,Float32,Vector}
     println("$(al_sampling) with query no. ", al_step)
     # sigma, num_params = prior
     pool_x, pool_y = pool
@@ -82,6 +82,8 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     end
     sample_weights ./= n_output
 
+	# @info "Sample weights type" typeof(sample_weights)
+
     # println("The acquired Batch has the follwing class distribution: $balance_of_acquired_batch")
     if n_output == 1
         training_data_xy = (training_data_x, Float32.(permutedims(training_data_y)))
@@ -91,9 +93,9 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
     # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
     #Training on Acquired Samples and logging classification_performance
-    if isnothing(mcmc_init_params)
-        independent_param_matrix, independent_noise_x, elapsed = vi_inference(prior, training_data_xy, nsteps, n_epochs, al_step, experiment, pipeline_name)
-    else
+    if learning_algorithm == "VI"
+        independent_param_matrix, independent_noise_x, elapsed = vi_inference(prior, training_data_xy, al_step, experiment, pipeline_name,temperature, sample_weights, likelihood_name)
+	elseif learning_algorithm == "MCMC"
         independent_param_matrix, independent_noise_x, elapsed = mcmc_inference(prior, training_data_xy, n_input, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness)
     end
     test_x, test_y = test_data

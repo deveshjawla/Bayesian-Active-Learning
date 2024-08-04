@@ -54,47 +54,53 @@ function computeCentroids(X_train::Array{Float32,2}, y_train::Array{Int64,1}, ce
         # ================================
 
         # Pick the first 'centersPerCategory' samples to use as the initial centers.
-        init_Centroids = Xc[1:centersPerCategory, :]
+        # init_Centroids = Xc[1:centersPerCategory, :]
+
+		if centersPerCategory > size(Xc, 1)
+			centersPerCategory = size(Xc, 1)
+		end
 
         # Run k-means clustering, with at most 100 iterations.        
         @printf("  Running kmeans with %d centers...\n", centersPerCategory)
-        result = kmeans(permutedims(Xc), centersPerCategory)
-        Centroids_c = permutedims(result.centers)
-        memberships_c = result.assignments
+		if centersPerCategory != 0
+			result = kmeans(permutedims(Xc), centersPerCategory)
+			Centroids_c = permutedims(result.centers)
+			memberships_c = result.assignments
 
-        # Remove any empty clusters.
-        #toRemove = [];
-        # 
-        # For each of the centroids...
-        #for (i = 1 : size(Centroids_c, 1))
-        #    # If this centroid has no members, mark it for removal.
-        #    if (sum(memberships_c .== i) == 0)        
-        #        toRemove = [toRemove; i];
-        #    end
-        #end
-        #
-        # If there were empty clusters...
-        #if (~isempty(toRemove))
-        #    # Remove the centroids of the empty clusters.
-        #    Centroids_c(toRemove, :) = [];
-        #    
-        #    # Reassign the memberships (index values will have changed).
-        #    memberships_c = findClosestCentroids(Xc, Centroids_c);
-        #end
+			# Remove any empty clusters.
+			#toRemove = [];
+			# 
+			# For each of the centroids...
+			#for (i = 1 : size(Centroids_c, 1))
+			#    # If this centroid has no members, mark it for removal.
+			#    if (sum(memberships_c .== i) == 0)        
+			#        toRemove = [toRemove; i];
+			#    end
+			#end
+			#
+			# If there were empty clusters...
+			#if (~isempty(toRemove))
+			#    # Remove the centroids of the empty clusters.
+			#    Centroids_c(toRemove, :) = [];
+			#    
+			#    # Reassign the memberships (index values will have changed).
+			#    memberships_c = findClosestCentroids(Xc, Centroids_c);
+			#end
 
-        # ================================
-        #    Compute Beta Coefficients
-        # ================================
-        if (verbose)
-            @printf("  Category %d betas...\n", c)
-        end
+			# ================================
+			#    Compute Beta Coefficients
+			# ================================
+			if (verbose)
+				@printf("  Category %d betas...\n", c)
+			end
 
-        # Compute betas for all the clusters.
-        betas_c = computeRBFBetas(Xc, Centroids_c, memberships_c)
+			# Compute betas for all the clusters.
+			betas_c = computeRBFBetas(Xc, Centroids_c, memberships_c)
 
-        # Add the centroids and their beta values to the network.
-        Centers = vcat(Centers, Centroids_c)
-        betas = vcat(betas, betas_c)
+			# Add the centroids and their beta values to the network.
+			Centers = vcat(Centers, Centroids_c)
+			betas = vcat(betas, betas_c)
+		end
     end
     numRBFNeurons = size(Centers, 1)
     return Centers, betas, numRBFNeurons

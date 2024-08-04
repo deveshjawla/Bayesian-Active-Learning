@@ -82,23 +82,26 @@ function maxabsscaling(x::Vector{Real}, absmax_::Real)
     return x ./ absmax_
 end
 
-function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, model_type::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Array{Float32,2},Array{Float32,2}}}
+function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, model_type::String; output_size=nothing)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Array{Float32,2},Array{Float32,2}}}
     pool = Matrix{Float32}(pool)
     test = Matrix{Float32}(test)
 
     pool_x = pool[:, 1:n_input]
     test_x = test[:, 1:n_input]
 
-    if model_type == "MCMC"
-        pool_y = pool[:, end]
-        test_y = test[:, end]
-    elseif model_type == "XGB"
-        pool_y = pool[:, end] .- 1
-        test_y = test[:, end] .- 1
+    if model_type == "XGB"
+        pool_y = permutedims(pool[:, end] .- 1)
+        test_y = permutedims(test[:, end] .- 1)
+	else
+        pool_y = permutedims(pool[:, end])
+        test_y = permutedims(test[:, end])
+	# elseif model_type == "Evidential" || model_type == "LaplaceApprox"
+	# 	pool_y = Flux.onehotbatch(pool[:, end], 1:output_size)
+    #     test_y = Flux.onehotbatch(test[:, end], 1:output_size)
     end
 
-    pool = (permutedims(pool_x), permutedims(pool_y))
-    test = (permutedims(test_x), permutedims(test_y))
+    pool = (permutedims(pool_x), pool_y)
+    test = (permutedims(test_x), test_y)
     return pool, test
 end
 
@@ -136,7 +139,7 @@ function average_accuracy_HM(true_labels, predicted_labels)
 	
 end
 
-using StatisticalMeasures: f1score, balanced_accuracy, MulticlassTruePositiveRate
+using StatisticalMeasures: f1score, balanced_accuracy, MulticlassTruePositiveRate, NoAvg
 using StatsBase: countmap
 function performance_stats_multiclass(true_labels, predicted_labels)
 	true_labels = vec(true_labels)
@@ -182,7 +185,7 @@ function performance_stats_multiclass(true_labels, predicted_labels)
 		acc = balanced_accuracy(predicted_labels, true_labels)
 		mul_recall = MulticlassTruePositiveRate(;average=NoAvg(), levels=levels(true_labels))
 		recalls = values(mul_recall(predicted_labels, true_labels))
-		f1 = 1 / ((1/n_classes)*(1 ./ recalls))
+		f1 = 1 / ((1/n_classes)*sum(recalls .^ -1))
 	end
     @info "Acc and f1" acc f1
     return acc, f1
@@ -239,4 +242,76 @@ function summary_stats(a::AbstractArray{T}) where {T<:Real}
         "3rd Quartile",
         "Maximum"]
     return [names_stats stats]
+end
+
+
+function mean_std_by_variable(group, group_by::Symbol, measurable::Symbol, variable::Symbol, experiment)
+    mean_std = DataFrames.combine(groupby(group, variable), measurable => mean, measurable => std)
+    group_name = first(group[!, group_by])
+    mean_std[!, group_by] = repeat([group_name], nrow(mean_std))
+    CSV.write("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", mean_std)
+end
+function mean_std_by_group(df_folds, group_by::Symbol, variable::Symbol, experiment; list_measurables=[:MSE, :Elapsed, :MAE, :AcceptanceRate, :NumericalErrors])
+    for group in groupby(df_folds, group_by)
+        for m in list_measurables
+            mean_std_by_variable(group, group_by, m, variable, experiment)
+        end
+    end
+end
+using Statistics: mean, std
+function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement1::Symbol, measurement2::Symbol, experiment::String)
+    aucs_acc = []
+    aucs_t = []
+    list_compared = []
+    list_total_training_samples = []
+    for i in groupby(df, group_by)
+        acc_ = i[!, measurement1]
+        time_ = i[!, measurement2]
+        # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
+        n_aocs_samples = lastindex(acc_)
+        total_training_samples = last(i[!, :CumulativeTrainedSize])
+        println(total_training_samples)
+        push!(list_total_training_samples, total_training_samples)
+        auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
+        auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
+        push!(list_compared, first(i[!, group_by]))
+        append!(aucs_acc, (auc_acc))
+        append!(aucs_t, auc_t)
+    end
+    min_total_samples = minimum(list_total_training_samples)
+    df = DataFrame(group_by => list_compared, measurement1 => min_total_samples .* (aucs_acc), measurement2 => min_total_samples .* aucs_t)
+    CSV.write("./Experiments/$(experiment)/auc_$(fold).csv", df)
+end
+function auc_mean(n_folds, experiment, group_by::Symbol, measurement1::Symbol, measurement2::Symbol)
+    df = DataFrame()
+    for fold = 1:n_folds
+        df_ = CSV.read("./Experiments/$(experiment)/auc_$(fold).csv", DataFrame, header=1)
+        df = vcat(df, df_)
+    end
+
+    mean_auc = combine(groupby(df, group_by), measurement1 => mean, measurement1 => std, measurement2 => mean, measurement2 => std)
+
+    CSV.write("./Experiments/$(experiment)/mean_auc.csv", mean_auc)
+end
+
+function plotting_measurable_variable(experiment, groupby::Symbol, list_group_names, dataset, variable::Symbol, measurable::Symbol, measurable_mean::Symbol, measurable_std::Symbol, normalised_measurable::Bool)
+    width = 6inch
+    height = 6inch
+    set_default_plot_size(width, height)
+    theme = Theme(major_label_font_size=10pt, minor_label_font_size=8pt, key_title_font_size=10pt, key_label_font_size=8pt, key_position=:inside, colorkey_swatch_shape=:circle, key_swatch_size=10pt)
+    Gadfly.push_theme(theme)
+
+    df = DataFrame()
+    for group_name in list_group_names
+        df_ = CSV.read("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", DataFrame, header=1)
+        # df_[!, :AcquisitonFunction] .= repeat([group_name], nrow(df_))
+        df = vcat(df, df_)
+    end
+    if normalised_measurable
+        y_ticks = collect(0:0.1:1.0)
+        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), Guide.yticks(ticks=y_ticks), Coord.cartesian(xmin=xmin = df[!, variable][1], ymin=0.0, ymax=1.0))
+    else
+        fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), Coord.cartesian(xmin=xmin = df[!, variable][1]))
+    end
+    fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=300)
 end

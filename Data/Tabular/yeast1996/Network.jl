@@ -1,13 +1,12 @@
-l1, l2 = 12, 12 
-nl1 = 8 * l1 + l1
+l1, l2 = 12, 12
+nl1 = n_input * l1 + l1
 nl2 = l1 * l2 + l2
 n_output_layer = l2 * n_output
-
 total_num_params = nl1 + nl2 + n_output_layer
 
 function feedforward(nn_params::AbstractVector)
 	w10	= reshape(nn_params[1:96], 12, 8)
-	b10 = reshape(nn_params[197:108], 12)
+	b10 = reshape(nn_params[97:108], 12)
 
 	w20 = reshape(nn_params[109:252], 12, 12)
 	b20 = reshape(nn_params[253:264], 12)

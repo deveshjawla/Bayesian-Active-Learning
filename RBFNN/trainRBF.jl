@@ -24,9 +24,9 @@ betas    - The beta coefficient for each coressponding RBF neuron.
 Theta    - The weights for the output layer. There is one row per neuron
 and one column per output node / category.
 """
-function trainRbf(X_train::Array{Float32,2}, y_train::Array{Int64,1}, centersPerCategory::Int64, verbose::Bool)
+function trainRbf(X_train::Array{Float32,2}, y_train::Vector{Int64}, centersPerCategory::Int64, verbose::Bool, numCats::Int)
     # Get the number of unique categories in the dataset.
-    numCats = size(unique(y_train), 1)
+    # numCats = size(unique(y_train), 1)
 
     # Ensure category values are non-zero and continuous.
     # This allows the index of the output node to equal its category (e.g.,

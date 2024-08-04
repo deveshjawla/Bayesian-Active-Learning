@@ -13,7 +13,7 @@ Returns
 optim_theta - The learned weights of the RBF-NN
 RBFNN - The RBF-NN architecture
 """
-function computeWeights(X::Array{Float32,2}, y::Array{Int64,1}, numRBFNeurons, numCats, verbose; lambda=0.0, n_epochs=1000)
+function computeWeights(X::Array{Float32,2}, y::Array{Int64,1}, numRBFNeurons, numCats, verbose; lambda=0.0, n_epochs=100)
     if (verbose)
         println("3. Learn output weights.\n")
     end
@@ -31,14 +31,14 @@ function computeWeights(X::Array{Float32,2}, y::Array{Int64,1}, numRBFNeurons, n
     optim_theta = 0
     re = 0
 
-    trnlosses = []
+	trnlosses = zeros(n_epochs)
     for e in 1:n_epochs
         local loss = 0.0f0
 
 		# global opt_state, nn
         Flux.adjust!(opt_state, ParameterSchedulers.next!(s))
         loss, grad = Flux.withgradient(m -> Flux.Losses.logitcrossentropy(m(X), y), nn)
-        push!(trnlosses, loss)
+        trnlosses[e] = loss
         Flux.update!(opt_state, nn, grad[1])
 		
         # if mod(e, 2) == 1
@@ -60,8 +60,10 @@ function computeWeights(X::Array{Float32,2}, y::Array{Int64,1}, numRBFNeurons, n
         end
 
     end
-    scatter(trnlosses, width=80, height=30)
-    savefig("./loss_cruve.pdf")
+    # scatter(1:n_epochs, trnlosses, width=80, height=30)
+    # savefig("./$(nn_arch)_loss.pdf")
+	@info "Finished training" last(trnlosses)
+    # optim_params, re = Flux.destructure(nn)
 
     return optim_theta, re
 end

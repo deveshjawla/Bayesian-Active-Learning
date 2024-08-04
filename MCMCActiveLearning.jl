@@ -15,30 +15,31 @@
 
 using Distributed
 using Turing
+
 num_chains = 8
 # Add four processes to use for sampling.
 addprocs(num_chains; exeflags=`--project`)
 
 variable_of_comparison = :AcquisitionFunction
 x_variable = :CumulativeTrainedSize
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-list_maximum_pool_size = [40, 120, 40, 40, 80, 100, 30, 296] #40, 120, 40, 40, 80, 100, 30, 296
-acquisition_sizes = round.(Int, list_maximum_pool_size ./ 5)
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+list_maximum_pool_size = [40, 60, 40, 40, 80, 100, 30, 296] #40, 60, 40, 40, 80, 100, 30, 296
+acquisition_sizes = round.(Int, list_maximum_pool_size ./ 1)
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
-list_acq_steps = repeat([5], 8)
+list_acq_steps = repeat([1], 8)
 
 list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
 list_n_folds = [5, 5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
 
-num_mcsteps = 1000
-experiments = ["ActiveLearning"]
-
+num_mcsteps = 100
+@everywhere learning_algorithm = "VI"
+experiments = ["ComparisonBayesianAcquisitionFunctions$(learning_algorithm)"]
 
 list_prior_informativeness = ["UnInformedPrior"] # "UnInformedPrior", "InformedPrior", "NoInit"
 list_prior_variance = ["GlorotPrior"] # "GlorotPrior", 0.01, 0.2, 1.0, 3.0, 5.0
 list_likelihood_name = ["WeightedLikelihood"] #"UnWeightedLikelihood", "WeightedLikelihood", "Regression"
-acq_functions = ["Initial", "BALD", "StdConfidence", "BayesianUncertainty0.8"] # "BayesianUncertainty0.8", "Initial", "Random"
+acq_functions = ["Initial"] # "BayesianUncertainty0.8", "Initial", "Random",  "BALD", "StdConfidence", "BayesianUncertainty0.8"
 # temperature = nothing, or a Float or list of nothing and Floats, nothing invokes a non-customised Likelihood in the @model
 temperatures = ["CWL"] # 1.0, 0.1, 0.001 or "CWL"
 
@@ -47,7 +48,6 @@ using CSV
 using DelimitedFiles
 using Random
 Random.seed!(1234)
-using StatsBase
 using Distances
 using CategoricalArrays
 using ProgressMeter
@@ -55,10 +55,12 @@ using ProgressMeter
 using Gadfly, Cairo, Fontconfig, DataFrames, CSV
 
 include("./MCMCUtils.jl")
+include("./MCMCInference.jl")
 include("./Query.jl")
 include("./DataUtils.jl")
 include("./ScoringFunctions.jl")
 include("./AcquisitionFunctions.jl")
+include("./Variational Inference/VI_Inference.jl")
 
 for experiment in experiments
     @everywhere experiment = $experiment
@@ -90,15 +92,26 @@ for experiment in experiments
 
             # println("The number of input features are $n_input")
             # println("The number of outputs are $n_output")
-            if n_output == 1
-                kpi_df = Array{Any}(missing, 0, 15)
-            else
-                class_names = Array{String}(undef, n_output)
-                for i = 1:n_output
-                    class_names[i] = "$(i)"
+            if learning_algorithm == "MCMC"
+                if n_output == 1
+                    kpi_df = Array{Any}(missing, 0, 15)
+                else
+                    class_names = Array{String}(undef, n_output)
+                    for i = 1:n_output
+                        class_names[i] = "$(i)"
+                    end
+                    kpi_df = Array{Any}(missing, 0, 18 + 2 * n_output)
                 end
-
-                kpi_df = Array{Any}(missing, 0, 18 + 2 * n_output)
+            elseif learning_algorithm == "VI"
+                if n_output == 1
+                    kpi_df = Array{Any}(missing, 0, 10)
+                else
+                    class_names = Array{String}(undef, n_output)
+                    for i = 1:n_output
+                        class_names[i] = "$(i)"
+                    end
+                    kpi_df = Array{Any}(missing, 0, 13 + 2 * n_output)
+                end
             end
             for prior_informativeness in list_prior_informativeness
                 @everywhere prior_informativeness = $prior_informativeness
@@ -114,7 +127,12 @@ for experiment in experiments
                                 @everywhere begin
                                     n_input = $n_input
                                     n_output = $n_output
+
+                                    # setprogress!(false)
                                     using Flux, Turing
+                                    using Turing: Variational
+                                    using ReverseDiff
+
 
                                     ###
                                     ### Dense Network specifications(Functional Model)
@@ -122,10 +140,6 @@ for experiment in experiments
                                     include(PATH * "/Network.jl")
                                     include("./BayesianModel.jl")
 
-                                    # setprogress!(false)
-
-
-                                    using ReverseDiff
 
 
                                     #Here we define the Prior
@@ -149,11 +163,11 @@ for experiment in experiments
                                 # mkpath("./Experiments/$(experiment)/$(pipeline_name)/log_distribution_changes")
                                 mkpath("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions")
 
-                                n_acq_steps = running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name)
+                                n_acq_steps = running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm)
                                 if n_output == 1
-                                    kpi = collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
+                                    kpi = collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, learning_algorithm)
                                 else
-                                    kpi = collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output)
+                                    kpi = collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output, learning_algorithm)
                                 end
                                 # kpi = readdlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", ',')
                                 kpi_df = vcat(kpi_df, permutedims(kpi))
@@ -162,12 +176,20 @@ for experiment in experiments
                     end
                 end
             end
-            if n_output == 1
-                kpi_names = vcat([:AcquisitionSize, :MSE, :MAE, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
-			elseif n_output == 2
-                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :F1Score, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
-			else
-                kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+            if learning_algorithm == "MCMC"
+                if n_output == 1
+                    kpi_names = vcat([:AcquisitionSize, :MSE, :MAE, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+                elseif n_output == 2
+                    kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :F1Score, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+                else
+                    kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed, :OOBRhat, :AcceptanceRate, :NumericalErrors, :AvgESS, :MaxPSRF)
+                end
+            elseif learning_algorithm == "VI"
+                if n_output == 2
+                    kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :F1Score, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed)
+                else
+                    kpi_names = vcat([:AcquisitionSize, :ClassDistEntropy, :BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :AcquisitionFunction, :Temperature, :Experiment, :CumulativeTrainedSize, :PriorInformativeness, :PriorVariance, :LikelihoodName], Symbol.(class_names), Symbol.(class_names), :CumCDE, :Elapsed)
+                end
             end
 
             df_fold = DataFrame(kpi_df, kpi_names; makeunique=true)
@@ -189,23 +211,41 @@ for experiment in experiments
         end
 
         df_folds = CSV.read("./Experiments/$(experiment)/df_folds.csv", DataFrame)
-
-        if n_output == 1
-            list_plotting_measurables = [:MSE, :Elapsed]
-            list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
-            list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
-            list_normalised_or_not = [false, false]
-		elseif n_output == 2
-            list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed, :AvgESS]
-            list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
-            list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
-            list_normalised_or_not = [false, false, false, false]
-		else
-			list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed, :AvgESS]
-            list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean, :AvgESS_mean]
-            list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std, :AvgESS_std]
-            list_normalised_or_not = [false, false, false, false]
-        end
+		if learning_algorithm == "MCMC"
+			if n_output == 1
+				list_plotting_measurables = [:MSE, :Elapsed]
+				list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
+				list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
+				list_normalised_or_not = [false, false]
+			elseif n_output == 2
+				list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed, :AvgESS]
+				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
+				list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
+				list_normalised_or_not = [false, false, false, false]
+			else
+				list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed, :AvgESS]
+				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean, :AvgESS_mean]
+				list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std, :AvgESS_std]
+				list_normalised_or_not = [false, false, false, false]
+			end
+		elseif learning_algorithm == "VI"
+			if n_output == 1
+				list_plotting_measurables = [:MSE, :Elapsed]
+				list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
+				list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
+				list_normalised_or_not = [false, false]
+			elseif n_output == 2
+				list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
+				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
+				list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
+				list_normalised_or_not = [false, false, false, false]
+			else
+				list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
+				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean]
+				list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std]
+				list_normalised_or_not = [false, false, false, false]
+			end
+		end
 
         mean_std_by_group(df_folds, variable_of_comparison, x_variable; list_measurables=list_plotting_measurables)
         for (i, j, k, l) in zip(list_plotting_measurables, list_plotting_measurables_mean, list_plotting_measurables_std, list_normalised_or_not)

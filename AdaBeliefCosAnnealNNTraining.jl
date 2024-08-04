@@ -5,10 +5,11 @@ function logitcrossentropyweighted(ŷ::AbstractArray, y::AbstractArray, sample_
     mean(.-sum(sample_weights .* (y .* logsoftmax(ŷ; dims=dims)); dims=dims))
 end
 
-function pred_analyzer_multiclass(preds::Matrix)::Array{Float32,2}
-	pred_label = map(argmax, eachcol(preds))
-    pred_prob = map(maximum, eachcol(preds))
-    pred_plus_std = vcat(permutedims(pred_label), permutedims(1 .- pred_prob))
+function pred_analyzer_multiclass(preds::Matrix, n_output::Int)::Array{Float32,2}
+	pred_label = mapslices(argmax, preds, dims=1)
+    pred_prob = mapslices(maximum, preds, dims=1)
+	pred_entropy = mapslices(x-> normalized_entropy(x, n_output), preds, dims=1)
+    pred_plus_std = vcat(pred_label, 1 .- pred_prob, pred_entropy)
 	return pred_plus_std
 end
 
@@ -94,9 +95,9 @@ function network_training(nn_arch::String, input_size::Int, output_size::Int, n_
         end
 
     end
-    scatter(1:n_epochs, trnlosses, width=80, height=30)
-    savefig("./$(nn_arch)_loss.pdf")
-
+    # scatter(1:n_epochs, trnlosses, width=80, height=30)
+    # savefig("./$(nn_arch)_loss.pdf")
+	@info "Finished training" last(trnlosses)
     # optim_params, re = Flux.destructure(nn)
     return optim_params, re
 end

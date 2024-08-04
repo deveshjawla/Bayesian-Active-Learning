@@ -13,19 +13,24 @@ top_k_acquisition_no_duplicates returns a pool of samples according to the follo
 3. remove_zeros = default False, when True it removes the samples with a score of zero
 4. sensitivity = in order to avoid acquiring duplicate samples, we bin the samples according to the scores, those samples which have the same score or scores within the sensitivity interval are put together in a bin and then only one sample from each bin is sampled
 """
-function top_k_acquisition_no_duplicates(pool_scores::Vector, acquisition_size::Int; descending=false, remove_zeros=false, sensitivity=0.0001)
+function top_k_acquisition_no_duplicates(pool_scores::Vector, acquisition_size::Int; descending=false, remove_zeros=false, sensitivity=1e-5)
     df = DataFrame(Scores=pool_scores, Sample_indices=collect(1:lastindex(pool_scores)))
 
     #Binning so that similar samples are sampled only once, one sample per bin
     max_score = maximum(df.Scores)
     min_score = minimum(df.Scores)
-    bins = min_score:sensitivity:max_score
-    # Creating categorical bins
-    df.scores_bins = cut(df.Scores, bins, extend=true)
-    cut_df = combine(groupby(df, :scores_bins), first)
+	
+	if abs(max_score - min_score) > 1e-3
+		bins = min_score:sensitivity:max_score
+		# Creating categorical bins
+		df.scores_bins = cut(df.Scores, bins, extend=true)
+		cut_df = combine(groupby(df, :scores_bins), first)
 
-    # Sorting the DataFrame based on Scores
-    sorted_df = sort(cut_df, :Scores, rev=descending)
+		# Sorting the DataFrame based on Scores
+		sorted_df = sort(cut_df, :Scores, rev=descending)
+	else
+		sorted_df = sort(df, :Scores, rev=descending)
+	end
     # CSV.write("./top_k_acquisition_$(descending).csv", sorted_df)
     # Handling zero scores if required
     if remove_zeros
@@ -37,7 +42,7 @@ function top_k_acquisition_no_duplicates(pool_scores::Vector, acquisition_size::
     return top_k
 end
 
-using Distributions
+using Distributions: Gumbel
 using CategoricalArrays
 """
 Acquisition Function based on the paper "Stochastic BALD (2022)"
@@ -61,7 +66,7 @@ function stochastic_acquisition(pool_scores::Vector, acquisition_size::Int; acqu
     return indices
 end
 
-function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; reconstruct=nothing, pct_epistemic_samples = 0.8)::Vector{Int}
+function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; pct_epistemic_samples = 0.8)::Vector{Int}
     if al_sampling == "Initial"
         sampled_indices = 1:acq_size_
     elseif al_sampling == "Random"

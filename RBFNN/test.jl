@@ -11,6 +11,7 @@ include("computeCentroids.jl")
 include("computeRBFActivations.jl")
 include("computeWeights.jl")
 include("trainRBF.jl")
+include("testRBF.jl")
 include("./../DataUtils.jl")
 
 # Generate data
@@ -23,11 +24,7 @@ gridSize = 100
 u = range(-10.0f0, 10.0f0, length=gridSize)
 v = range(-10.0f0, 10.0f0, length=gridSize)
 
-(Centers, betas, Theta, nn) = trainRbf(X, y, 10, false)
-
-########################################
-# Let's test
-model = nn(Theta)
+(Centers, betas, Theta, nn) = trainRbf(X, y, 10, false, 3)
 
 # # ================================================
 # #       Evaluate the RBFNN over the grid.
@@ -37,7 +34,7 @@ model = nn(Theta)
 # # each point on the grid.
 ########################################
 # Draw contour
-heatmap(u, v, (x, y) -> softmax(model(getRBFActivations(Centers, betas, hcat(x, y))))[3])
+heatmap(u, v, (x, y) -> testRbf(Centers, betas, Theta, nn, hcat(x, y))[3])
 scatter!(Centers[:, 1], Centers[:, 2], color=:blue, label="Centers")
 scatter!(X[y.==1, 1], X[y.==1, 2], color=:red, label="1")
 scatter!(X[y.==2, 1], X[y.==2, 2], color=:green, label="2")

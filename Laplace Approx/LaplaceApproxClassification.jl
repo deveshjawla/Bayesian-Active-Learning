@@ -16,6 +16,7 @@ output_size = size(train_y, 1)
 
 include("./../AdaBeliefCosAnnealNNTraining.jl")
 optim_theta, re = network_training("Relu2Layers", input_size, output_size, 100; data=(train_x, train_y), loss_function=Flux.logitcrossentropy)
+
 m = re(optim_theta)
 
 #Laplace Approximation
@@ -26,13 +27,13 @@ fit!(la, zip(collect(eachcol(train_x)), train_y))
 optimize_prior!(la; verbose=true, n_steps=100)
 
 predict_la = LaplaceRedux.predict(la, train_x, link_approx=:probit)
-ŷ_uncertainty = pred_analyzer_multiclass(predict_la)
+ŷ_uncertainty = pred_analyzer_multiclass(predict_la, output_size)
 
 X1 = -4.0f0:0.10f0:4.0f0
 X2 = -3.0f0:0.10f0:5.0f0
 test_x_area = pairs_to_matrix(X1, X2)
 predict_la = LaplaceRedux.predict(la, test_x_area, link_approx=:probit)
-ŷ_uncertainty = pred_analyzer_multiclass(predict_la)
+ŷ_uncertainty = pred_analyzer_multiclass(predict_la, output_size)
 uncertainties = reshape(ŷ_uncertainty[2, :], (lastindex(X1), lastindex(X2)))
 gr(size=(700, 600), dpi=300)
 heatmap(X1, X2, uncertainties)
