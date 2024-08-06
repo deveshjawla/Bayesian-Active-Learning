@@ -65,24 +65,24 @@ function balance_binary_data(data_xy::DataFrame; balancing="undersampling", posi
 end
 
 # A handy helper function to normalize our dataset.
-function meannormalize(x::Vector{Real}, mean_::Real, std_::Real)
+function meannormalize(x, mean_, std_)
     return (x .- mean_) ./ (std_ .+ convert(eltype(std_), 0.000001))
 end
 
 # A handy helper function to normalize our dataset.
-function robustscaling(x::Vector{Real}, median_::Real, iqr_::Real)
+function robustscaling(x, median_, iqr_)
     return (x .- median_) ./ (iqr_ .+ convert(eltype(std_), 0.000001))
 end
 # A handy helper function to normalize our dataset.
-function minmaxscaling(x::Vector{Real}, max_::Real, min_::Real)
+function minmaxscaling(x, max_, min_)
     return (x .- min_) ./ (max_ - min_)
 end
 
-function maxabsscaling(x::Vector{Real}, absmax_::Real)
+function maxabsscaling(x, absmax_)
     return x ./ absmax_
 end
 
-function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, model_type::String; output_size=nothing)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Array{Float32,2},Array{Float32,2}}}
+function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, model_type::String; n_output=nothing)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Array{Float32,2},Array{Float32,2}}}
     pool = Matrix{Float32}(pool)
     test = Matrix{Float32}(test)
 
@@ -96,8 +96,8 @@ function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, mod
         pool_y = permutedims(pool[:, end])
         test_y = permutedims(test[:, end])
 	# elseif model_type == "Evidential" || model_type == "LaplaceApprox"
-	# 	pool_y = Flux.onehotbatch(pool[:, end], 1:output_size)
-    #     test_y = Flux.onehotbatch(test[:, end], 1:output_size)
+	# 	pool_y = Flux.onehotbatch(pool[:, end], 1:n_output)
+    #     test_y = Flux.onehotbatch(test[:, end], 1:n_output)
     end
 
     pool = (permutedims(pool_x), pool_y)
@@ -141,7 +141,8 @@ end
 
 using StatisticalMeasures: f1score, balanced_accuracy, MulticlassTruePositiveRate, NoAvg
 using StatsBase: countmap
-function performance_stats_multiclass(true_labels, predicted_labels)
+function performance_stats_multiclass(true_labels, predicted_labels, n_classes)
+	# @info "Number of classes" n_classes
 	true_labels = vec(true_labels)
 	predicted_labels = vec(predicted_labels)
 	# missing_labels = setdiff(predicted_labels, true_labels)
@@ -157,12 +158,13 @@ function performance_stats_multiclass(true_labels, predicted_labels)
 	# 	end
 	# end
 
-	writedlm("./test.csv", [true_labels predicted_labels])
+	# writedlm("./test.csv", [true_labels predicted_labels])
 
 	# Convert inputs to categorical vectors
     true_labels = categorical(true_labels, ordered=true)
     predicted_labels = categorical(predicted_labels, ordered=true)
-    levels!(predicted_labels, levels(true_labels))
+    levels!(true_labels, 1:n_classes)
+    levels!(predicted_labels, 1:n_classes)
 
     # Calculate class weights
     # label_dist = sort(countmap(true_labels))
@@ -171,7 +173,7 @@ function performance_stats_multiclass(true_labels, predicted_labels)
 	# @info "Distribution of Classes" pct_labels
 
     # n_total = length(true_labels)
-    n_classes = lastindex(levels(true_labels))
+    # n_classes = lastindex(levels(true_labels))
     # weights = n_total ./ (n_classes .* (collect(values(label_dist))))
     
     # Create a dictionary of class weights
@@ -183,9 +185,12 @@ function performance_stats_multiclass(true_labels, predicted_labels)
 		f1 = f1score(predicted_labels, true_labels)
 	else
 		acc = balanced_accuracy(predicted_labels, true_labels)
-		mul_recall = MulticlassTruePositiveRate(;average=NoAvg(), levels=levels(true_labels))
+		mul_recall = MulticlassTruePositiveRate(;average=NoAvg(), levels=1:n_classes)
 		recalls = values(mul_recall(predicted_labels, true_labels))
 		f1 = 1 / ((1/n_classes)*sum(recalls .^ -1))
+		if isnan(f1)
+			f1 = 0
+		end
 	end
     @info "Acc and f1" acc f1
     return acc, f1
@@ -259,39 +264,37 @@ function mean_std_by_group(df_folds, group_by::Symbol, variable::Symbol, experim
     end
 end
 using Statistics: mean, std
-function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement1::Symbol, measurement2::Symbol, experiment::String)
+
+function auc_per_fold(fold::Int, df::DataFrame, group_by::Symbol, measurement::Symbol, experiment::String)
     aucs_acc = []
-    aucs_t = []
     list_compared = []
     list_total_training_samples = []
     for i in groupby(df, group_by)
-        acc_ = i[!, measurement1]
-        time_ = i[!, measurement2]
+        acc_ = i[!, measurement]
         # n_aocs_samples = ceil(Int, 0.3 * lastindex(acc_))
         n_aocs_samples = lastindex(acc_)
         total_training_samples = last(i[!, :CumulativeTrainedSize])
         println(total_training_samples)
         push!(list_total_training_samples, total_training_samples)
         auc_acc = mean(acc_[1:n_aocs_samples] .- 0.0) / total_training_samples
-        auc_t = mean(time_[1:n_aocs_samples] .- 0.0) / total_training_samples
         push!(list_compared, first(i[!, group_by]))
         append!(aucs_acc, (auc_acc))
-        append!(aucs_t, auc_t)
     end
     min_total_samples = minimum(list_total_training_samples)
-    df = DataFrame(group_by => list_compared, measurement1 => min_total_samples .* (aucs_acc), measurement2 => min_total_samples .* aucs_t)
-    CSV.write("./Experiments/$(experiment)/auc_$(fold).csv", df)
+    df = DataFrame(group_by => list_compared, measurement => min_total_samples .* (aucs_acc))
+    CSV.write("./Experiments/$(experiment)/auc_$(measurement)_$(fold).csv", df)
 end
-function auc_mean(n_folds, experiment, group_by::Symbol, measurement1::Symbol, measurement2::Symbol)
+
+function auc_mean(n_folds, experiment, group_by::Symbol, measurement::Symbol)
     df = DataFrame()
     for fold = 1:n_folds
-        df_ = CSV.read("./Experiments/$(experiment)/auc_$(fold).csv", DataFrame, header=1)
+        df_ = CSV.read("./Experiments/$(experiment)/auc_$(measurement)_$(fold).csv", DataFrame, header=1)
         df = vcat(df, df_)
     end
 
-    mean_auc = combine(groupby(df, group_by), measurement1 => mean, measurement1 => std, measurement2 => mean, measurement2 => std)
+    mean_auc = combine(groupby(df, group_by), measurement => mean, measurement => std)
 
-    CSV.write("./Experiments/$(experiment)/mean_auc.csv", mean_auc)
+    CSV.write("./Experiments/$(experiment)/mean_auc_$(measurement).csv", mean_auc)
 end
 
 function plotting_measurable_variable(experiment, groupby::Symbol, list_group_names, dataset, variable::Symbol, measurable::Symbol, measurable_mean::Symbol, measurable_std::Symbol, normalised_measurable::Bool)

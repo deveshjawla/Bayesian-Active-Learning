@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, noise_x, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Vector{Vector{Float32}},Array{Float32,2},Float32,Float32,Vector}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::Int, n_output::Int, param_matrix, noise_x, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Vector{Vector{Float32}},Array{Float32,2},Float32,Float32,Vector}
     println("$(al_sampling) with query no. ", al_step)
     # sigma, num_params = prior
     pool_x, pool_y = pool
@@ -68,7 +68,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
         end
     end
 
-    training_data_x, training_data_y = training_data[1:input_size, :], training_data[end, :]
+    training_data_x, training_data_y = training_data[1:n_input, :], training_data[end, :]
 
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
@@ -119,7 +119,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
         ŷ_test = predictions[1, :]
         # ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
 
-        acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+        acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
 
         # writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$(al_step)_map.csv", [["Acquisition Size", "Accuracy"] [acq_size_, acc_map]], ',')
@@ -141,6 +141,6 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, input_size
 
     # println("size of training data is: ",size(training_data))
     # println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
-    new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
+    new_pool_tuple = (new_pool[1:n_input, :], permutedims(new_pool[end, :]))
     return new_pool_tuple, independent_param_matrix, independent_noise_x, training_data, acc, elapsed, param_matrix_mean
 end

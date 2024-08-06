@@ -24,7 +24,7 @@ gridSize = 100
 u = range(-10.0f0, 10.0f0, length=gridSize)
 v = range(-10.0f0, 10.0f0, length=gridSize)
 
-(Centers, betas, Theta, nn) = trainRbf(X, y, 10, false, 3)
+(Centers, betas, Theta, nn) = trainRbf(X, y, 10, true, 3)
 
 # # ================================================
 # #       Evaluate the RBFNN over the grid.

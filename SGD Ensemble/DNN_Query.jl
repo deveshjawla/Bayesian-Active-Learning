@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_prior, independent_param_matrix, training_data
 """
-function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, ensemble_size::Int, al_sampling::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Float32,Float32}
+function dnn_query(pool::Tuple, previous_training_data, n_input::Int, n_output::Int, param_matrix, al_step::Int, test_data, experiment_name::String, pipeline_name::String, acq_size_::Int, ensemble_size::Int, al_sampling::String)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Array{Float32,2},Float32,Float32}
     nn = make_nn_arch()
 
     init_params, re = Flux.destructure(nn)
@@ -42,7 +42,7 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
         training_data = hcat(previous_training_data, new_training_data)
     end
 
-    training_data_x, training_data_y = training_data[1:input_size, :], training_data[end, :]
+    training_data_x, training_data_y = training_data[1:n_input, :], training_data[end, :]
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
 	sample_weights =  similar(training_data_y, Float32)
@@ -57,7 +57,7 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
     # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
     if acq_size_ !== 0
         #Training on Acquired Samples and logging classification_performance
-        independent_param_matrix, elapsed = ensemble_training(num_params, input_size, n_output, acq_size_, training_data_xy, ensemble_size, sample_weights)
+        independent_param_matrix, elapsed = ensemble_training(num_params, n_input, n_output, acq_size_, training_data_xy, ensemble_size, sample_weights)
     elseif acq_size_ == 0
         independent_param_matrix, elapsed = param_matrix, 0
     end
@@ -77,7 +77,7 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
         # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, f1, mcc, fpr, prec, recall, threat, cm]])
     else
         
-		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+		acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
         # println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acq_size_, balance_of_acquired_batch, acc]])
@@ -96,6 +96,6 @@ function dnn_query(pool::Tuple, previous_training_data, input_size::Int, n_outpu
 
     # println("size of training data is: ",size(training_data))
     # println("The dimenstions of the new_pool and param_matrix during AL step no. $al_step are:", size(new_pool), " & ", size(param_matrix))
-    new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
+    new_pool_tuple = (new_pool[1:n_input, :], permutedims(new_pool[end, :]))
     return new_pool_tuple, independent_param_matrix, training_data, acc, elapsed
 end

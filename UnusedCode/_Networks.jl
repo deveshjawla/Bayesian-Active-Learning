@@ -195,8 +195,8 @@ end
 
 # conv_layers = [ConvParams(), ConvParams(), ConvParams()]
 
-# input_size = (128, 128)
-# final_conv_out_dims = conv_out_dims(input_size, conv_layers[1]) |> x -> conv_out_dims(x, conv_layers[2]) |> x -> conv_out_dims(x, conv_layers[3])
+# n_input = (128, 128)
+# final_conv_out_dims = conv_out_dims(n_input, conv_layers[1]) |> x -> conv_out_dims(x, conv_layers[2]) |> x -> conv_out_dims(x, conv_layers[3])
 
 # dense_layers = [DenseParams(indim = prod([final_conv_out_dims..., conv_layers[end].out_channels])), DenseParams(outdim = 10)]
 
@@ -496,10 +496,10 @@ Turing.setadbackend(:reverse_diff)
 num_samples = 500
 ch2 = sample(bayes_nn_general(hcat(xs...), ts, network_shape, num_params), NUTS(0.65), num_samples);
 
-# input_size = $input_size
+# n_input = $n_input
 #     n_output = $n_output
 l1, l2, l3, l4 = 5, 5, 5, 5
-nl1 = input_size * l1 + l1
+nl1 = n_input * l1 + l1
 nl2 = l1 * l2 + l2
 nl3 = l2 * l3 + l3
 nl4 = l3 * l4 + l4
@@ -529,7 +529,7 @@ total_num_params = nl1 + nl2 + nl3 + nl4 + n_output_layer
 # 	return model
 # end
 
-nn_initial = Chain(Dense(input_size, l1, relu), Dense(l1, l2, relu), Dense(l2, l3, relu), Dense(l3, l4, relu), Dense(l4, n_output, relu), softmax)
+nn_initial = Chain(Dense(n_input, l1, relu), Dense(l1, l2, relu), Dense(l2, l3, relu), Dense(l3, l4, relu), Dense(l4, n_output, relu), softmax)
 
 # Extract weights and a helper function to reconstruct NN from weights
 parameters_initial, feedforward = Flux.destructure(nn_initial)

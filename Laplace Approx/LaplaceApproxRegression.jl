@@ -26,11 +26,11 @@ for function_name in function_names
     data = zip(X, ys)
     train_x = hcat(X...)
     train_y = permutedims(ys)
-    input_size, output_size = 1, 1
-    m = nn_without_dropout(input_size, output_size)
+    n_input, n_output = 1, 1
+    m = nn_without_dropout(n_input, n_output)
     params_, rec = Flux.destructure(m)
     num_params = lastindex(params_)
-	trained_params, re = network_training(m, input_size, output_size, n_epochs, train_loader, sample_weights_loader)
+	trained_params, re = network_training(m, n_input, n_output, n_epochs, train_loader, sample_weights_loader)
 
     plt = 0
 

@@ -2,12 +2,18 @@
 
 julia_version = "1.10.1"
 manifest_format = "2.0"
-project_hash = "a5cd9ec2c9ea69c557a372a816a5126739e603be"
+project_hash = "eff3dc4256b76fb1345066afe07cea4543e59b23"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "016833eb52ba2d6bea9fcb50ca295980e728ee24"
 uuid = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 version = "0.2.7"
+
+[[deps.ARFFFiles]]
+deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
+git-tree-sha1 = "e8c8e0a2be6eb4f56b1672e46004463033daa409"
+uuid = "da404889-ca92-49ff-9e8b-0aa6b4d38dc8"
+version = "1.4.1"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]

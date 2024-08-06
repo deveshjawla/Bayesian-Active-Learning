@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_prior, learned_weights, training_data
 """
-function query(pool::Tuple, previous_training_data, input_size::Int, n_output::Int, old_network_tuple, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, al_sampling::String, learning_algorithm)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Any,Any},Array{Float32,2},Float64,Float32}
+function query(pool::Tuple, previous_training_data, n_input::Int, n_output::Int, old_network_tuple, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, al_sampling::String, learning_algorithm)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Tuple{Any,Any},Array{Float32,2},Float64,Float32}
     println("$(al_sampling) with query no. ", al_step)
     pool_x, pool_y = pool #pool_y is a onehotbatch
     pool_size = lastindex(pool_y)
@@ -31,11 +31,10 @@ function query(pool::Tuple, previous_training_data, input_size::Int, n_output::I
     sampled_indices = non_bayesian_get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix)
 
     pool = vcat(pool_x, pool_y)
-    new_acq_size_ = lastindex(sampled_indices)
+    acq_size_ = lastindex(sampled_indices)
+	@info "Acquisition size is $(acq_size_)"
     new_training_data = pool[:, sampled_indices]
     new_pool = pool[:, Not(sampled_indices)]
-
-    acq_size_ = new_acq_size_
 
     new_training_data_y = new_training_data[end, :]
     balance_of_acquired_batch = countmap(Int.(new_training_data_y))
@@ -63,7 +62,7 @@ function query(pool::Tuple, previous_training_data, input_size::Int, n_output::I
         end
     end
 
-    training_data_x, training_data_y = training_data[1:input_size, :], training_data[end, :]
+    training_data_x, training_data_y = training_data[1:n_input, :], training_data[end, :]
 
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
@@ -85,7 +84,7 @@ function query(pool::Tuple, previous_training_data, input_size::Int, n_output::I
     else
         training_data_xy = (training_data_x, Flux.onehotbatch(training_data_y, 1:n_output))
     end
-    # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
+    println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
 
     #Training on Acquired Samples and logging classification_performance
     if learning_algorithm == "RBF"
@@ -131,7 +130,7 @@ function query(pool::Tuple, previous_training_data, input_size::Int, n_output::I
     else
         ŷ_test = predictions_matrix[1, :]
 
-        acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+        acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
 
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
@@ -142,6 +141,6 @@ function query(pool::Tuple, previous_training_data, input_size::Int, n_output::I
 
     # println("size of training data is: ",size(training_data))
     # println("The dimenstions of the new_pool and old_network_tuple during AL step no. $al_step are:", size(new_pool), " & ", size(old_network_tuple))
-    new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
+    new_pool_tuple = (new_pool[1:n_input, :], permutedims(new_pool[end, :]))
     return new_pool_tuple, new_network_tuple, training_data, acc, elapsed
 end

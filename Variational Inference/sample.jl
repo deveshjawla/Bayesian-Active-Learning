@@ -14,18 +14,18 @@ train_Y = mapslices(argmax, train_y, dims=1)
 test_X, test_y = gen_3_clusters(100)
 test_Y = mapslices(argmax, test_y, dims=1)
 
-input_size = size(train_X, 1)
-output_size = size(train_y, 1)
+n_input = size(train_X, 1)
+n_output = size(train_y, 1)
 
 l1, l2 = 8, 8
-nl1 = input_size * l1 + l1
+nl1 = n_input * l1 + l1
 nl2 = l1 * l2 + l2
-n_output_layer = l2 * output_size
+n_output_layer = l2 * n_output
 
 num_params = nl1 + nl2 + n_output_layer
 
 include("./../MCMC Variants Comparison/SoftmaxNetwork3.jl")
-prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (input_size + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + output_size)) * ones(n_output_layer)))
+prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer)))
 location = zeros(num_params)
 
 using Turing, Flux, ReverseDiff
@@ -55,7 +55,7 @@ include("./../MCMCUtils.jl")
 include("./../ScoringFunctions.jl")
 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix; noise_set_x=noise_set_x)
 ŷ = ŷ_uncertainties[1, :]
-acc, f1 = performance_stats_multiclass(vec(Float32.(test_Y)), ŷ)
+acc, f1 = performance_stats_multiclass(vec(Float32.(test_Y)), ŷ, n_output)
 @info "Balanced Accuracy and F1 are " acc f1
 
 using StatsPlots

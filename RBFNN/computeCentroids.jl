@@ -47,7 +47,7 @@ function computeCentroids(X_train::Array{Float32,2}, y_train::Array{Int64,1}, ce
         end
 
         # Select the training vectors for category 'c'.
-        Xc = X_train[(y_train.==c), :]
+        Xc = X_train[(y_train .== c), :]
 
         # ================================
         #      Find cluster centers
@@ -55,37 +55,42 @@ function computeCentroids(X_train::Array{Float32,2}, y_train::Array{Int64,1}, ce
 
         # Pick the first 'centersPerCategory' samples to use as the initial centers.
         # init_Centroids = Xc[1:centersPerCategory, :]
+		# @info "Size of training vectors for category $(c)" size(Xc)
 
-		if centersPerCategory > size(Xc, 1)
-			centersPerCategory = size(Xc, 1)
+		if centersPerCategory > size(Xc, 1) #&& size(Xc, 1) > numCats
+			centersforC = size(Xc, 1)
+		else
+			centersforC = centersPerCategory
 		end
 
+		# @info "Number of centers for Category $(c) = $(centersforC)"
+
         # Run k-means clustering, with at most 100 iterations.        
-        @printf("  Running kmeans with %d centers...\n", centersPerCategory)
-		if centersPerCategory != 0
-			result = kmeans(permutedims(Xc), centersPerCategory)
+		if centersforC != 0
+			@printf("  Running kmeans with %d centers...\n", centersforC)
+			result = kmeans(permutedims(Xc), centersforC)
 			Centroids_c = permutedims(result.centers)
 			memberships_c = result.assignments
 
-			# Remove any empty clusters.
-			#toRemove = [];
-			# 
-			# For each of the centroids...
-			#for (i = 1 : size(Centroids_c, 1))
+			# # Remove any empty clusters.
+			# toRemove = [];
+			
+			# # For each of the centroids...
+			# for i = 1 : size(Centroids_c, 1)
 			#    # If this centroid has no members, mark it for removal.
 			#    if (sum(memberships_c .== i) == 0)        
 			#        toRemove = [toRemove; i];
 			#    end
-			#end
-			#
-			# If there were empty clusters...
-			#if (~isempty(toRemove))
+			# end
+			
+			# # If there were empty clusters...
+			# if isempty(toRemove)
 			#    # Remove the centroids of the empty clusters.
-			#    Centroids_c(toRemove, :) = [];
-			#    
+			#    Centroids_c[toRemove, :] = [];
+			   
 			#    # Reassign the memberships (index values will have changed).
 			#    memberships_c = findClosestCentroids(Xc, Centroids_c);
-			#end
+			# end
 
 			# ================================
 			#    Compute Beta Coefficients
@@ -103,5 +108,6 @@ function computeCentroids(X_train::Array{Float32,2}, y_train::Array{Int64,1}, ce
 		end
     end
     numRBFNeurons = size(Centers, 1)
+	# @info size(Centers), size(betas), numRBFNeurons
     return Centers, betas, numRBFNeurons
 end

@@ -3,7 +3,7 @@ PATH = @__DIR__
 cd(PATH)
 include("../../../DataUtils.jl")
 
-train=CSV.read("./data.csv", DataFrame, header=1, normalizenames=true; stripwhitespace=true)
+train=CSV.read("./data.txt", DataFrame, header=1, normalizenames=true; stripwhitespace=true)
 # names(train)
 train = select(train, Not([:workclass, :marital_status, :education, :fnlwgt, :capital_gain, :capital_loss, :relationship]))
 train = dropmissing(train)
@@ -36,7 +36,7 @@ rename!(train, :label_mean => :group_weight)
 train = select(train, [:group_weight, :age, :education_num, :hour_per_week, :label])
 
 
-test=CSV.read("./test.csv", DataFrame, header=1, normalizenames=true; stripwhitespace=true)
+test=CSV.read("./test.txt", DataFrame, header=1, normalizenames=true; stripwhitespace=true)
 test = select(test, Not([:workclass, :education, :marital_status, :fnlwgt, :capital_gain, :capital_loss, :relationship]))
 test = dropmissing(test)
 test.age = minmaxscaling(test.age, 90, 17)
@@ -77,19 +77,20 @@ test.label = replace(test.label, false=>2)
 full_data = vcat(train, test)
 Random.seed!(1234)
 df = full_data[shuffle(axes(full_data, 1)), :]
-train_size = 120
-n_folds = 5
-fold_size = div(size(df, 1), n_folds)
+train_size = 1000
+test_size = 1000
+n_folds = 10
+fold_size = 1000 #div(size(df, 1), n_folds)
 
 mkpath("./FiveFolds")
 #generate five folds and save them as train/test split in the 5 Folds Folder
 for i in 1:n_folds
 	train = df[(fold_size*(i-1))+1:fold_size*i, :]
-	train, leftovers = balance_binary_data(train)
-	test = df[Not((fold_size*(i-1))+1:fold_size*i), :]
-	test = vcat(test, leftovers)
+	# # train, leftovers = balance_binary_data(train)
+	test = df[fold_size*i+1:fold_size*(i+1), :]
+	# # test = vcat(test, leftovers)
 	CSV.write("./FiveFolds/train_$(i).csv", train)
 	CSV.write("./FiveFolds/test_$(i).csv", test)
 	# println((fold_size*(i-1))+1:fold_size*i)
+	# println(1000*i+1:1000*(i+1))
 end
-

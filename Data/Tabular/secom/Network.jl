@@ -1,5 +1,5 @@
 l1, l2 = 30, 30
-nl1 = input_size * l1 + l1
+nl1 = n_input * l1 + l1
 nl2 = l1 * l2 + l2
 n_output_layer = l2 * n_output
 

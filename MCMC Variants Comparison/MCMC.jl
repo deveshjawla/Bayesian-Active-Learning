@@ -45,30 +45,30 @@ let
                                 test_Y = test_y
                             end
 
-                            input_size = size(X, 1)
-                            output_size = size(y, 1)
+                            n_input = size(X, 1)
+                            n_output = size(y, 1)
 
                             l1, l2 = 8, 8
-                            nl1 = input_size * l1 + l1
+                            nl1 = n_input * l1 + l1
                             nl2 = l1 * l2 + l2
-                            n_output_layer = l2 * output_size
+                            n_output_layer = l2 * n_output
 
                             num_params = nl1 + nl2 + n_output_layer
 
-                            if output_activation_function == "Softmax" && output_size == 1
+                            if output_activation_function == "Softmax" && n_output == 1
                                 include("SoftmaxNetwork1.jl")
-                            elseif output_activation_function == "Relu" && output_size == 1
+                            elseif output_activation_function == "Relu" && n_output == 1
                                 include("ReluNetwork1.jl")
                             end
 
-                            if output_activation_function == "Softmax" && output_size == 3
+                            if output_activation_function == "Softmax" && n_output == 3
                                 include("SoftmaxNetwork3.jl")
-                            elseif output_activation_function == "Relu" && output_size == 3
+                            elseif output_activation_function == "Relu" && n_output == 3
                                 include("ReluNetwork3.jl")
                             end
 
 
-                            prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (input_size + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + output_size)) * ones(n_output_layer)))
+                            prior_std = Float32.(sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer)))
 
                             num_params = lastindex(prior_std)
                             using ReverseDiff
@@ -160,7 +160,7 @@ let
                             end
 
                             ŷ = ŷ_uncertainties[1, :]
-                            acc, f1 = performance_stats_multiclass(test_Y, ŷ)
+                            acc, f1 = performance_stats_multiclass(test_Y, ŷ, n_output)
                             @info "Balanced Accuracy and F1 are " acc f1
 
                             stats_matrix = vcat(stats_matrix, [compile_reversediff num_clusters n output_activation_function noise_x noise_y acc f1 elapsed])

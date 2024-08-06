@@ -78,16 +78,16 @@ end
 
 
 using StatsBase
-function paa(input_vector, output_size)
-	if lastindex(input_vector)%output_size == Int32(0)
-		quotient_ = Int(lastindex(input_vector)/output_size)
-		indices_list = [((i-1)*quotient_)+1:quotient_*i for i in 1:output_size]
+function paa(input_vector, n_output)
+	if lastindex(input_vector)%n_output == Int32(0)
+		quotient_ = Int(lastindex(input_vector)/n_output)
+		indices_list = [((i-1)*quotient_)+1:quotient_*i for i in 1:n_output]
 		output_vector = [mean(indices) for indices in indices_list]
 		output_vector_magnitude = [mean([input_vector[i] for i in indices]) for indices in indices_list]
 	else
-		value_space = 1:(lastindex(input_vector)*output_size)
+		value_space = 1:(lastindex(input_vector)*n_output)
 		output_indices = cld.(value_space, lastindex(input_vector))
-		input_indices = cld.(value_space, output_size)
+		input_indices = cld.(value_space, n_output)
 		count_map = countmap(output_indices)
 		uniques, nUniques = keys(count_map), values(count_map)
 		output_vector_magnitude = [mean([input_vector[i] for i in indices]) for indices in split(input_indices, cumsum(nUniques))]

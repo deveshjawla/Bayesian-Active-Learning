@@ -1,7 +1,7 @@
 """
 Returns new_pool, new_xgb, training_data
 """
-function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_step, test_data, experiment_name, pipeline_name, acq_size_, nsteps, al_sampling)
+function xgb_query(xgb, pool, previous_training_data, n_input, n_output, al_step, test_data, experiment_name, pipeline_name, acq_size_, nsteps, al_sampling)
 
     println("$(al_sampling) with query step no. ", al_step)
 
@@ -54,7 +54,7 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
     end
 
 
-    training_data_x, training_data_y = copy(permutedims(training_data[1:input_size, :])), vec(copy(permutedims(training_data[end, :])))
+    training_data_x, training_data_y = copy(permutedims(training_data[1:n_input, :])), vec(copy(permutedims(training_data[end, :])))
 
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
@@ -97,13 +97,13 @@ function xgb_query(xgb, pool, previous_training_data, input_size, n_output, al_s
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     else
         
-		acc, f1 = performance_stats_multiclass(test_y, ŷ_test)
+		acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "Elapsed", "MacroF1Score"] [acq_size_, acc, elapsed, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     end
 
     println("size of training data is: ", size(training_data))
-    new_pool_tuple = (new_pool[1:input_size, :], permutedims(new_pool[end, :]))
+    new_pool_tuple = (new_pool[1:n_input, :], permutedims(new_pool[end, :]))
     return new_pool_tuple, xgb, training_data, acc, elapsed
 end
 

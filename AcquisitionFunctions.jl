@@ -34,10 +34,14 @@ function top_k_acquisition_no_duplicates(pool_scores::Vector, acquisition_size::
     # CSV.write("./top_k_acquisition_$(descending).csv", sorted_df)
     # Handling zero scores if required
     if remove_zeros
-        non_zero_scores = filter(row -> row.Scores > sensitivity, sorted_df)
-        top_k = non_zero_scores[1:min(acquisition_size, nrow(non_zero_scores)), :Sample_indices]
-    else
-        top_k = sorted_df[1:min(acquisition_size, nrow(sorted_df)), :Sample_indices]
+        sorted_df = filter(row -> row.Scores > sensitivity, sorted_df)
+	end
+
+	if size(sorted_df, 1) >= acquisition_size
+        top_k = sorted_df[1:acquisition_size, :Sample_indices]
+	else
+		sorted_df = sort(df, :Scores, rev=descending)
+		top_k = sorted_df[1:acquisition_size, :Sample_indices]
     end
     return top_k
 end

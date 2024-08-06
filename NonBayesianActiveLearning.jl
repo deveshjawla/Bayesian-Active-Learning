@@ -48,19 +48,19 @@ variable_of_comparison = :AcquisitionFunction
 x_variable = :CumulativeTrainedSize
 
 
-list_learning_algorithms = ["LaplaceApprox"] #"RBF", "Evidential", "LaplaceApprox"
+list_learning_algorithms = ["RBF", "Evidential", "LaplaceApprox"] #"RBF", "Evidential", "LaplaceApprox"
 
 acq_functions = ["Initial", "Entropy", "Uncertainty"]
 
-datasets = ["adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-list_maximum_pool_size = [60, 40, 40, 80, 100, 30, 296] #40, 60, 40, 40, 80, 100, 30, 296
-acquisition_sizes = round.(Int, list_maximum_pool_size ./ 5)
+datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+list_maximum_pool_size = 2 .* [40, 60, 40, 40, 80, 100, 30, 296] #40, 60, 40, 40, 80, 100, 30, 296
+acquisition_sizes = round.(Int, list_maximum_pool_size ./ 10)
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
-list_acq_steps = repeat([5], 8)
+list_acq_steps = [10, 10, 10, 10, 10, 10, 5, 5] # 10, 10, 10, 10, 10, 10, 5, 5
 
-list_inout_dims = [(4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [5, 5, 5, 5, 3, 5, 5]#5, 5, 5, 5, 5, 3, 5, 5
+list_n_folds = [10, 10, 10, 10, 10, 10, 5, 5]#10, 10, 10, 10, 10, 10, 5, 5
 
 for learning_algorithm in list_learning_algorithms
     experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)"
@@ -87,7 +87,7 @@ for learning_algorithm in list_learning_algorithms
             test = CSV.read("./FiveFolds/test_$(fold).csv", DataFrame, header=1)
             # test = CSV.read("./test.csv", DataFrame, header=1)
 
-            pool, test = pool_test_to_matrix(train, test, n_input, learning_algorithm; output_size=n_output)
+            pool, test = pool_test_to_matrix(train, test, n_input, learning_algorithm; n_output=n_output)
             total_pool_samples = size(pool[1], 2)
 
             # println("The number of input features are $n_input")

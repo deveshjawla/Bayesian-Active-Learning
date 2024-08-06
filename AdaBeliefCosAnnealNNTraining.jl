@@ -15,9 +15,9 @@ end
 
 include("./MakeNNArch.jl")
 using ParameterSchedulers
-function network_training(nn_arch::String, input_size::Int, output_size::Int, n_epochs::Int; train_loader=nothing, sample_weights_loader=nothing, data=nothing, loss_function=false, lambda=0.0)::Tuple{Vector{Float32},Any}
+function network_training(nn_arch::String, n_input::Int, n_output::Int, n_epochs::Int; train_loader=nothing, sample_weights_loader=nothing, data=nothing, loss_function=false, lambda=0.0)::Tuple{Vector{Float32},Any}
 
-    nn = make_nn_arch(nn_arch, input_size, output_size)
+    nn = make_nn_arch(nn_arch, n_input, n_output)
 
     opt = OptimiserChain(WeightDecay(lambda), AdaBelief())
     s = ParameterSchedulers.Stateful(CosAnneal(0.1, 1e-6, 100))
