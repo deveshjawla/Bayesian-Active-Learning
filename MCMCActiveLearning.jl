@@ -41,15 +41,15 @@ include("./Variational Inference/VI_Inference.jl")
 
 variable_of_comparison = :AcquisitionFunction
 x_variable = :CumulativeTrainedSize
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-list_maximum_pool_size = 2 .* [40, 60, 40, 40, 80, 100, 30] #40, 60, 40, 40, 80, 100, 30, 296
+datasets = ["yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+list_maximum_pool_size = 2 .* [296] #40, 60, 40, 40, 80, 100, 30, 296
 acquisition_sizes = round.(Int, list_maximum_pool_size ./ 10)
 # acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
-list_acq_steps = [10, 10, 10, 10, 10, 10, 5] # 10, 10, 10, 10, 10, 10, 5, 5
+list_acq_steps = [5] # 10, 10, 10, 10, 10, 10, 5, 5
 
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+list_inout_dims = [(8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_n_folds = [10, 10, 10, 10, 10, 10, 5]#10, 10, 10, 10, 10, 10, 5, 5
+list_n_folds = [5]#10, 10, 10, 10, 10, 10, 5, 5
 
 num_mcsteps = 100
 list_learning_algorithms = ["MCMC"]
@@ -63,7 +63,7 @@ temperatures = ["CWL"] # 1.0, 0.1, 0.001 or "CWL"
 
 for learning_algorithm in list_learning_algorithms
     experiment = "ComparisonBayesianAcquisitionFunctions$(learning_algorithm)"
-	@everywhere experiment = $experiment
+    @everywhere experiment = $experiment
     for (dataset, inout_dims, acquisition_size, n_folds, n_acq_steps) in zip(datasets, list_inout_dims, acquisition_sizes, list_n_folds, list_acq_steps)
         # for (dataset, inout_dims, acquisition_size) in zip(datasets, list_inout_dims, acquisition_sizes)
         println(dataset)
@@ -72,13 +72,13 @@ for learning_algorithm in list_learning_algorithms
 
         n_input, n_output = inout_dims
 
-		if n_output == 1
-			list_auc_measurables = [:MSE, :Elapsed]
-		elseif n_output == 2
-			list_auc_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
-		else
-			list_auc_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
-		end
+        if n_output == 1
+            list_auc_measurables = [:MSE, :Elapsed]
+        elseif n_output == 2
+            list_auc_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
+        else
+            list_auc_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
+        end
 
         ###
         ### Data
@@ -132,33 +132,33 @@ for learning_algorithm in list_learning_algorithms
                             for temperature in temperatures
                                 @everywhere temperature = $temperature
 
-                                @everywhere begin
-                                    n_input = $n_input
-                                    n_output = $n_output
+                                # @everywhere begin
+                                #     n_input = $n_input
+                                #     n_output = $n_output
 
-                                    # setprogress!(false)
-                                    using Flux, Turing
-                                    using Turing: Variational
-                                    using ReverseDiff
-
-
-                                    ###
-                                    ### Dense Network specifications(Functional Model)
-                                    ###
-                                    include(PATH * "/Network.jl")
-                                    include("./BayesianModel.jl")
+                                #     # setprogress!(false)
+                                #     using Flux, Turing
+                                #     using Turing: Variational
+                                #     using ReverseDiff
 
 
+                                #     ###
+                                #     ### Dense Network specifications(Functional Model)
+                                #     ###
+                                #     include(PATH * "/Network.jl")
+                                #     include("./BayesianModel.jl")
 
-                                    #Here we define the Prior
-                                    if prior_variance isa Number
-                                        prior_std = prior_variance .* ones(num_params)
-                                    else
-                                        # GlorotNormal initialisation
-                                        prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer))
-                                        # prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
-                                    end
-                                end
+
+
+                                #     #Here we define the Prior
+                                #     if prior_variance isa Number
+                                #         prior_std = prior_variance .* ones(num_params)
+                                #     else
+                                #         # GlorotNormal initialisation
+                                #         prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + n_output)) * ones(n_output_layer))
+                                #         # prior_std = sqrt(2) .* vcat(sqrt(2 / (n_input + l1)) * ones(nl1), sqrt(2 / (l1 + l2)) * ones(nl2), sqrt(2 / (l2 + l3)) * ones(nl3), sqrt(2 / (l3 + l4)) * ones(nl4), sqrt(2 / (l4 + n_output)) * ones(n_output_layer))
+                                #     end
+                                # end
 
 
                                 pipeline_name = "$(acquisition_size)_$(acq_func)_$(prior_variance)_$(likelihood_name)_$(prior_informativeness)_$(temperature)_$(fold)_$(num_chains)_$(num_mcsteps)"
@@ -171,13 +171,13 @@ for learning_algorithm in list_learning_algorithms
                                 # mkpath("./Experiments/$(experiment)/$(pipeline_name)/log_distribution_changes")
                                 mkpath("./Experiments/$(experiment)/$(pipeline_name)/query_batch_class_distributions")
 
-                                n_acq_steps = running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm)
-                                if n_output == 1
-                                    kpi = collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, learning_algorithm)
-                                else
-                                    kpi = collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output, learning_algorithm)
-                                end
-                                # kpi = readdlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", ',')
+                                # n_acq_steps = running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm)
+                                # if n_output == 1
+                                #     kpi = collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, learning_algorithm)
+                                # else
+                                #     kpi = collecting_stats_active_learning_experiments_classification(n_acq_steps, experiment, pipeline_name, num_chains, n_output, learning_algorithm)
+                                # end
+                                kpi = readdlm("./Experiments/$(experiment)/$(pipeline_name)/kpi.csv", ',')
                                 kpi_df = vcat(kpi_df, permutedims(kpi))
                             end
                         end
@@ -202,64 +202,56 @@ for learning_algorithm in list_learning_algorithms
 
             df_fold = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df_fold)
+
             df_fold = CSV.read("./Experiments/$(experiment)/df_$(fold).csv", DataFrame)
-			for auc_measurable in list_auc_measurables
+            for auc_measurable in list_auc_measurables
                 auc_per_fold(fold, df_fold, variable_of_comparison, auc_measurable, experiment)
-			end
-            # if n_output == 1
-            #     auc_per_fold(fold, df_fold, variable_of_comparison, :MSE, :Elapsed, experiment)
-            # else
-            #     auc_per_fold(fold, df_fold, variable_of_comparison, :BalancedAccuracy, :Elapsed, experiment)
-            # end
-            # df_folds = vcat(df_folds, df_fold)
+            end
+
+            df_folds = vcat(df_folds, df_fold)
         end
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
-		for auc_measurable in list_auc_measurables
-			auc_mean(n_folds, experiment, variable_of_comparison, auc_measurable)
-		end
 
-        # if n_output == 1
-        #     auc_mean(n_folds, experiment, variable_of_comparison, :MSE, :Elapsed)
-        # else
-        #     auc_mean(n_folds, experiment, variable_of_comparison, :BalancedAccuracy, :Elapsed)
-        # end
+        for auc_measurable in list_auc_measurables
+            auc_mean(n_folds, experiment, variable_of_comparison, auc_measurable)
+        end
 
         df_folds = CSV.read("./Experiments/$(experiment)/df_folds.csv", DataFrame)
-		if learning_algorithm == "MCMC"
-			if n_output == 1
-				list_plotting_measurables = [:MSE, :Elapsed]
-				list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
-				list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
-				list_normalised_or_not = [false, false]
-			elseif n_output == 2
-				list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed, :AvgESS]
-				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
-				list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
-				list_normalised_or_not = [false, false, false, false]
-			else
-				list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed, :AvgESS]
-				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean, :AvgESS_mean]
-				list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std, :AvgESS_std]
-				list_normalised_or_not = [false, false, false, false]
-			end
-		elseif learning_algorithm == "VI"
-			if n_output == 1
-				list_plotting_measurables = [:MSE, :Elapsed]
-				list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
-				list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
-				list_normalised_or_not = [false, false]
-			elseif n_output == 2
-				list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
-				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
-				list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
-				list_normalised_or_not = [true, true, false, false]
-			else
-				list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
-				list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean]
-				list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std]
-				list_normalised_or_not = [true, true, false, false]
-			end
-		end
+        if learning_algorithm == "MCMC"
+            if n_output == 1
+                list_plotting_measurables = [:MSE, :Elapsed]
+                list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
+                list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
+                list_normalised_or_not = [false, false]
+            elseif n_output == 2
+                list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed, :AvgESS]
+                list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean, :AvgESS_mean]
+                list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std, :AvgESS_std]
+                list_normalised_or_not = [true, true, false, false]
+            else
+                list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed, :AvgESS]
+                list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean, :AvgESS_mean]
+                list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std, :AvgESS_std]
+                list_normalised_or_not = [true, true, false, false]
+            end
+        elseif learning_algorithm == "VI"
+            if n_output == 1
+                list_plotting_measurables = [:MSE, :Elapsed]
+                list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
+                list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
+                list_normalised_or_not = [false, false]
+            elseif n_output == 2
+                list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
+                list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean]
+                list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std]
+                list_normalised_or_not = [true, true, false, false]
+            else
+                list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
+                list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean]
+                list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std]
+                list_normalised_or_not = [true, true, false, false]
+            end
+        end
 
         mean_std_by_group(df_folds, variable_of_comparison, x_variable, experiment; list_measurables=list_plotting_measurables)
         for (i, j, k, l) in zip(list_plotting_measurables, list_plotting_measurables_mean, list_plotting_measurables_std, list_normalised_or_not)

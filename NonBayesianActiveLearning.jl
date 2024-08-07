@@ -73,6 +73,14 @@ for learning_algorithm in list_learning_algorithms
 
         n_input, n_output = inout_dims
 
+		if n_output == 1
+            list_auc_measurables = [:MSE, :Elapsed]
+        elseif n_output == 2
+            list_auc_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
+        else
+            list_auc_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
+        end
+
         ###
         ### Data
         ###
@@ -127,20 +135,19 @@ for learning_algorithm in list_learning_algorithms
 
             df_fold = DataFrame(kpi_df, kpi_names; makeunique=true)
             CSV.write("./Experiments/$(experiment)/df_$(fold).csv", df_fold)
+
             df_fold = CSV.read("./Experiments/$(experiment)/df_$(fold).csv", DataFrame)
-            if n_output == 1
-                auc_per_fold(fold, df_fold, variable_of_comparison, :MSE, :Elapsed, experiment)
-            else
-                auc_per_fold(fold, df_fold, variable_of_comparison, :BalancedAccuracy, :Elapsed, experiment)
+
+            for auc_measurable in list_auc_measurables
+                auc_per_fold(fold, df_fold, variable_of_comparison, auc_measurable, experiment)
             end
+
             df_folds = vcat(df_folds, df_fold)
         end
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
 
-        if n_output == 1
-            auc_mean(n_folds, experiment, variable_of_comparison, :MSE, :Elapsed)
-        else
-            auc_mean(n_folds, experiment, variable_of_comparison, :BalancedAccuracy, :Elapsed)
+        for auc_measurable in list_auc_measurables
+            auc_mean(n_folds, experiment, variable_of_comparison, auc_measurable)
         end
 
         df_folds = CSV.read("./Experiments/$(experiment)/df_folds.csv", DataFrame)
@@ -153,12 +160,12 @@ for learning_algorithm in list_learning_algorithms
             list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
             list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean]
             list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std]
-            list_normalised_or_not = [false, false, false]
+            list_normalised_or_not = [true, true, false]
         else
             list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
             list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean]
             list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std]
-            list_normalised_or_not = [false, false, false]
+            list_normalised_or_not = [true, true, false]
         end
 
 
