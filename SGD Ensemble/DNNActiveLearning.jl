@@ -104,7 +104,7 @@ for experiment in experiments
                     new_pool = 0
                     for AL_iteration = 1:n_acq_steps
                         if AL_iteration == 1
-                            new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(pool, new_training_data, n_input, n_output, param_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, ensemble_size, "Initial")
+                            new_pool, param_matrix, new_training_data, last_acc, last_elapsed = dnn_query(pool, new_training_data, n_input, n_output, param_matrix, AL_iteration, test, experiment, pipeline_name, acquisition_size, ensemble_size, "Random")
                             n_acq_steps = deepcopy(AL_iteration)
                         elseif lastindex(new_pool[2]) > acquisition_size
                             # new_prior = (new_prior[1], sigma)

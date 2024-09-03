@@ -115,7 +115,7 @@ for experiment in experiments
                         #     last_improvement = AL_iteration
                         # end
                         if AL_iteration == 1
-                            new_pool, new_xgb, new_training_data, last_acc, last_elapsed = xgb_query(new_xgb, pool, new_training_data, n_input, n_output, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_rounds, "Initial")
+                            new_pool, new_xgb, new_training_data, last_acc, last_elapsed = xgb_query(new_xgb, pool, new_training_data, n_input, n_output, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_rounds, "Random")
                             n_acq_steps = deepcopy(AL_iteration)
                         elseif lastindex(new_pool[2]) > acquisition_size
                             new_pool, new_xgb, new_training_data, last_acc, last_elapsed = xgb_query(new_xgb, new_pool, new_training_data, n_input, n_output, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_rounds, acq_func)

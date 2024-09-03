@@ -226,7 +226,7 @@ function plotter(cr::Matrix{Float32}, num_Categories::Int, TotalSamples::Int, ca
     (n, m) = size(cr)
     heatmap([i > j ? NaN : cr[i, j] for i in 1:m, j in 1:n], fc=cgrad([:red, :white, :dodgerblue4]), clim=(-1.0, 1.0), xticks=(1:m, cols), xrot=90, yticks=(1:m, cols), yflip=true, dpi=300, size=(800, 700), title="NumCategories=$(num_Categories) TotalSamples=$(TotalSamples) Case=$(case)")
     annotate!([(j, i, text(round(cr[i, j], digits=3), 10, "Computer Modern", :black)) for i in 1:n for j in 1:m])
-    savefig("./Simulations of Uncertainty/$(TotalSamples) Samples/pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).png")
+    savefig("./Simulations of Uncertainty/$(TotalSamples) Samples/pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case).pdf")
     return nothing
 end
 

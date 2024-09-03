@@ -34,6 +34,6 @@ for case in Cases
             plot!(xs, ys, ylabel="Pearson Correlation", xlabel="Total Number of Samples", ylims=[-1, 1], label="$(names[i]) and $(names[j])", dpi=300, size=(600, 600), xscale=:identity, legend=:outerbottom, linewidth = 2)
         end
         mkpath("/Users/456828/Projects/Bayesian-Active-Learning/Simulations of Uncertainty/Pearson Correlation versus TotalSamples VarAleatoric/NumCategories=$(num_Categories)")
-        savefig("/Users/456828/Projects/Bayesian-Active-Learning/Simulations of Uncertainty/Pearson Correlation versus TotalSamples VarAleatoric/NumCategories=$(num_Categories)/corr_plot_Case=$(case).png")
+        savefig("/Users/456828/Projects/Bayesian-Active-Learning/Simulations of Uncertainty/Pearson Correlation versus TotalSamples VarAleatoric/NumCategories=$(num_Categories)/corr_plot_Case=$(case).pdf")
     end
 end

@@ -71,10 +71,10 @@ function stochastic_acquisition(pool_scores::Vector, acquisition_size::Int; acqu
 end
 
 function get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix; pct_epistemic_samples = 0.8)::Vector{Int}
-    if al_sampling == "Initial"
+    if al_sampling == "Random"
         sampled_indices = 1:acq_size_
-    elseif al_sampling == "Random"
-        sampled_indices = random_acquisition(pool_size, acq_size_)
+    # elseif al_sampling == "Random"
+    #     sampled_indices = random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerBALD"
         bald_scores = pool_prediction_matrix[5, :]
         sampled_indices = stochastic_acquisition(bald_scores, acq_size_; acquisition_type="Power")

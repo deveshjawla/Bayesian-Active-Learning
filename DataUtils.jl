@@ -139,8 +139,9 @@ function average_accuracy_HM(true_labels, predicted_labels)
 	
 end
 
-using StatisticalMeasures: f1score, balanced_accuracy, MulticlassTruePositiveRate, NoAvg
+using StatisticalMeasures: FScore, balanced_accuracy, MulticlassTruePositiveRate, NoAvg
 using StatsBase: countmap
+using CategoricalArrays
 function performance_stats_multiclass(true_labels, predicted_labels, n_classes)
 	# @info "Number of classes" n_classes
 	true_labels = vec(true_labels)
@@ -182,11 +183,16 @@ function performance_stats_multiclass(true_labels, predicted_labels, n_classes)
     # Calculate F1 score and accuracy
 	if n_classes == 2
 		acc = balanced_accuracy(predicted_labels, true_labels)
+		f1score = FScore(; rev=true)
 		f1 = f1score(predicted_labels, true_labels)
+		if isnan(f1)
+			f1 = 0
+		end
 	else
 		acc = balanced_accuracy(predicted_labels, true_labels)
 		mul_recall = MulticlassTruePositiveRate(;average=NoAvg(), levels=1:n_classes)
 		recalls = values(mul_recall(predicted_labels, true_labels))
+		zero_recalls = count(==(0), recalls)
 		f1 = 1 / ((1/n_classes)*sum(recalls .^ -1))
 		if isnan(f1)
 			f1 = 0
@@ -249,9 +255,46 @@ function summary_stats(a::AbstractArray{T}) where {T<:Real}
     return [names_stats stats]
 end
 
+using StatsPlots
+using Plots: text
+
+function plotter(cr::Matrix{Float32}, cols::Vector{Symbol})::Nothing
+    (n, m) = size(cr)
+    heatmap([i > j ? NaN : cr[i, j] for i in 1:m, j in 1:n], fc=cgrad([:red, :white, :dodgerblue4]), clim=(-1.0, 1.0), xticks=(1:m, cols), xrot=90, yticks=(1:m, cols), yflip=true, dpi=300, size=(800, 700), title="Pearson Correlation Coefficients")
+    annotate!([(j, i, text(round(cr[i, j], digits=3), 10, "Computer Modern", :black)) for i in 1:n for j in 1:m])
+    savefig("./Experiments/pearson_correlations_Uncertainties.pdf")
+    return nothing
+end
+
+using Statistics
+using Distributions
+
+function confidence_interval_95(data)
+    # Calculate the sample mean
+    mean_val = mean(data)
+    
+    # Calculate the sample standard deviation (use `corrected=true` for sample standard deviation)
+    std_dev = std(data, corrected=true)
+    
+    # Calculate the sample size
+    n = length(data)
+    
+    # Z-score for 95% confidence interval (for a two-tailed test)
+    z = quantile(Normal(), 0.975)
+    
+    # Calculate the margin of error
+    margin_of_error = z * (std_dev / sqrt(n))
+    
+    # # Confidence interval bounds
+    # lower_bound = mean_val - margin_of_error
+    # upper_bound = mean_val + margin_of_error
+    
+    # return (lower_bound, upper_bound)
+	return margin_of_error
+end
 
 function mean_std_by_variable(group, group_by::Symbol, measurable::Symbol, variable::Symbol, experiment)
-    mean_std = DataFrames.combine(groupby(group, variable), measurable => mean, measurable => std)
+    mean_std = DataFrames.combine(groupby(group, variable), measurable => mean, measurable => confidence_interval_95)
     group_name = first(group[!, group_by])
     mean_std[!, group_by] = repeat([group_name], nrow(mean_std))
     CSV.write("./Experiments/$(experiment)/mean_std_$(group_name)_$(measurable)_$(variable).csv", mean_std)
@@ -292,7 +335,7 @@ function auc_mean(n_folds, experiment, group_by::Symbol, measurement::Symbol)
         df = vcat(df, df_)
     end
 
-    mean_auc = combine(groupby(df, group_by), measurement => mean, measurement => std)
+    mean_auc = combine(groupby(df, group_by), measurement => mean, measurement => confidence_interval_95)
 
     CSV.write("./Experiments/$(experiment)/mean_auc_$(measurement).csv", mean_auc)
 end

@@ -6,23 +6,34 @@ using DelimitedFiles
 using Statistics
 using DataFrames
 using LazyArrays
+using StatsPlots
 using FillArrays
 using CSV
 PATH = @__DIR__
 cd(PATH)
 include("./../Evidential Deep Learning/DirichletLayer.jl")
 using Random
-list_noise_x = [false, true]
-list_noise_y = [false, true]
-output_activation_functions = ["Relu", "Softmax"]
+list_noise_x = [true]
+list_noise_y = [false]
+output_activation_functions = ["Softmax"]
 uncertainty_metrics = ["Predicted Label", "Prediction Probability", "Std of Prediction Probability", "Aleatoric Uncertainty", "Epistemic Uncertainty", "Total Uncertainty"]
 number_of_clusters = [3]
-list_compile_reversediff = [true, false]
+list_compile_reversediff = [false]
 N = 1000 #number of MCMC steps
-list_training_sizes = [20, 100]
+list_training_sizes = [40]
 # n = 20 #number of training samples
+
+
+function plotter(cr::Matrix{Float32}, cols::Vector{Symbol})::Nothing
+    (n, m) = size(cr)
+    heatmap([i > j ? NaN : cr[i, j] for i in 1:m, j in 1:n], fc=cgrad([:red, :white, :dodgerblue4]), clim=(-1.0, 1.0), xticks=(1:m, cols), xrot=90, yticks=(1:m, cols), yflip=true, dpi=300, size=(800, 700), title="Pearson Correlation Coefficients")
+    annotate!([(j, i, text(round(cr[i, j], digits=3), 10, "Computer Modern", :black)) for i in 1:n for j in 1:m])
+    savefig("./Experiments/pearson_correlations_Uncertainties.pdf")
+    return nothing
+end
+
 let
-    stats_matrix = Array{Float32}(undef, 0, 8)
+    stats_matrix = Array{Float32}(undef, 0, 9)
     for compile_reversediff in list_compile_reversediff
         for num_clusters in number_of_clusters
             for n in list_training_sizes
@@ -98,15 +109,15 @@ let
                                 end
                             else
                                 if output_activation_function == "Softmax"
-                                    if noise_x
-                                        model = softmax_bnn_noise_x(X, Y, num_params, prior_std)
-                                    elseif noise_y
-                                        model = softmax_bnn_noise_y(X, Y, num_params, prior_std)
-                                    elseif noise_y && noise_x
-                                        model = softmax_bnn_noise_xy(X, Y, num_params, prior_std)
-                                    else
-                                        model = softmax_bnn(X, Y, num_params, prior_std)
-                                    end
+                                    # if noise_x
+                                    # model = softmax_bnn_noise_x(X, Y, num_params, prior_std)
+                                    # elseif noise_y
+                                    # model = softmax_bnn_noise_y(X, Y, num_params, prior_std)
+                                    # elseif noise_y && noise_x
+                                    model = softmax_bnn_noise_xy(X, Y, num_params, prior_std)
+                                    # else
+                                    # model = softmax_bnn(X, Y, num_params, prior_std)
+                                    # end
                                 elseif output_activation_function == "Relu"
                                     if noise_x
                                         model = softplus_bnn_noise_x(X, Y, num_params, prior_std)
@@ -159,9 +170,15 @@ let
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix; output_activation_function=output_activation_function)
                             end
 
-                            ŷ = ŷ_uncertainties[1, :]
+                            ŷ = Int.(ŷ_uncertainties[1, :])
                             acc, f1 = performance_stats_multiclass(test_Y, ŷ, n_output)
                             @info "Balanced Accuracy and F1 are " acc f1
+
+
+                            cols = [:Confidence, :StdDeviationConfidence, :Aleatoric, :Epistemic, :TotalUncertainty]
+                            M = cor(ŷ_uncertainties[2:6,:], dims=2)
+
+							plotter(M, cols)
 
                             stats_matrix = vcat(stats_matrix, [compile_reversediff num_clusters n output_activation_function noise_x noise_y acc f1 elapsed])
 
@@ -203,17 +220,17 @@ let
     end
 
     df = DataFrame(stats_matrix, [:CompileReverseDiff, :NumClusters, :TrainingSize, :OutputActivationFunction, :NoiseX, :NoiseY, :BalancedAccuracy, :F1Score, :Elapsed])
-    CSV.write("./Experiments/stats.csv", df)
+    # CSV.write("./Experiments/stats.csv", df)
 end
 
-df = CSV.read("./Experiments/stats.csv", DataFrame, header=1)
-names(df)
+# df = CSV.read("./Experiments/stats.csv", DataFrame, header=1)
+# names(df)
 
-groupby(df, [:CompileReverseDiff, :TrainingSize])
-println(combine(groupby(df, [:CompileReverseDiff, :TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
-println(combine(groupby(df, [:CompileReverseDiff, :NoiseX, :NoiseY, :TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
+# groupby(df, [:CompileReverseDiff, :TrainingSize])
+# println(combine(groupby(df, [:CompileReverseDiff, :TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
+# println(combine(groupby(df, [:CompileReverseDiff, :NoiseX, :NoiseY, :TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
 
-filtered_df = filter([:CompileReverseDiff, :NoiseX] => (x, y) -> x == false && y == true, df)
-println(combine(groupby(filtered_df, [:TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
+# filtered_df = filter([:CompileReverseDiff, :NoiseX] => (x, y) -> x == false && y == true, df)
+# println(combine(groupby(filtered_df, [:TrainingSize, :OutputActivationFunction]), :BalancedAccuracy => mean, :BalancedAccuracy => std, "WeightedF1" => mean, "WeightedF1" => std, :Elapsed => mean, :Elapsed => std))
 
-Best = "Compile_ReverseDiff = false, NoiseX =true, NoiseY =false, OutputActivationFunction=Softmax and we conclude that the Aleatoric Uncertainty is just the inverse of Predicted Probability, and the Epistemic Uncertainty is proportional to Std Predicted Probability, More data samples will reduce the epistemic uncertainty in that space."
+# Best = "Compile_ReverseDiff = false, NoiseX =true, NoiseY =false, OutputActivationFunction=Softmax and we conclude that the Aleatoric Uncertainty is just the inverse of Predicted Probability, and the Epistemic Uncertainty is proportional to Std Predicted Probability, More data samples will reduce the epistemic uncertainty in that space."

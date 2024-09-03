@@ -14,14 +14,22 @@ function inference(training_data::Tuple{Matrix{Float32},Any}, al_step::Int, expe
 		loss_func = dirloss
 	end
 
-    timed_tuple = @timed network_training(nn_arch_name, n_input, n_output, 100; data=(train_x, train_y), loss_function=loss_func)
+	balance_of_training_data = countmap(Int.(train_y))
+	sample_weights = similar(train_y, Float32)
+    nos_training = lastindex(train_y)
+    for i = 1:nos_training
+        sample_weights[i] = nos_training / balance_of_training_data[train_y[i]]
+    end
+    sample_weights ./= n_output
+
+    timed_tuple = @timed network_training(nn_arch_name, n_input, n_output, 100; data=(train_x, train_y), data_weights = sample_weights, loss_function=loss_func)
 
     optim_theta, re = timed_tuple.value
     elapsed = Float32(timed_tuple.time)
 
 	if learning_algorithm == "LaplaceApprox"
 		m=re(optim_theta)
-		la = Laplace(m; likelihood=:classification, subset_of_weights=:last_layer)
+		la = LaplaceRedux.Laplace(m; likelihood=:classification, subset_of_weights=:last_layer)
 		fit!(la, zip(collect(eachcol(train_x)), train_y))
 
 		#Using Empirical Bayes, optimise the Prior

@@ -1,7 +1,6 @@
 datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
 list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-
 list_learning_algorithms = ["RBF", "Evidential", "LaplaceApprox", "MCMC"]
 
 using DelimitedFiles, DataFrames, CSV, Statistics
@@ -25,12 +24,11 @@ for (dataset, inout_dims) in zip(datasets, list_inout_dims)
     convergence_stats = Matrix{Any}(undef, 0, lastindex(col_names))
     for learning_algorithm in list_learning_algorithms
         if learning_algorithm == "MCMC"
-            experiment = "ComparisonBayesianAcquisitionFunctions$(learning_algorithm)"
-            acq_functions = ["Initial", "BALD", "StdConfidence", "BayesianUncertainty0.8"] # "Initial", "Random",  "BALD", "StdConfidence", "BayesianUncertainty0.8"
-
+            experiment = "ComparisonBayesianAcquisitionFunctions$(learning_algorithm)_ReverseF1"
+            acq_functions = ["Random", "BALD", "StdConfidence", "BayesianUncertainty0.8"] # "Random", "Random",  "BALD", "StdConfidence", "BayesianUncertainty0.8"
         else
-            experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)"
-            acq_functions = ["Initial", "Entropy", "Uncertainty"]
+            experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)_Weighted"
+            acq_functions = ["Random", "Entropy", "Uncertainty"]
         end
 
         array_measurables = Array{String}(undef, lastindex(acq_functions), lastindex(list_measurables))
@@ -38,7 +36,7 @@ for (dataset, inout_dims) in zip(datasets, list_inout_dims)
             mean_std = CSV.read("./$(experiment)/mean_auc_$(measurable).csv", DataFrame)
 
             stats_df_avg = mean_std[!, Symbol("$(measurable)_mean")]
-            stats_df_std = mean_std[!, Symbol("$(measurable)_std")]
+            stats_df_std = mean_std[!, Symbol("$(measurable)_confidence_interval_95")]
 
             stats_df_ = []
             for (i, j) in zip(stats_df_avg, stats_df_std)

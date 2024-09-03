@@ -50,7 +50,7 @@ x_variable = :CumulativeTrainedSize
 
 list_learning_algorithms = ["RBF", "Evidential", "LaplaceApprox"] #"RBF", "Evidential", "LaplaceApprox"
 
-acq_functions = ["Initial", "Entropy", "Uncertainty"]
+acq_functions = ["Random", "Entropy", "Uncertainty"]
 
 datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
 list_maximum_pool_size = 2 .* [40, 60, 40, 40, 80, 100, 30, 296] #40, 60, 40, 40, 80, 100, 30, 296
@@ -63,7 +63,7 @@ list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8
 list_n_folds = [10, 10, 10, 10, 10, 10, 5, 5]#10, 10, 10, 10, 10, 10, 5, 5
 
 for learning_algorithm in list_learning_algorithms
-    experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)"
+    experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)_Weighted"
 
     for (dataset, inout_dims, acquisition_size, n_folds, n_acq_steps) in zip(datasets, list_inout_dims, acquisition_sizes, list_n_folds, list_acq_steps)
         # for (dataset, inout_dims, acquisition_size) in zip(datasets, list_inout_dims, acquisition_sizes)
@@ -154,23 +154,22 @@ for learning_algorithm in list_learning_algorithms
         if n_output == 1
             list_plotting_measurables = [:MSE, :Elapsed]
             list_plotting_measurables_mean = [:MSE_mean, :Elapsed_mean]
-            list_plotting_measurables_std = [:MSE_std, :Elapsed_std]
+            list_plotting_measurables_confidence_interval_95 = [:MSE_confidence_interval_95, :Elapsed_confidence_interval_95]
             list_normalised_or_not = [false, false]
         elseif n_output == 2
             list_plotting_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
             list_plotting_measurables_mean = [:BalancedAccuracy_mean, :F1Score_mean, :Elapsed_mean]
-            list_plotting_measurables_std = [:BalancedAccuracy_std, :F1Score_std, :Elapsed_std]
+            list_plotting_measurables_confidence_interval_95 = [:BalancedAccuracy_confidence_interval_95, :F1Score_confidence_interval_95, :Elapsed_confidence_interval_95]
             list_normalised_or_not = [true, true, false]
         else
             list_plotting_measurables = [:BalancedAccuracy, :AverageClassAccuracyHarmonicMean, :Elapsed]
             list_plotting_measurables_mean = [:BalancedAccuracy_mean, :AverageClassAccuracyHarmonicMean_mean, :Elapsed_mean]
-            list_plotting_measurables_std = [:BalancedAccuracy_std, :AverageClassAccuracyHarmonicMean_std, :Elapsed_std]
+            list_plotting_measurables_confidence_interval_95 = [:BalancedAccuracy_confidence_interval_95, :AverageClassAccuracyHarmonicMean_confidence_interval_95, :Elapsed_confidence_interval_95]
             list_normalised_or_not = [true, true, false]
         end
 
-
         mean_std_by_group(df_folds, variable_of_comparison, x_variable, experiment; list_measurables=list_plotting_measurables)
-        for (i, j, k, l) in zip(list_plotting_measurables, list_plotting_measurables_mean, list_plotting_measurables_std, list_normalised_or_not)
+        for (i, j, k, l) in zip(list_plotting_measurables, list_plotting_measurables_mean, list_plotting_measurables_confidence_interval_95, list_normalised_or_not)
             plotting_measurable_variable(experiment, variable_of_comparison, acq_functions, dataset, x_variable, i, j, k, l)
         end
     end

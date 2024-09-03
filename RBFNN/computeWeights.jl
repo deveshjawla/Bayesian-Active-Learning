@@ -13,11 +13,19 @@ Returns
 optim_theta - The learned weights of the RBF-NN
 RBFNN - The RBF-NN architecture
 """
-function computeWeights(X::Array{Float32,2}, y::Array{Int64,1}, numRBFNeurons, numCats, verbose; lambda=0.0, n_epochs=100)
+function computeWeights(X::Array{Float32,2}, y::Vector{Int64}, numRBFNeurons, numCats, verbose; lambda=0.0, n_epochs=100)
     if (verbose)
         println("3. Learn output weights.\n")
     end
     nn = Dense(numRBFNeurons, numCats; bias=false)
+
+	balance_of_training_data = countmap(y)
+	sample_weights = similar(y, Float32)
+    nos_training = lastindex(y)
+    for i = 1:nos_training
+        sample_weights[i] = nos_training / balance_of_training_data[y[i]]
+    end
+    sample_weights ./= numCats
 
     y = Flux.onehotbatch(vec(y), 1:numCats)
 
@@ -37,7 +45,8 @@ function computeWeights(X::Array{Float32,2}, y::Array{Int64,1}, numRBFNeurons, n
 
 		# global opt_state, nn
         Flux.adjust!(opt_state, ParameterSchedulers.next!(s))
-        loss, grad = Flux.withgradient(m -> Flux.Losses.logitcrossentropy(m(X), y), nn)
+        # loss, grad = Flux.withgradient(m -> Flux.Losses.logitcrossentropy(m(X), y), nn)
+        loss, grad = Flux.withgradient(m -> logitcrossentropyweighted(m(X), y, sample_weights), nn)
         trnlosses[e] = loss
         Flux.update!(opt_state, nn, grad[1])
 		

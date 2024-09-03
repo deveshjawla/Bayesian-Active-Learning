@@ -54,13 +54,14 @@ end
     end
 end
 
-@model function softmax_bnn_noise_x(x, y, num_params, scale)
-    θ ~ MvNormal(zeros(num_params), scale)
+@model function softmax_bnn_noise_x(x, y, loc, scale, weights_vector)
+    θ ~ MvNormal(loc, scale)
     nn = feedforward(θ)
     noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
     preds = nn(x .+ noise_x)
-    for i = 1:lastindex(y)
-        y[i] ~ Categorical(softmax(preds[:, i]))
+	for i = 1:lastindex(y)
+        loglik = loglikelihood(Categorical(softmax(preds[:, i])), y[i]) * weights_vector[i]
+        Turing.@addlogprob!(loglik)
     end
 end
 
@@ -87,33 +88,48 @@ end
 # end
 
 
-@model function softmax_bnn_noise_y(x, y, num_params, scale)
-    θ ~ MvNormal(zeros(num_params), scale)
+@model function softmax_bnn_noise_y(x, y, loc, scale, weights_vector)
+    θ ~ MvNormal(loc, scale)
     nn = feedforward(θ)
     preds = nn(x)
     noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
-    for i = 1:lastindex(y)
-        y[i] ~ Categorical(softmax(preds[:, i] .+ noise_y))
+	for i = 1:lastindex(y)
+        loglik = loglikelihood(Categorical(softmax(preds[:, i] .+ noise_y)), y[i]) * weights_vector[i]
+        Turing.@addlogprob!(loglik)
     end
 end
+# @model function softmax_bnn_noise_xy(x, y, loc, scale, weights_vector)
+#     θ ~ MvNormal(loc, scale)
+#     nn = feedforward(θ)
+#     noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
+#     preds = nn(x .+ noise_x)
+#     noise_y ~ Product([Gamma(0.1, 10) for _ in 1:size(preds, 1)])
+#     # noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
+#     # noise_y ~ MvNormal(zeros(3), ones(3))
+#     for i = 1:lastindex(y)
+#         loglik = loglikelihood(Categorical(softmax(preds[:, i] .+ noise_y)), y[i]) * weights_vector[i]
+#         Turing.@addlogprob!(loglik)
+#     end
+# end
+
 @model function softmax_bnn_noise_xy(x, y, num_params, scale)
     θ ~ MvNormal(zeros(num_params), scale)
     nn = feedforward(θ)
     noise_x ~ MvNormal(zeros(size(x, 1)), ones(size(x, 1)))
     preds = nn(x .+ noise_x)
     noise_y ~ Product([Gamma(0.1, 10) for _ in 1:size(preds, 1)])
-    # noise_y ~ filldist(Gamma(0.1, 10), size(preds, 1))
-    # noise_y ~ MvNormal(zeros(3), ones(3))
-    for i = 1:lastindex(y)
-        y[i] ~ Categorical(softmax(preds[:, i] .+ noise_y))
-    end
-end
-@model function softmax_bnn(x, y, num_params, scale)
-    θ ~ MvNormal(zeros(num_params), scale)
-    nn = feedforward(θ)
-    preds = nn(x)
     for i = 1:lastindex(y)
         y[i] ~ Categorical(softmax(preds[:, i]))
+    end
+end
+
+@model function softmax_bnn(x, y, loc, scale, weights_vector)
+    θ ~ MvNormal(loc, scale)
+    nn = feedforward(θ)
+    preds = nn(x)
+	for i = 1:lastindex(y)
+        loglik = loglikelihood(Categorical(softmax(preds[:, i])), y[i]) * weights_vector[i]
+        Turing.@addlogprob!(loglik)
     end
 end
 

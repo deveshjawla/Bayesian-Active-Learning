@@ -94,6 +94,37 @@ function dirloss(y, α, t)
     sum(loss .+ λₜ .* reg)
 end
 
+"""
+    dirloss(y, α, t)
+
+Regularized version of a type II maximum likelihood for the Multinomial(p)
+distribution where the parameter p, which follows a Dirichlet distribution has
+been integrated out.
+
+# Arguments:
+- `y`: the targets whose shape should be (O, B)
+- `α`: the parameters of a Dirichlet distribution representing the belief in each class which shape should be (O, B)
+- `t`: counter for the current epoch being evaluated
+"""
+function dirlossweighted(y, α, t, sample_weights)
+    S = sum(α, dims = 1)
+    p̂ = α ./ S
+    # Main loss
+    loss = (y - p̂) .^ 2 .+ p̂ .* (1 .- p̂) ./ (S .+ 1)
+	if size(loss) != size(sample_weights)
+        error("dirlossweighted(ŷ, y), size loss = $(size(loss)) and size of sample_weights = $(size(sample_weights)) not the same")
+    end
+    loss = sum(sample_weights .* loss, dims = 1)
+    # Regularizer
+    λₜ = min(1.0, t / 10)
+    # Keep only misleading evidence, i.e., penalize stuff that fit badly
+    α̂ = @. y + (1 - y) * α
+    reg = kl(α̂)
+    # Total loss = likelihood + regularizer
+    #sum(loss .+ λₜ .* reg, dims = 2)
+    sum(loss .+ λₜ .* reg)
+end
+
 
 """
 EDLC Uncertainty

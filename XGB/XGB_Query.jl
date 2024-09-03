@@ -9,10 +9,10 @@ function xgb_query(xgb, pool, previous_training_data, n_input, n_output, al_step
     pool = vcat(pool_x, pool_y)
     pool_size = lastindex(pool_y)
     sampled_indices = 0
-    if al_sampling == "Initial"
+    if al_sampling == "Random"
         sampled_indices = 1:acq_size_
-    elseif al_sampling == "Random"
-        sampled_indices = random_acquisition(pool_size, acq_size_)
+    # elseif al_sampling == "Random"
+    #     sampled_indices = random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerEntropy"
         #Scoring the pool and acquiring new samples
         pool_x = copy(permutedims(pool_x))

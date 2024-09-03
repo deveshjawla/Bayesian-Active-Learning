@@ -268,11 +268,12 @@ function collecting_stats_active_learning_experiments_classification(n_acq_steps
 end
 
 
-function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm)
+function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
     # n_acq_steps = 10#round(Int, total_pool_samples / acquisition_size, RoundUp)
     prior = (zeros(num_params), prior_std)
     param_matrix, new_training_data = 0, 0
     new_noise_x = 0
+    new_noise_y = 0
     last_acc = 0
     best_acc = 0.5
     last_improvement = 0
@@ -310,7 +311,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
 
 
         if AL_iteration == 1
-            new_pool, param_matrix, new_noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Initial", mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)
+            new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Random", mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
             mcmc_init_params = deepcopy(location_posterior)
             n_acq_steps = deepcopy(AL_iteration)
         elseif lastindex(new_pool[2]) >= acquisition_size
@@ -319,7 +320,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
             else
                 new_prior = (location_posterior, prior_std)
             end
-            new_pool, param_matrix, new_noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)
+            new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
             mcmc_init_params = deepcopy(location_posterior)
             n_acq_steps = deepcopy(AL_iteration)
         # elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
@@ -328,7 +329,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
         #     else
         #         new_prior = (location_posterior, prior_std)
         #     end
-        #     new_pool, param_matrix, new_noise_x, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)
+        #     new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)
         #     mcmc_init_params = deepcopy(location_posterior)
         #     println("Trained on last few samples remaining in the Pool")
         #     n_acq_steps = deepcopy(AL_iteration)
