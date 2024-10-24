@@ -23,7 +23,7 @@ n_input = size(train_x, 1)
 n_output = size(train_y, 1)
 
 optim_theta, re = network_training("Evidential Classification", n_input, n_output, 100; data=(train_x, train_y), loss_function=dirloss)
-m=re(optim_theta)
+m = re(optim_theta)
 # Test predictions
 α̂ = m(train_x)
 ŷ = α̂ ./ sum(α̂, dims=1)

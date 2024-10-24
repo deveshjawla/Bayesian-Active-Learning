@@ -14,7 +14,7 @@ function dnn_query(pool::Tuple, previous_training_data, n_input::Int, n_output::
     sampled_indices = 0
     pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix)
 
-	sampled_indices = get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix, reconstruct = re)
+    sampled_indices = get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix, reconstruct=re)
 
     acq_size_ = lastindex(sampled_indices)
     new_training_data = pool[:, sampled_indices]
@@ -45,13 +45,13 @@ function dnn_query(pool::Tuple, previous_training_data, n_input::Int, n_output::
     training_data_x, training_data_y = training_data[1:n_input, :], training_data[end, :]
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
-	sample_weights =  similar(training_data_y, Float32)
-	nos_training = lastindex(training_data_y)
-	for i = 1:nos_training
-		sample_weights[i] = nos_training/balance_of_training_data[training_data_y[i]]
-	end
-	sample_weights ./= n_output
-	
+    sample_weights = similar(training_data_y, Float32)
+    nos_training = lastindex(training_data_y)
+    for i = 1:nos_training
+        sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
+    end
+    sample_weights ./= n_output
+
     # println("The acquired Batch has the follwing class distribution: $balance_of_acquired_batch")
     training_data_xy = (training_data_x, Int.(permutedims(training_data_y)))
     # println("The dimenstions of the training data during AL step no. $al_step are:", size(training_data_x))
@@ -76,8 +76,8 @@ function dnn_query(pool::Tuple, previous_training_data, n_input::Int, n_output::
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
         # println([["Acquisition Size","Acquired Batch class distribution", "Accuracy", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, balance_of_acquired_batch, acc, f1, mcc, fpr, prec, recall, threat, cm]])
     else
-        
-		acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
+
+        acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
         # println([["Acquisition Size","Acquired Batch class distribution","Accuracy"] [acq_size_, balance_of_acquired_batch, acc]])

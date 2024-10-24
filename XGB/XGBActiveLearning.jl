@@ -53,11 +53,11 @@ for experiment in experiments
         @everywhere PATH = $PATH
         df_folds = DataFrame()
         for fold in 1:n_folds
-            train = CSV.read("./FiveFolds/train_$(fold).csv", DataFrame, header=1)
+            train = CSV.read("./TenFolds/train_$(fold).csv", DataFrame, header=1)
             # validate = CSV.read("validate.csv", DataFrame, header=1)
             # pool = vcat(train, validate)
 
-            test = CSV.read("./FiveFolds/test_$(fold).csv", DataFrame, header=1)
+            test = CSV.read("./TenFolds/test_$(fold).csv", DataFrame, header=1)
 
             pool, test = pool_test_maker_xgb(train, test, n_input, n_output)
             total_pool_samples = size(pool[1], 2)
@@ -205,7 +205,7 @@ for experiment in experiments
             df_folds = vcat(df_folds, df_fold)
         end
         CSV.write("./Experiments/$(experiment)/df_folds.csv", df_folds)
-		for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
+        for (j, i) in enumerate(groupby(df_folds, :AcquisitionFunction))
             mean_std_acc = combine(groupby(i, :CumulativeTrainedSize), :BalancedAccuracy => mean, :BalancedAccuracy => std)
             mean_std_f1 = combine(groupby(i, :CumulativeTrainedSize), :F1Score => mean, :F1Score => std)
             mean_std_time = combine(groupby(i, :CumulativeTrainedSize), :Elapsed => mean, :Elapsed => std)

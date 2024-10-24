@@ -50,21 +50,17 @@ x_variable = :CumulativeTrainedSize
 
 list_learning_algorithms = ["RBF", "Evidential", "LaplaceApprox"] #"RBF", "Evidential", "LaplaceApprox"
 
-acq_functions = ["Random", "Entropy", "Uncertainty"]
+acq_functions = ["Random"]#, "Entropy", "Uncertainty"
 
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-list_maximum_pool_size = 2 .* [40, 60, 40, 40, 80, 100, 30, 296] #40, 60, 40, 40, 80, 100, 30, 296
-acquisition_sizes = round.(Int, list_maximum_pool_size ./ 10)
-# acquisition_sizes = [20, 20, 10, 10, 20, 20, 10, 40]#20, 20, 10, 10, 20, 20, 10, 40 
-list_acq_steps = [10, 10, 10, 10, 10, 10, 5, 5] # 10, 10, 10, 10, 10, 10, 5, 5
+datasets = ["coalmineseismicbumps", "adult1994", "creditdefault2005", "stroke", "banknote2012", "creditfraud", "iris1988", "yeast1996"]#
+acquisition_sizes = repeat([10], 8)
+list_acq_steps = [10, 10, 10, 10, 10, 10, 5, 10] # 10, 10, 10, 10, 10, 10, 5, 10
+list_inout_dims = [(19, 2), (50, 2), (32, 2), (19, 2), (4, 2), (28, 2), (4, 3), (8, 10)] # 
 
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
-
-list_n_folds = [10, 10, 10, 10, 10, 10, 5, 5]#10, 10, 10, 10, 10, 10, 5, 5
+list_n_folds = [10, 10]#10, 10, 10, 10, 10, 10, 5, 10
 
 for learning_algorithm in list_learning_algorithms
-    experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)_Weighted"
-
+    experiment = "Supervised Learning 100 Samples per fold, 10 Folds"
     for (dataset, inout_dims, acquisition_size, n_folds, n_acq_steps) in zip(datasets, list_inout_dims, acquisition_sizes, list_n_folds, list_acq_steps)
         # for (dataset, inout_dims, acquisition_size) in zip(datasets, list_inout_dims, acquisition_sizes)
         println(dataset)
@@ -73,7 +69,7 @@ for learning_algorithm in list_learning_algorithms
 
         n_input, n_output = inout_dims
 
-		if n_output == 1
+        if n_output == 1
             list_auc_measurables = [:MSE, :Elapsed]
         elseif n_output == 2
             list_auc_measurables = [:BalancedAccuracy, :F1Score, :Elapsed]
@@ -89,14 +85,18 @@ for learning_algorithm in list_learning_algorithms
 
         df_folds = DataFrame()
         for fold in 1:n_folds
-            train = CSV.read("./FiveFolds/train_$(fold).csv", DataFrame, header=1)
+
+            @info "The fold number is" fold
+            train = CSV.read("./TenFolds/train_$(fold).csv", DataFrame, header=1)
             # train = CSV.read("./train.csv", DataFrame, header=1)
 
-            test = CSV.read("./FiveFolds/test_$(fold).csv", DataFrame, header=1)
+            test = CSV.read("./TenFolds/test_$(fold).csv", DataFrame, header=1)
             # test = CSV.read("./test.csv", DataFrame, header=1)
 
             pool, test = pool_test_to_matrix(train, test, n_input, learning_algorithm; n_output=n_output)
             total_pool_samples = size(pool[1], 2)
+
+            acquisition_size = total_pool_samples
 
             # println("The number of input features are $n_input")
             # println("The number of outputs are $n_output")

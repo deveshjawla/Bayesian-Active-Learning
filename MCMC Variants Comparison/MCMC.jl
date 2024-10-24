@@ -87,9 +87,9 @@ let
                             include("./../BayesianModel.jl")
                             if compile_reversediff
                                 if output_activation_function == "Softmax"
-                                    if noise_x
+                                    if noise_x && !noise_y
                                         model = fast_softmax_bnn_noise_x(X, Y, num_params, prior_std)
-                                    elseif noise_y
+                                    elseif noise_y && !noise_x
                                         model = fast_softmax_bnn_noise_y(X, Y, num_params, prior_std)
                                     elseif noise_y && noise_x
                                         model = fast_softmax_bnn_noise_xy(X, Y, num_params, prior_std)
@@ -97,9 +97,9 @@ let
                                         model = fast_softmax_bnn(X, Y, num_params, prior_std)
                                     end
                                 elseif output_activation_function == "Relu"
-                                    if noise_x
+                                    if noise_x && !noise_y
                                         model = fast_softplus_bnn_noise_x(X, Y, num_params, prior_std)
-                                    elseif noise_y
+                                    elseif noise_y && !noise_x
                                         model = fast_softplus_bnn_noise_y(X, Y, num_params, prior_std)
                                     elseif noise_y && noise_x
                                         model = fast_softplus_bnn_noise_xy(X, Y, num_params, prior_std)
@@ -109,19 +109,19 @@ let
                                 end
                             else
                                 if output_activation_function == "Softmax"
-                                    # if noise_x
-                                    # model = softmax_bnn_noise_x(X, Y, num_params, prior_std)
-                                    # elseif noise_y
-                                    # model = softmax_bnn_noise_y(X, Y, num_params, prior_std)
-                                    # elseif noise_y && noise_x
-                                    model = softmax_bnn_noise_xy(X, Y, num_params, prior_std)
-                                    # else
-                                    # model = softmax_bnn(X, Y, num_params, prior_std)
-                                    # end
+                                    if noise_x && !noise_y
+                                        model = softmax_bnn_noise_x(X, Y, num_params, prior_std)
+                                    elseif noise_y && !noise_x
+                                        model = softmax_bnn_noise_y(X, Y, num_params, prior_std)
+                                    elseif noise_y && noise_x
+                                        model = softmax_bnn_noise_xy(X, Y, num_params, prior_std)
+                                    else
+                                        model = softmax_bnn(X, Y, num_params, prior_std)
+                                    end
                                 elseif output_activation_function == "Relu"
-                                    if noise_x
+                                    if noise_x && !noise_y
                                         model = softplus_bnn_noise_x(X, Y, num_params, prior_std)
-                                    elseif noise_y
+                                    elseif noise_y && !noise_x
                                         model = softplus_bnn_noise_y(X, Y, num_params, prior_std)
                                     elseif noise_y && noise_x
                                         model = softplus_bnn_noise_xy(X, Y, num_params, prior_std)
@@ -139,11 +139,11 @@ let
                             params_set = collect.(Float32, eachrow(weights[:, :, 1]))
                             param_matrix = mapreduce(permutedims, vcat, params_set)
 
-                            if noise_x
+                            if noise_x && !noise_y
                                 noises = MCMCChains.group(ch1, :noise_x).value #get posterior MCMC samples for network weights
                                 noise_set_x = collect.(Float32, eachrow(noises[:, :, 1]))
                                 noise_matrix = mapreduce(permutedims, vcat, noise_set_x)
-                            elseif noise_y
+                            elseif noise_y && !noise_x
                                 noises_y = MCMCChains.group(ch1, :noise_y).value
                                 noise_set_y = collect.(Float32, eachrow(noises_y[:, :, 1]))
                                 noise_matrix_y = mapreduce(permutedims, vcat, noise_set_y)
@@ -160,9 +160,9 @@ let
                             using Distributed
                             include("./../MCMCUtils.jl")
                             include("./../ScoringFunctions.jl")
-                            if noise_x
+                            if noise_x && !noise_y
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set_x=noise_set_x; output_activation_function=output_activation_function)
-                            elseif noise_y
+                            elseif noise_y && !noise_x
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set_y=noise_set_y; output_activation_function=output_activation_function)
                             elseif noise_y && noise_x
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_X, param_matrix, noise_set_x=noise_set_x, noise_set_y=noise_set_y; output_activation_function=output_activation_function)
@@ -176,9 +176,9 @@ let
 
 
                             cols = [:Confidence, :StdDeviationConfidence, :Aleatoric, :Epistemic, :TotalUncertainty]
-                            M = cor(ŷ_uncertainties[2:6,:], dims=2)
+                            M = cor(ŷ_uncertainties[2:6, :], dims=2)
 
-							plotter(M, cols)
+                            plotter(M, cols)
 
                             stats_matrix = vcat(stats_matrix, [compile_reversediff num_clusters n output_activation_function noise_x noise_y acc f1 elapsed])
 
@@ -190,9 +190,9 @@ let
 
                             test_x_area = pairs_to_matrix(X1, X2)
 
-                            if noise_x
+                            if noise_x && !noise_y
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set_x=noise_set_x, output_activation_function=output_activation_function)
-                            elseif noise_y
+                            elseif noise_y && !noise_x
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set_y=noise_set_y, output_activation_function=output_activation_function)
                             elseif noise_y && noise_x
                                 ŷ_uncertainties = pred_analyzer_multiclass(test_x_area, param_matrix, noise_set_x=noise_set_x, noise_set_y=noise_set_y, output_activation_function=output_activation_function)

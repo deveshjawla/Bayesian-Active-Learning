@@ -19,8 +19,8 @@ function computeWeights(X::Array{Float32,2}, y::Vector{Int64}, numRBFNeurons, nu
     end
     nn = Dense(numRBFNeurons, numCats; bias=false)
 
-	balance_of_training_data = countmap(y)
-	sample_weights = similar(y, Float32)
+    balance_of_training_data = countmap(y)
+    sample_weights = similar(y, Float32)
     nos_training = lastindex(y)
     for i = 1:nos_training
         sample_weights[i] = nos_training / balance_of_training_data[y[i]]
@@ -30,7 +30,7 @@ function computeWeights(X::Array{Float32,2}, y::Vector{Int64}, numRBFNeurons, nu
     y = Flux.onehotbatch(vec(y), 1:numCats)
 
     opt = OptimiserChain(WeightDecay(lambda), AdaBelief())
-	s = ParameterSchedulers.Stateful(CosAnneal(0.1, 1e-6, 100))
+    s = ParameterSchedulers.Stateful(CosAnneal(0.1, 1e-6, 100))
     opt_state = Flux.setup(opt, nn)
 
     # Train it
@@ -39,21 +39,21 @@ function computeWeights(X::Array{Float32,2}, y::Vector{Int64}, numRBFNeurons, nu
     optim_theta = 0
     re = 0
 
-	trnlosses = zeros(n_epochs)
+    trnlosses = zeros(n_epochs)
     for e in 1:n_epochs
         local loss = 0.0f0
 
-		# global opt_state, nn
+        # global opt_state, nn
         Flux.adjust!(opt_state, ParameterSchedulers.next!(s))
         # loss, grad = Flux.withgradient(m -> Flux.Losses.logitcrossentropy(m(X), y), nn)
         loss, grad = Flux.withgradient(m -> logitcrossentropyweighted(m(X), y, sample_weights), nn)
         trnlosses[e] = loss
         Flux.update!(opt_state, nn, grad[1])
-		
+
         # if mod(e, 2) == 1
         # 	# Report on train and test, only every 2nd epoch_idx:
         # 	@info "After Epoch $e" loss
-		# @warn("After Epoch $e -> $(opt_state.weight.rule)\n $(opt_state.bias.rule)!")
+        # @warn("After Epoch $e -> $(opt_state.weight.rule)\n $(opt_state.bias.rule)!")
         # end
 
         if abs(loss) < abs(least_loss)
@@ -71,7 +71,7 @@ function computeWeights(X::Array{Float32,2}, y::Vector{Int64}, numRBFNeurons, nu
     end
     # scatter(1:n_epochs, trnlosses, width=80, height=30)
     # savefig("./$(nn_arch)_loss.pdf")
-	@info "Finished training" last(trnlosses)
+    @info "Finished training" last(trnlosses)
     # optim_params, re = Flux.destructure(nn)
 
     return optim_theta, re

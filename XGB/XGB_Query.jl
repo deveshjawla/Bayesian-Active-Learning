@@ -11,8 +11,8 @@ function xgb_query(xgb, pool, previous_training_data, n_input, n_output, al_step
     sampled_indices = 0
     if al_sampling == "Random"
         sampled_indices = 1:acq_size_
-    # elseif al_sampling == "Random"
-    #     sampled_indices = random_acquisition(pool_size, acq_size_)
+        # elseif al_sampling == "Random"
+        #     sampled_indices = random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerEntropy"
         #Scoring the pool and acquiring new samples
         pool_x = copy(permutedims(pool_x))
@@ -58,16 +58,16 @@ function xgb_query(xgb, pool, previous_training_data, n_input, n_output, al_step
 
     #calculate the weights of the samples
     balance_of_training_data = countmap(Int.(training_data_y))
-	sample_weights =  similar(training_data_y, Float32)
-	nos_training = lastindex(training_data_y)
-	for i = 1:nos_training
-		sample_weights[i] = nos_training/balance_of_training_data[training_data_y[i]]
-	end
-	sample_weights ./= n_output
+    sample_weights = similar(training_data_y, Float32)
+    nos_training = lastindex(training_data_y)
+    for i = 1:nos_training
+        sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
+    end
+    sample_weights ./= n_output
 
-	d_matrix= DMatrix(training_data_x, training_data_y; weight = sample_weights)
+    d_matrix = DMatrix(training_data_x, training_data_y; weight=sample_weights)
 
-	println("checking if size of training and weights is coomatible",size(training_data_x), size(sample_weights))
+    println("checking if size of training and weights is coomatible", size(training_data_x), size(sample_weights))
 
     #Training on Acquired Samples and logging classification_performance
     if al_step == 1
@@ -78,7 +78,7 @@ function xgb_query(xgb, pool, previous_training_data, n_input, n_output, al_step
         # xgb_timed = @timed update!(xgb, (training_data_x, training_data_y), num_round=nsteps)
         # _ = xgb_timed.value
         # elapsed = xgb_timed.time
-		xgb_timed = @timed xgboost(d_matrix, num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
+        xgb_timed = @timed xgboost(d_matrix, num_round=nsteps, max_depth=6, objective="multi:softmax", num_class=n_output)
         xgb = xgb_timed.value
         elapsed = xgb_timed.time
     end
@@ -96,8 +96,8 @@ function xgb_query(xgb, pool, previous_training_data, n_input, n_output, al_step
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Accuracy", "Elapsed", "f1", "MCC", "fpr", "precision", "recall", "CSI", "CM"] [acq_size_, acc, elapsed, f1, mcc, fpr, prec, recall, threat, cm]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     else
-        
-		acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
+
+        acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "Elapsed", "MacroF1Score"] [acq_size_, acc, elapsed, f1]], ',')
         writedlm("./Experiments/$(experiment_name)/$(pipeline_name)/query_batch_class_distributions/$al_step.csv", ["ClassDistEntropy" class_dist_ent; class_dist], ',')
     end

@@ -46,5 +46,5 @@ function make_data(function_name::String)
         ys = map(x -> f(x, function_name) + randn(), xs)
 
     end
-	return xs, ys, Xline
+    return xs, ys, Xline
 end

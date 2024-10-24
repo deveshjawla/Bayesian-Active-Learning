@@ -18,16 +18,16 @@ df = CSV.read("secom_data_preprocessed_moldovan2017.csv", DataFrame, header=fals
 labels = readdlm("secom_labels.csv", ' ')
 println(describe(df))
 
-to_be_scaled = findall(x->minimum(x)>=0, eachcol(df))
-to_be_normalized = findall(x->minimum(x)<0, eachcol(df))
-a = mapcols(col-> StatsBase.standardize(UnitRangeTransform, col), select(df, to_be_scaled))
+to_be_scaled = findall(x -> minimum(x) >= 0, eachcol(df))
+to_be_normalized = findall(x -> minimum(x) < 0, eachcol(df))
+a = mapcols(col -> StatsBase.standardize(UnitRangeTransform, col), select(df, to_be_scaled))
 # b = mapcols(col-> StatsBase.standardize(ZScoreTransform, Float32.(col)), select(df, to_be_normalized))
-b = mapcols(col-> StatsBase.standardize(UnitRangeTransform, Float32.(col), unit=false), select(df, to_be_normalized))
+b = mapcols(col -> StatsBase.standardize(UnitRangeTransform, Float32.(col), unit=false), select(df, to_be_normalized))
 
 float_features = hcat(a, b)
 
-labels = labels[:,1]
-labels = labels.==1
+labels = labels[:, 1]
+labels = labels .== 1
 float_features.labels = Int.(labels)
 float_features.labels[float_features.labels.==0] .= 2
 

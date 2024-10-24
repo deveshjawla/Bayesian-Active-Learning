@@ -1,4 +1,4 @@
-function make_nn_arch(nn_arch::String, n_input::Int, n_output::Int; dropout_rate=0.2)
+function make_nn_arch(nn_arch::String, n_input::Int, n_output::Int; width_hidden=100, dropout_rate=0.2)
     if nn_arch == "Conv"
         nn = Chain(
             # First convolution, operating upon a 28x28 image
@@ -19,9 +19,10 @@ function make_nn_arch(nn_arch::String, n_input::Int, n_output::Int; dropout_rate
     elseif nn_arch == "Evidential Classification"
         # Define model
         nn = Chain(
-            Dense(n_input => 8, relu; bias=true),
-            Dense(8 => 8, relu; bias=true),
-            DIR(8 => n_output; bias=false)
+            Dense(n_input => width_hidden, relu; bias=true),
+            Dense(width_hidden => width_hidden, relu; bias=true),
+            Dense(width_hidden => width_hidden, relu; bias=true),
+            DIR(width_hidden => n_output; bias=false)
         )
     elseif nn_arch == "MixActivations4Layers"
         nn = Chain(
@@ -33,17 +34,18 @@ function make_nn_arch(nn_arch::String, n_input::Int, n_output::Int; dropout_rate
         )
     elseif nn_arch == "DroputNN2Layers"
         nn = Chain(
-            Dense(n_input => 5, tanh; init=Flux.glorot_normal()),
+            Dense(n_input => width_hidden, tanh; init=Flux.glorot_normal()),
             Dropout(dropout_rate),
-            Dense(5 => 5, tanh; init=Flux.glorot_normal()),
+            Dense(width_hidden => width_hidden, tanh; init=Flux.glorot_normal()),
             Dropout(dropout_rate),
-            Dense(5 => n_output; bias=false, init=Flux.glorot_normal()),
+            Dense(width_hidden => n_output; bias=false, init=Flux.glorot_normal()),
         )
     elseif nn_arch == "Relu2Layers"
         nn = Chain(
-            Dense(n_input => 5, relu; init=Flux.glorot_normal()),
-            Dense(5 => 5, relu; init=Flux.glorot_normal()),
-            Dense(5 => n_output; bias=false, init=Flux.glorot_normal()),
+            Dense(n_input => width_hidden, relu; init=Flux.glorot_normal()),
+            Dense(width_hidden => width_hidden, relu; init=Flux.glorot_normal()),
+            Dense(width_hidden => width_hidden, relu; init=Flux.glorot_normal()),
+            Dense(width_hidden => n_output; bias=false, init=Flux.glorot_normal()),
         )
     end
     return nn

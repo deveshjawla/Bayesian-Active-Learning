@@ -92,12 +92,12 @@ function pool_test_to_matrix(pool::DataFrame, test::DataFrame, n_input::Int, mod
     if model_type == "XGB"
         pool_y = permutedims(pool[:, end] .- 1)
         test_y = permutedims(test[:, end] .- 1)
-	else
+    else # outputs a tuple = (n_input×total samples Matrix{Float32}, 1×total samples Matrix{Float32})
         pool_y = permutedims(pool[:, end])
         test_y = permutedims(test[:, end])
-	# elseif model_type == "Evidential" || model_type == "LaplaceApprox"
-	# 	pool_y = Flux.onehotbatch(pool[:, end], 1:n_output)
-    #     test_y = Flux.onehotbatch(test[:, end], 1:n_output)
+        # elseif model_type == "Evidential" || model_type == "LaplaceApprox"
+        # 	pool_y = Flux.onehotbatch(pool[:, end], 1:n_output)
+        #     test_y = Flux.onehotbatch(test[:, end], 1:n_output)
     end
 
     pool = (permutedims(pool_x), pool_y)
@@ -136,68 +136,68 @@ end
 
 using StatisticalMeasures: recall
 function average_accuracy_HM(true_labels, predicted_labels)
-	
+
 end
 
 using StatisticalMeasures: FScore, balanced_accuracy, MulticlassTruePositiveRate, NoAvg
 using StatsBase: countmap
 using CategoricalArrays
 function performance_stats_multiclass(true_labels, predicted_labels, n_classes)
-	# @info "Number of classes" n_classes
-	true_labels = vec(true_labels)
-	predicted_labels = vec(predicted_labels)
-	# missing_labels = setdiff(predicted_labels, true_labels)
-	# for missing_label in missing_labels
-	# 	true_labels_indices_with_missing_label = findall(!=(missing_label), true_labels)
-	# 	predicted_labels_indices_with_missing_label = findall(!=(missing_label), predicted_labels)
-	# 	if lastindex(true_labels_indices_with_missing_label) < lastindex(predicted_labels_indices_with_missing_label)
-	# 		true_labels = true_labels[true_labels_indices_with_missing_label]
-	# 		predicted_labels = predicted_labels[true_labels_indices_with_missing_label]
-	# 	else
-	# 		true_labels = true_labels[predicted_labels_indices_with_missing_label]
-	# 		predicted_labels = predicted_labels[predicted_labels_indices_with_missing_label]
-	# 	end
-	# end
+    # @info "Number of classes" n_classes
+    true_labels = vec(true_labels)
+    predicted_labels = vec(predicted_labels)
+    # missing_labels = setdiff(predicted_labels, true_labels)
+    # for missing_label in missing_labels
+    # 	true_labels_indices_with_missing_label = findall(!=(missing_label), true_labels)
+    # 	predicted_labels_indices_with_missing_label = findall(!=(missing_label), predicted_labels)
+    # 	if lastindex(true_labels_indices_with_missing_label) < lastindex(predicted_labels_indices_with_missing_label)
+    # 		true_labels = true_labels[true_labels_indices_with_missing_label]
+    # 		predicted_labels = predicted_labels[true_labels_indices_with_missing_label]
+    # 	else
+    # 		true_labels = true_labels[predicted_labels_indices_with_missing_label]
+    # 		predicted_labels = predicted_labels[predicted_labels_indices_with_missing_label]
+    # 	end
+    # end
 
-	# writedlm("./test.csv", [true_labels predicted_labels])
+    # writedlm("./test.csv", [true_labels predicted_labels])
 
-	# Convert inputs to categorical vectors
+    # Convert inputs to categorical vectors
+
     true_labels = categorical(true_labels, ordered=true)
     predicted_labels = categorical(predicted_labels, ordered=true)
+
     levels!(true_labels, 1:n_classes)
     levels!(predicted_labels, 1:n_classes)
 
     # Calculate class weights
     # label_dist = sort(countmap(true_labels))
-	# pct_labels = collect(values(label_dist)) ./ sum(collect(values(label_dist)))
+    # pct_labels = collect(values(label_dist)) ./ sum(collect(values(label_dist)))
     # pct_labels = Dict(keys(label_dist) .=> pct_labels)
-	# @info "Distribution of Classes" pct_labels
+    # @info "Distribution of Classes" pct_labels
 
     # n_total = length(true_labels)
     # n_classes = lastindex(levels(true_labels))
     # weights = n_total ./ (n_classes .* (collect(values(label_dist))))
-    
+
     # Create a dictionary of class weights
     # class_weights = sort(Dict(keys(label_dist) .=> weights))
-	# @info "Class Weights" class_weights
+    # @info "Class Weights" class_weights
     # Calculate F1 score and accuracy
-	if n_classes == 2
-		acc = balanced_accuracy(predicted_labels, true_labels)
-		f1score = FScore(; rev=true)
-		f1 = f1score(predicted_labels, true_labels)
-		if isnan(f1)
-			f1 = 0
-		end
-	else
-		acc = balanced_accuracy(predicted_labels, true_labels)
-		mul_recall = MulticlassTruePositiveRate(;average=NoAvg(), levels=1:n_classes)
-		recalls = values(mul_recall(predicted_labels, true_labels))
-		zero_recalls = count(==(0), recalls)
-		f1 = 1 / ((1/n_classes)*sum(recalls .^ -1))
-		if isnan(f1)
-			f1 = 0
-		end
-	end
+    if n_classes == 2
+        acc = balanced_accuracy(predicted_labels, true_labels)
+        f1score = FScore(; rev=true)
+        f1 = f1score(predicted_labels, true_labels)
+    else
+        acc = balanced_accuracy(predicted_labels, true_labels)
+        mul_recall = MulticlassTruePositiveRate(; average=NoAvg(), levels=1:n_classes)
+        recalls = values(mul_recall(predicted_labels, true_labels))
+        n_classes_true_labels = lastindex(unique(true_labels))
+        if n_classes_true_labels < n_classes
+            n_classes = n_classes_true_labels
+            recalls = filter(!isnan, collect(recalls))
+        end
+        f1 = 1 / ((1 / n_classes) * sum(recalls .^ -1))
+    end
     @info "Acc and f1" acc f1
     return acc, f1
 end
@@ -272,25 +272,25 @@ using Distributions
 function confidence_interval_95(data)
     # Calculate the sample mean
     mean_val = mean(data)
-    
+
     # Calculate the sample standard deviation (use `corrected=true` for sample standard deviation)
     std_dev = std(data, corrected=true)
-    
+
     # Calculate the sample size
     n = length(data)
-    
+
     # Z-score for 95% confidence interval (for a two-tailed test)
     z = quantile(Normal(), 0.975)
-    
+
     # Calculate the margin of error
     margin_of_error = z * (std_dev / sqrt(n))
-    
+
     # # Confidence interval bounds
     # lower_bound = mean_val - margin_of_error
     # upper_bound = mean_val + margin_of_error
-    
+
     # return (lower_bound, upper_bound)
-	return margin_of_error
+    return margin_of_error
 end
 
 function mean_std_by_variable(group, group_by::Symbol, measurable::Symbol, variable::Symbol, experiment)
@@ -360,4 +360,73 @@ function plotting_measurable_variable(experiment, groupby::Symbol, list_group_na
         fig1a = Gadfly.plot(df, x=variable, y=measurable_mean, color=groupby, ymin=df[!, measurable_mean] - df[!, measurable_std], ymax=df[!, measurable_mean] + df[!, measurable_std], Geom.point, Geom.line, Geom.ribbon, Guide.ylabel(String(measurable)), Guide.xlabel(String(variable)), Coord.cartesian(xmin=xmin = df[!, variable][1]))
     end
     fig1a |> PDF("./Experiments/$(experiment)/$(measurable)_$(variable)_$(dataset)_$(experiment)_folds.pdf", dpi=300)
+end
+
+
+function to_integer_categorical_vector(vec::AbstractVector)
+    # Get the unique categories and map them to integers
+    unique_vals = unique(vec)
+    category_map = Dict(val => i for (i, val) in enumerate(unique_vals))
+
+    # Replace each value in the vector with its corresponding integer
+    return [category_map[v] for v in vec]
+end
+
+function encode_categorical_data(categorical_data, categories)
+    # Create a dictionary mapping each category to an index
+    category_to_index = Dict(category => i for (i, category) in enumerate(categories))
+
+    # Encode the categorical data as a list of indices
+    categorical_inputs = [category_to_index[category] for category in categorical_data]
+
+    return categorical_inputs
+end
+
+function onehotbatch_indices(categorical_inputs::Vector{AbstractVector}, num_categories_list::Vector{Int})
+    # Preallocate a vector for the one-hot encoded tensors
+    indices_tensor = Vector{Any}(undef, lastindex(categorical_inputs))
+
+    # Loop over the categorical inputs and their corresponding number of categories
+    for i in 1:lastindex(categorical_inputs)
+        # Apply one-hot encoding for each categorical input
+        indices_tensor[i] = Flux.onehotbatch(categorical_inputs[i], 1:num_categories_list[i])
+    end
+
+    return indices_tensor
+end
+
+
+
+
+function to_binary_vector(vec::AbstractVector)
+    return [v == vec[1] ? 1 : 0 for v in vec]
+end
+
+# Cross-validation function
+function cross_validation_indices(n_samples::Int, n_folds::Int)
+    # Ensure valid input
+    @assert n_folds > 1 "Number of folds should be greater than 1"
+    @assert n_samples >= n_folds "Number of samples should be greater or equal to number of folds"
+
+    # Generate an array of indices
+    indices = collect(1:n_samples)
+
+    # Divide the indices into approximately equal folds
+    folds = collect(Iterators.partition(indices, minimum([1000, ceil(Int, n_samples / n_folds)])))
+
+    # Prepare the cross-validation splits
+    cv_splits = []
+
+    for i in 1:n_folds
+        # Train set is the current fold
+        train_set = folds[i]
+
+        # Test set is next fold
+        val_set = folds[mod1(i + 1, n_folds)]
+
+        # Store the train/validation sets
+        push!(cv_splits, (train_set, val_set))
+    end
+
+    return cv_splits
 end

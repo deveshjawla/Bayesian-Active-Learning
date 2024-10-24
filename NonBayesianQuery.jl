@@ -32,7 +32,7 @@ function query(pool::Tuple, previous_training_data, n_input::Int, n_output::Int,
 
     pool = vcat(pool_x, pool_y)
     acq_size_ = lastindex(sampled_indices)
-	@info "Acquisition size is $(acq_size_)"
+    @info "Acquisition size is $(acq_size_)"
     new_training_data = pool[:, sampled_indices]
     new_pool = pool[:, Not(sampled_indices)]
 
@@ -109,10 +109,10 @@ function query(pool::Tuple, previous_training_data, n_input::Int, n_output::Int,
         entropies_edlc = mapslices(x -> normalized_entropy(x, n_output), ŷ, dims=1)
         predictions_matrix = vcat(ŷ_label, u, entropies_edlc)
     elseif learning_algorithm == "LaplaceApprox"
-		@info "Starting Predictions on Test"
+        @info "Starting Predictions on Test"
         predictions_test_x = LaplaceRedux.predict(nn_reconstruct, test_x, link_approx=:probit)
         predictions_matrix = pred_analyzer_multiclass(predictions_test_x, n_output)
-		@info "Finished Predictions on Test"
+        @info "Finished Predictions on Test"
     elseif learning_algorithm == "RBF"
         predictions_test_x = testRbf(learned_weights[1], learned_weights[2], nn_reconstruct[1], nn_reconstruct[2], permutedims(test_x))
         predictions_matrix = pred_analyzer_multiclass(predictions_test_x, n_output)

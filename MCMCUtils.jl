@@ -83,7 +83,7 @@ end
 
 	Returns: Matrix with Dims(6, Number of Samples) where 6 are the following quantitites = [pred_label, pred_prob, pred_std, aleatoric_uncertainties, epistemic_uncertainties, total_uncertainties]
 """
-function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array{Float32,2}; noise_set_x=nothing, noise_set_y=nothing, reconstruct=nothing, output_activation_function="Softmax")::Array{Float32,2}
+function pred_analyzer_multiclass(test_xs::Array{Float32,2}, categorical_indices_list, param_matrix::Array{Float32,2}; noise_set_x=nothing, noise_set_y=nothing, reconstruct=nothing, output_activation_function="Softmax")::Array{Float32,2}
     if isnothing(reconstruct)
         nets = map(feedforward, eachrow(param_matrix))
     else
@@ -93,22 +93,22 @@ function pred_analyzer_multiclass(test_xs::Array{Float32,2}, param_matrix::Array
     if output_activation_function == "Softmax"
         if isnothing(noise_set_x) && isnothing(noise_set_y)
             # predictions_nets = map(x -> softmax(x(test_xs)), nets)
-            predictions_nets = map(net -> softmax(net(test_xs); dims=1), nets)
-        elseif isnothing(noise_set_y)
+            predictions_nets = map(net -> softmax(net(test_xs, categorical_indices_list); dims=1), nets)
+        elseif isnothing(noise_set_y) && !isnothing(noise_set_x)
             predictions_nets = map((net, noise_x) -> softmax(net(test_xs .+ noise_x); dims=1), nets, noise_set_x)
-        elseif isnothing(noise_set_x)
-            predictions_nets = map((net, noise_y) -> softmax(net(test_xs) .+ noise_y; dims=1), nets, noise_set_y)
+        elseif isnothing(noise_set_x) && !isnothing(noise_set_y)
+            predictions_nets = map((net, noise_y) -> softmax(net(test_xs, categorical_indices_list) .+ noise_y; dims=1), nets, noise_set_y)
         else
             predictions_nets = map((net, noise_x, noise_y) -> softmax(net(test_xs .+ noise_x) .+ noise_y; dims=1), nets, noise_set_x, noise_set_y)
         end
     elseif output_activation_function == "Relu"
         if isnothing(noise_set_x) && isnothing(noise_set_y)
             # predictions_nets = map(x -> softmax(x(test_xs)), nets)
-            predictions_nets = map(net -> net(test_xs) ./ sum(net(test_xs), dims=1), nets)
+            predictions_nets = map(net -> net(test_xs, categorical_indices_list) ./ sum(net(test_xs, categorical_indices_list), dims=1), nets)
         elseif isnothing(noise_set_y)
             predictions_nets = map((net, noise_x) -> net(test_xs .+ noise_x) ./ sum(net(test_xs .+ noise_x), dims=1), nets, noise_set_x)
         elseif isnothing(noise_set_x)
-            predictions_nets = map((net, noise_y) -> (net(test_xs) .+ noise_y) ./ sum(net(test_xs) .+ noise_y, dims=1), nets, noise_set_y)
+            predictions_nets = map((net, noise_y) -> (net(test_xs, categorical_indices_list) .+ noise_y) ./ sum(net(test_xs, categorical_indices_list) .+ noise_y, dims=1), nets, noise_set_y)
         else
             predictions_nets = map((net, noise_x, noise_y) -> (net(test_xs .+ noise_x) .+ noise_y) ./ sum((net(test_xs .+ noise_x) .+ noise_y), dims=1), nets, noise_set_x, noise_set_y)
         end
@@ -150,19 +150,18 @@ Returns a tuple of {Prediction, Prediction probability}
 
 Uses a simple argmax and percentage of samples in the ensemble respectively
 """
-function pred_analyzer_regression(test_xs::Array{Float32,2}, param_matrix::Array{Float32,2}; reconstruct=nothing)::Tuple{Array{Float32,2},Array{Float32,2}}
+function pred_analyzer_regression(test_xs::Array{Float32,2}, categorical_indices_list, param_matrix::Array{Float32,2}; reconstruct=nothing)::Tuple{Array{Float32,2},Array{Float32,2}}
     if isnothing(reconstruct)
         nets = map(feedforward, eachrow(param_matrix))
     else
         nets = map(reconstruct, eachrow(param_matrix))
     end
-    predictions_nets = map(net -> net(test_xs), nets)
+    predictions_nets = map(net -> net(test_xs, categorical_indices_list), nets)
     predictions = permutedims(reduce(vcat, predictions_nets))
     pred_matrix_mean = mapslices(mean, predictions, dims=2)
     pred_matrix_std = mapslices(std, predictions, dims=2)
     return pred_matrix_mean, pred_matrix_std
 end
-
 
 function collecting_stats_active_learning_experiments_regression(n_acq_steps, experiment, pipeline_name, num_chains, learning_algorithm)
     performance_stats = Array{Any}(undef, 5, n_acq_steps)
@@ -224,7 +223,7 @@ function collecting_stats_active_learning_experiments_classification(n_acq_steps
     for al_step = 1:n_acq_steps
         if learning_algorithm == "MCMC"
             data = Array{Any}(undef, 6, num_chains)
-			elapsed = 0
+            elapsed = 0
             for i = 1:num_chains
                 m = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain_$i.csv", ',')
                 data[:, i] = m[:, 2]
@@ -233,8 +232,8 @@ function collecting_stats_active_learning_experiments_classification(n_acq_steps
             d = mean(data, dims=2)
             writedlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/$(al_step)_chain.csv", d)
             performance_stats[:, al_step] = d
-		elseif learning_algorithm == "VI"
-			elapsed = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/elapsed_$(al_step).csv", ',')
+        elseif learning_algorithm == "VI"
+            elapsed = readdlm("./Experiments/$(experiment)/$(pipeline_name)/convergence_statistics/elapsed_$(al_step).csv", ',')
             elapsed_stats[:, al_step] = elapsed
         end
 
@@ -268,7 +267,7 @@ function collecting_stats_active_learning_experiments_classification(n_acq_steps
 end
 
 
-function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
+function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, pool, n_input, n_output, categorical_indices_list, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
     # n_acq_steps = 10#round(Int, total_pool_samples / acquisition_size, RoundUp)
     prior = (zeros(num_params), prior_std)
     param_matrix, new_training_data = 0, 0
@@ -311,7 +310,7 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
 
 
         if AL_iteration == 1
-            new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Random", mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
+            new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(prior, pool, new_training_data, n_input, n_output, categorical_indices_list, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, "Random", mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
             mcmc_init_params = deepcopy(location_posterior)
             n_acq_steps = deepcopy(AL_iteration)
         elseif lastindex(new_pool[2]) >= acquisition_size
@@ -320,19 +319,19 @@ function running_active_learning_ensemble(n_acq_steps, num_params, prior_std, po
             else
                 new_prior = (location_posterior, prior_std)
             end
-            new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
+            new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, categorical_indices_list, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, acquisition_size, num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)
             mcmc_init_params = deepcopy(location_posterior)
             n_acq_steps = deepcopy(AL_iteration)
-        # elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
-        #     if prior_informativeness == "UnInformedPrior"
-        #         new_prior = prior
-        #     else
-        #         new_prior = (location_posterior, prior_std)
-        #     end
-        #     new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)
-        #     mcmc_init_params = deepcopy(location_posterior)
-        #     println("Trained on last few samples remaining in the Pool")
-        #     n_acq_steps = deepcopy(AL_iteration)
+            # elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
+            #     if prior_informativeness == "UnInformedPrior"
+            #         new_prior = prior
+            #     else
+            #         new_prior = (location_posterior, prior_std)
+            #     end
+            #     new_pool, param_matrix, new_noise_x, new_noise_y, new_training_data, last_acc, last_elapsed, location_posterior = bnn_query(new_prior, new_pool, new_training_data, n_input, n_output, param_matrix, new_noise_x, new_noise_y, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), num_mcsteps, num_chains, acq_func, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm)
+            #     mcmc_init_params = deepcopy(location_posterior)
+            #     println("Trained on last few samples remaining in the Pool")
+            #     n_acq_steps = deepcopy(AL_iteration)
         end
     end
     return n_acq_steps

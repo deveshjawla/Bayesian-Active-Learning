@@ -1,8 +1,8 @@
 
 function vi_inference(prior::Tuple, training_data::Tuple{Matrix{Float32},Matrix{Int64}}, al_step::Int, experiment_name::String, pipeline_name::String, temperature, sample_weights, likelihood_name)::Tuple{Array{Float32,2},Vector{Vector{Float32}},Float32}
     location, scale = prior
-	# scale = Float32.(scale)
-	# location = Float32.(location)
+    # scale = Float32.(scale)
+    # location = Float32.(location)
     # nparameters = lastindex(location)
     train_x, train_y = training_data
     println("Checking dimensions of train_x and train_y just before training:", size(train_x), " & ", size(train_y))
@@ -15,13 +15,13 @@ function vi_inference(prior::Tuple, training_data::Tuple{Matrix{Float32},Matrix{
     else
         model = BNN(train_x, train_y, location, scale)
     end
-	
+
     q0 = Variational.meanfield(model)
-	advi = ADVI(10, 10000; adtype=AutoReverseDiff())
+    advi = ADVI(10, 10000; adtype=AutoReverseDiff())
     opt = Variational.DecayedADAGrad(1e-2, 1.1, 0.9)
     timed_q = @timed vi(model, advi, q0; optimizer=opt)
-	q = timed_q.value
-	elapsed = Float32(timed_q.time)
+    q = timed_q.value
+    elapsed = Float32(timed_q.time)
     z = rand(q, 1000)
 
     _, sym2range = bijector(model, Val(true))

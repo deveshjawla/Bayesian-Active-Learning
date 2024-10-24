@@ -112,8 +112,8 @@ using Printf
 # Gadfly.push_theme(theme)
 experiment = "TotalSamples"
 mkpath("./Plots/$(experiment)")
-groups  = deepcopy(groupby(df, [:Case, :NumCategories]))
+groups = deepcopy(groupby(df, [:Case, :NumCategories]))
 for g in groups
-	plt = Gadfly.plot(g, x=:TotalSamples, y=:Correlation, color=:Pair, Gadfly.Geom.point(), Gadfly.Geom.line(), Scale.x_log10)
-	plt |> PDF("./Plots/$(experiment)/Case=$(g.Case[1])_$(g.NumCategories[1]).pdf", 600pt, 600pt)
+    plt = Gadfly.plot(g, x=:TotalSamples, y=:Correlation, color=:Pair, Gadfly.Geom.point(), Gadfly.Geom.line(), Scale.x_log10)
+    plt |> PDF("./Plots/$(experiment)/Case=$(g.Case[1])_$(g.NumCategories[1]).pdf", 600pt, 600pt)
 end

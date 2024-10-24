@@ -1,9 +1,9 @@
 """
-Returns new_pool, new_prior, independent_param_matrix, training_data
+Returns new_pool_tuple, independent_param_matrix, independent_noise_x, independent_noise_y, training_data, acc, elapsed, param_matrix_mean
 """
-function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::Int, n_output::Int, param_matrix, noise_x_set, noise_y_set, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Union{Nothing,Vector{Vector{Float32}},Matrix{Float32}},Union{Nothing,Vector{Vector{Float32}},Matrix{Float32}},Array{Float32,2},Float32,Float32,Vector}
+function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::Int, n_output::Int, categorical_indices_list, param_matrix, noise_x_set, noise_y_set, al_step::Int, test_data, experiment::String, pipeline_name::String, acq_size_::Int, nsteps::Int, n_chains::Int, al_sampling::String, mcmc_init_params, temperature, prior_informativeness, likelihood_name, learning_algorithm, noise_x, noise_y)::Tuple{Tuple{Array{Float32,2},Array{Float32,2}},Array{Float32,2},Matrix{Float32},Matrix{Float32},Array{Float32,2},Float32,Float32,Vector{Float32}}
 
-    new_pool_tuple, independent_param_matrix, independent_noise_x, independent_noise_y, training_data, acc, elapsed, param_matrix_mean = nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing
+    new_pool_tuple, independent_param_matrix, independent_noise_x, independent_noise_y, acc, elapsed, param_matrix_mean = nothing, nothing, nothing, nothing, nothing, nothing, nothing
 
     println("$(al_sampling) with query no. ", al_step)
     # sigma, num_params = prior
@@ -12,15 +12,15 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::I
     sampled_indices = 0
     pool_prediction_matrix = 0
     if typeof(param_matrix) == Array{Float32,2}
-        # pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix; noise_set_x=noise_x_set)
-        if noise_x
-            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix; noise_set_x=noise_x_set)
-        elseif noise_y
-            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix; noise_set_y=noise_y_set)
+        # pool_prediction_matrix = pred_analyzer_multiclass(pool_x, categorical_indices_list,  param_matrix; noise_set_x=noise_x_set)
+        if noise_x && !noise_y
+            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, categorical_indices_list, param_matrix; noise_set_x=noise_x_set)
+        elseif noise_y && !noise_x
+            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, categorical_indices_list, param_matrix; noise_set_y=noise_y_set)
         elseif noise_y && noise_x
-            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix; noise_set_x=noise_x_set, noise_set_y=noise_y_set)
+            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, categorical_indices_list, param_matrix; noise_set_x=noise_x_set, noise_set_y=noise_y_set)
         else
-            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, param_matrix)
+            pool_prediction_matrix = pred_analyzer_multiclass(pool_x, categorical_indices_list, param_matrix)
         end
     end
     sampled_indices = get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix)
@@ -37,22 +37,22 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::I
     #     end
     # end
 
-    if new_acq_size_ == 0
-        @info "Last Query Returned Zero Samples, therefore Random Sampling!"
-        sampled_indices = random_acquisition(pool_size, acq_size_)
-        acq_size_ = lastindex(sampled_indices)
-        new_training_data = pool[:, sampled_indices]
-        new_pool = pool[:, Not(sampled_indices)]
-        # if n_output == 2 && class_balancing == "BalancedBinaryAcquisition"
-        #     new_training_data, leftovers = balance_binary_data(new_training_data, positive_class_label=1, negative_class_label=2)
-        #     if leftovers !== nothing
-        #         new_pool = hcat(new_pool, leftovers)
-        #         acq_size_ = acq_size_ - size(leftovers, 2)
-        #     end
-        # end
-    else
-        acq_size_ = new_acq_size_
-    end
+    # if new_acq_size_ == 0
+    #     @info "Last Query Returned Zero Samples, therefore Random Sampling!"
+    #     sampled_indices = random_acquisition(pool_size, acq_size_)
+    #     acq_size_ = lastindex(sampled_indices)
+    #     new_training_data = pool[:, sampled_indices]
+    #     new_pool = pool[:, Not(sampled_indices)]
+    #     # if n_output == 2 && class_balancing == "BalancedBinaryAcquisition"
+    #     #     new_training_data, leftovers = balance_binary_data(new_training_data, positive_class_label=1, negative_class_label=2)
+    #     #     if leftovers !== nothing
+    #     #         new_pool = hcat(new_pool, leftovers)
+    #     #         acq_size_ = acq_size_ - size(leftovers, 2)
+    #     #     end
+    #     # end
+    # else
+    acq_size_ = new_acq_size_
+    # end
 
     new_training_data_y = new_training_data[end, :]
     balance_of_acquired_batch = countmap(Int.(new_training_data_y))
@@ -82,17 +82,20 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::I
 
     training_data_x, training_data_y = training_data[1:n_input, :], training_data[end, :]
 
-    #calculate the weights of the samples
-    balance_of_training_data = countmap(Int.(training_data_y))
+    sample_weights = nothing
+    if n_output > 1
+        #calculate the weights of the samples
+        balance_of_training_data = countmap(Int.(training_data_y))
 
-    sample_weights = similar(training_data_y, Float32)
+        sample_weights = similar(training_data_y, Float32)
 
-    nos_training = lastindex(training_data_y)
+        nos_training = lastindex(training_data_y)
 
-    for i = 1:nos_training
-        sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
+        for i = 1:nos_training
+            sample_weights[i] = nos_training / balance_of_training_data[training_data_y[i]]
+        end
+        sample_weights ./= n_output
     end
-    sample_weights ./= n_output
 
     # @info "Sample weights type" typeof(sample_weights)
 
@@ -110,8 +113,7 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::I
     elseif learning_algorithm == "MCMC"
         # independent_param_matrix, independent_noise_x, elapsed = mcmc_inference(prior, training_data_xy, n_input, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness, noise_x, noise_y)
 
-        independent_param_matrix, independent_noise_x, independent_noise_y, elapsed = mcmc_inference(prior, training_data_xy, n_input, n_output, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness, noise_x, noise_y)
-
+        independent_param_matrix, independent_noise_x, independent_noise_y, elapsed = mcmc_inference(prior, training_data_xy, n_input, n_output, categorical_indices_list, nsteps, n_chains, al_step, experiment, pipeline_name, mcmc_init_params, temperature, sample_weights, likelihood_name, prior_informativeness, noise_x, noise_y)
     end
     test_x, test_y = test_data
 
@@ -128,24 +130,23 @@ function bnn_query(prior::Tuple, pool::Tuple, previous_training_data, n_input::I
         acc = mse
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "MSE", "MAE"] [acq_size_, mse, mae]], ',')
     else
-        # predictions = pred_analyzer_multiclass(test_x, independent_param_matrix; noise_set_x=independent_noise_x)
-        if noise_x
-            predictions = pred_analyzer_multiclass(test_x, independent_param_matrix, noise_set_x=independent_noise_x)
-        elseif noise_y
-            predictions = pred_analyzer_multiclass(test_x, independent_param_matrix, noise_set_y=independent_noise_y)
+        # predictions = pred_analyzer_multiclass(pool_x, categorical_indices_list,  independent_param_matrix; noise_set_x=independent_noise_x)
+        if noise_x && !noise_y
+            predictions = pred_analyzer_multiclass(test_x, categorical_indices_list, independent_param_matrix, noise_set_x=independent_noise_x)
+        elseif noise_y && !noise_x
+            predictions = pred_analyzer_multiclass(test_x, categorical_indices_list, independent_param_matrix, noise_set_y=independent_noise_y)
         elseif noise_y && noise_x
-            predictions = pred_analyzer_multiclass(test_x, independent_param_matrix, noise_set_x=independent_noise_x, noise_set_y=independent_noise_y)
+            predictions = pred_analyzer_multiclass(test_x, categorical_indices_list, independent_param_matrix, noise_set_x=independent_noise_x, noise_set_y=independent_noise_y)
         else
-            predictions = pred_analyzer_multiclass(test_x, independent_param_matrix)
+            predictions = pred_analyzer_multiclass(test_x, categorical_indices_list, independent_param_matrix)
         end
 
         ŷ_test = predictions[1, :]
 
-		cols = [:Confidence, :StdDeviationConfidence, :Aleatoric, :Epistemic, :TotalUncertainty]
-		M = cor(predictions[2:6,:], dims=2)
-		writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/corr_matrix_$al_step.csv", M, ',')
-		plotter(M, cols)
-        # ŷ_test_map = permutedims(Int.(predictions_map[1, :]))
+        # cols = [:Confidence, :StdDeviationConfidence, :Aleatoric, :Epistemic, :TotalUncertainty]
+        # M = cor(predictions[2:6, :], dims=2)
+        # writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/corr_matrix_$al_step.csv", M, ',')
+        # plotter(M, cols)
 
         acc, f1 = performance_stats_multiclass(test_y, ŷ_test, n_output)
         writedlm("./Experiments/$(experiment)/$(pipeline_name)/classification_performance/$al_step.csv", [["Acquisition Size", "Balanced Accuracy", "MacroF1Score"] [acq_size_, acc, f1]], ',')

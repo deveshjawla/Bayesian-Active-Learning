@@ -10,10 +10,10 @@ function running_active_learning(n_acq_steps, pool, n_input, n_output, test, exp
         elseif lastindex(new_pool[2]) >= acquisition_size
             new_pool, network_tuple, new_training_data, last_acc, last_elapsed = query(new_pool, new_training_data, n_input, n_output, network_tuple, AL_iteration, test, experiment, pipeline_name, acquisition_size, acq_func, learning_algorithm)
             n_acq_steps = deepcopy(AL_iteration)
-        # elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
-        #     new_pool, network_tuple, new_training_data, last_acc, last_elapsed = query(new_pool, new_training_data, n_input, n_output, network_tuple, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), acq_func, learning_algorithm)
-        #     println("Trained on last few samples remaining in the Pool")
-        #     n_acq_steps = deepcopy(AL_iteration)
+            # elseif lastindex(new_pool[2]) <= acquisition_size && lastindex(new_pool[2]) > 0
+            #     new_pool, network_tuple, new_training_data, last_acc, last_elapsed = query(new_pool, new_training_data, n_input, n_output, network_tuple, AL_iteration, test, experiment, pipeline_name, lastindex(new_pool[2]), acq_func, learning_algorithm)
+            #     println("Trained on last few samples remaining in the Pool")
+            #     n_acq_steps = deepcopy(AL_iteration)
         end
     end
     return n_acq_steps
@@ -22,8 +22,8 @@ end
 function non_bayesian_get_sampled_indices(al_sampling, acq_size_, pool_size, pool_prediction_matrix)::Vector{Int}
     if al_sampling == "Random"
         sampled_indices = 1:acq_size_
-    # elseif al_sampling == "Random"
-    #     sampled_indices = random_acquisition(pool_size, acq_size_)
+        # elseif al_sampling == "Random"
+        #     sampled_indices = random_acquisition(pool_size, acq_size_)
     elseif al_sampling == "PowerEntropy"
         entropy_scores = pool_prediction_matrix[3, :]
         sampled_indices = stochastic_acquisition(entropy_scores, acq_size_; acquisition_type="Power")

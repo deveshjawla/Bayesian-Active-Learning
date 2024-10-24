@@ -37,6 +37,6 @@ each of the RBF neurons.
 function getRBFActivations(centers::Array{Float32,2}, betas::Array{Float32,2}, input::Array{Float32,2})
     # Calculate Squared Euclidean Distance between all the centers and the single input data-point
     sqrdDists = pairwise(SqEuclidean(), centers, input, dims=1)
-	z = exp.(-betas .* sqrdDists)
+    z = exp.(-betas .* sqrdDists)
     return z
 end

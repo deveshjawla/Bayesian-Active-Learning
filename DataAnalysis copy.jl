@@ -1,8 +1,8 @@
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+datasets = ["stroke", "adult1994", "creditdefault2005"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+list_inout_dims = [(4, 2), (4, 2), (22, 2)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_noise_x = [false, true]
-list_noise_y = [false, true]
+list_noise_x = [false, false]
+list_noise_y = [false, false]
 
 using DelimitedFiles, DataFrames, CSV, Statistics
 
@@ -25,7 +25,7 @@ for (dataset, inout_dims) in zip(datasets, list_inout_dims)
     convergence_stats = Matrix{Any}(undef, 0, lastindex(col_names))
     for noise_x in list_noise_x
         for noise_y in list_noise_y
-            experiment = "NoiseX = $(noise_x) and NoiseY = $(noise_y)"
+            experiment = "Test"
 
             array_measurables = Array{String}(undef, 1, lastindex(list_measurables))
             for (idx, measurable) in enumerate(list_measurables)

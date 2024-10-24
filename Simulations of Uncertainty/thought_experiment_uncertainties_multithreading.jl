@@ -90,7 +90,7 @@ function neither_argmax_nor_argmin(A::Vector{<:Number})::Union{Vector{Int64},Not
     end
 end
 
-function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64, case::Int)::Tuple{Matrix{Float16}, Int64}
+function analyse_uncertainties(TotalSamples::Int64, num_Categories::Int64, case::Int)::Tuple{Matrix{Float16},Int64}
     if num_Categories == 2
         Possible_Ratio_Pred_CorrectInCorrect = [[i j] for i in 0:TotalSamples, j in 0:TotalSamples if sum([i, j]) == TotalSamples]
     elseif num_Categories == 3
@@ -237,18 +237,18 @@ end
 List_TotalCategories = [3, 4]
 List_TotalSamples = [100]
 using DelimitedFiles
-Cases = [1,2,3] #:Correct_Maj, :Correct_Min, :Correct_Eq
+Cases = [1, 2, 3] #:Correct_Maj, :Correct_Min, :Correct_Eq
 for num_Categories in List_TotalCategories
     for TotalSamples in List_TotalSamples
         for case in Cases
             @info "Now running simulations for $(num_Categories) Categories! and Case = $(case)"
             results_timed = @timed analyse_uncertainties(TotalSamples, num_Categories, case)
             elapsed = results_timed.time
-			M, total_permutations = results_timed.value
+            M, total_permutations = results_timed.value
             # writedlm("./Simulations of Uncertainty/$(TotalSamples) Samples/unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case)_TotalPermutations=$(total_permutations)_Elapsed=$(elapsed)seconds.csv", M, ',')
-			# results = readdlm("./unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case)_TotalPermutations=$(total_permutations)_Elapsed=$(elapsed)seconds.csv", ',', Float32)
-			mkpath("./Simulations of Uncertainty/$(TotalSamples) Samples")
-			M = convert(Matrix{Float32}, M)
+            # results = readdlm("./unceratinties_theory_data_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(case)_TotalPermutations=$(total_permutations)_Elapsed=$(elapsed)seconds.csv", ',', Float32)
+            mkpath("./Simulations of Uncertainty/$(TotalSamples) Samples")
+            M = convert(Matrix{Float32}, M)
             cols = [:PctCorrectByMembers, :AvgEntropyCorrect, :AvgEntropyInCorrect, :TotalUncertainty, :Aleatoric, :Epistemic, :VarAleatoric]
             M = cor(M)
             writedlm("./Simulations of Uncertainty/$(TotalSamples) Samples/pearson_correlations_Uncertainties_NumCategories=$(num_Categories)_TotalSamples=$(TotalSamples)_Case=$(Float16(case)).csv", M, ',')

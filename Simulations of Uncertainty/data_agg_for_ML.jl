@@ -29,6 +29,6 @@ let
         end
     end
     df = DataFrame(empty_matrix, [:Case, :NumCategories, :TotalSamples, :Pair, :Correlation])
-	df = filter(row -> !isnan(row.Correlation), df)
+    df = filter(row -> !isnan(row.Correlation), df)
     CSV.write("/Users/456828/Projects/Bayesian-Active-Learning/Simulations of Uncertainty/correlations_dataframe.csv", df)
 end

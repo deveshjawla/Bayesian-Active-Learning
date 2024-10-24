@@ -21,7 +21,7 @@ include("./../AdaBeliefCosAnnealNNTraining.jl")
 function parallel_network_training(n_networks, nparameters, n_epochs, n_input, n_output, train_loader, sample_weights_loader)::Matrix{Float32}
     param_matrices_accumulated = SharedMatrix{Float32}(n_networks, nparameters)
     @showprogress "Parallel Networks Training Progress" pmap(1:n_networks) do i #@showprogress
-		optim_theta, re = network_training(m, n_input, n_output, n_epochs, train_loader, sample_weights_loader)
+        optim_theta, re = network_training(m, n_input, n_output, n_epochs, train_loader, sample_weights_loader)
         param_matrices_accumulated[i, :] = optim_theta
     end
     return convert(Matrix{Float32}, param_matrices_accumulated)

@@ -33,10 +33,10 @@ let
         cd(PATH * "/Data/Tabular/$(dataset)/Experiments")
         println(dataset)
 
-		for fold in n_folds
-        	M = readdlm("./Correlations_uncertainty/$(acquisition_size)_Random_GlorotPrior_WeightedLikelihood_UnInformedPrior_CWL_$(fold)_8_200/classification_performance/corr_matrix_1.csv", ',')
-        	convergence_stats = cat(convergence_stats, M, dims=3)
-		end
+        for fold in n_folds
+            M = readdlm("./Correlations_uncertainty/$(acquisition_size)_Random_GlorotPrior_WeightedLikelihood_UnInformedPrior_CWL_$(fold)_8_200/classification_performance/corr_matrix_1.csv", ',')
+            convergence_stats = cat(convergence_stats, M, dims=3)
+        end
     end
     mean_stats = mean(convergence_stats, dims=3)
     std_stats = std(convergence_stats, dims=3)

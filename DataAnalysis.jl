@@ -1,7 +1,7 @@
-datasets = ["stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps", "iris1988", "yeast1996"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
-list_inout_dims = [(4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
+datasets = ["stroke", "adult1994", "creditdefault2005", "iris1988"]#"stroke", "adult1994", "banknote2012", "creditfraud", "creditdefault2005", "coalmineseismicbumps",  "iris1988", "yeast1996"
+list_inout_dims = [(4, 2), (4, 2), (22, 2), (4, 3)] # (4, 2), (4, 2), (4, 2), (28, 2), (22, 2), (11, 2), (4, 3), (8, 10)
 
-list_learning_algorithms = ["RBF", "Evidential", "LaplaceApprox", "MCMC"]
+list_learning_algorithms = ["MCMC"]#"RBF", "Evidential", "LaplaceApprox", 
 
 using DelimitedFiles, DataFrames, CSV, Statistics
 
@@ -26,6 +26,7 @@ for (dataset, inout_dims) in zip(datasets, list_inout_dims)
         if learning_algorithm == "MCMC"
             experiment = "ComparisonBayesianAcquisitionFunctions$(learning_algorithm)_ReverseF1"
             acq_functions = ["Random", "BALD", "StdConfidence", "BayesianUncertainty0.8"] # "Random", "Random",  "BALD", "StdConfidence", "BayesianUncertainty0.8"
+            experiment = "Test"
         else
             experiment = "ComparisonAcquisitionFunctions$(learning_algorithm)_Weighted"
             acq_functions = ["Random", "Entropy", "Uncertainty"]
@@ -44,8 +45,8 @@ for (dataset, inout_dims) in zip(datasets, list_inout_dims)
             end
             array_measurables[:, idx] = stats_df_
         end
-		array_per_algorithm = hcat(acq_functions, array_measurables)
-		convergence_stats = vcat(convergence_stats, hcat(repeat([learning_algorithm], lastindex(acq_functions)), array_per_algorithm))
+        array_per_algorithm = hcat(acq_functions, array_measurables)
+        convergence_stats = vcat(convergence_stats, hcat(repeat([learning_algorithm], lastindex(acq_functions)), array_per_algorithm))
     end
-	CSV.write("./Comparison of Models and Acquisition Functions.csv", DataFrame(convergence_stats, col_names))
+    CSV.write("./Comparison Bayesian Acq Functions.csv", DataFrame(convergence_stats, col_names))
 end

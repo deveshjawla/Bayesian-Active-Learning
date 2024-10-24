@@ -14,24 +14,35 @@ df[df.label.==0, :label] .= 2
 
 # CSV.write("./train.csv", train)
 # CSV.write("./test.csv", test)
-
 Random.seed!(1234)
 df = df[shuffle(axes(df, 1)), :]
-train_size = 1000
-train_size = 1000
-test_size = 1000
-n_folds = 10
-fold_size = minimum([1000, div(size(df, 1), n_folds)])
 
-mkpath("./FiveFolds")
+df_size, = size(df, 1)
+n_folds = 10
+fold_size = minimum([1000, div(df_size, n_folds)])
+
+fold_incides = cross_validation_indices(df_size, n_folds)
+
+mkpath("./TenFolds")
 #generate five folds and save them as train/test split in the 5 Folds Folder
 for i in 1:n_folds
-	train = df[(fold_size*(i-1))+1:fold_size*i, :]
-	# # # train, leftovers = balance_binary_data(train)
-	test = df[(fold_size*mod(i, n_folds))+1:fold_size*mod1((i+1), n_folds), :]
-	# # # test = vcat(test, leftovers)
-	CSV.write("./FiveFolds/train_$(i).csv", train)
-	CSV.write("./FiveFolds/test_$(i).csv", test)
-	# println((fold_size*(i-1))+1:fold_size*i)
-	# println((fold_size*mod(i, n_folds))+1:fold_size*mod1((i+1), n_folds))
+    # train = continuous_features_train[(train_fold_size*(i-1))+1:train_fold_size*i, :]
+    # # cat_train = categorical_features_train[(train_fold_size*(i-1))+1:train_fold_size*i, :]
+    # # # train, leftovers = balance_binary_data(train)
+    # # test = continuous_features_test[fold_size*i+1:fold_size*(i+1), :]
+    # # cat_test = categorical_features_test[fold_size*i+1:fold_size*(i+1), :]
+
+    # test = continuous_features_test[(test_fold_size*(i-1))+1:test_fold_size*i, :]
+    # # cat_test = categorical_features_test[(test_fold_size*(i-1))+1:test_fold_size*i, :]
+    # # # test = vcat(test, leftovers)
+
+    train_indices, test_indices = fold_incides[i]
+    train = df[train_indices, :]
+    test = df[test_indices, :]
+    CSV.write("./TenFolds/train_$(i).csv", train)
+    # CSV.write("./TenFolds/categorical_train_$(i).csv", cat_train)
+    CSV.write("./TenFolds/test_$(i).csv", test)
+    # CSV.write("./TenFolds/categorical_test_$(i).csv", cat_test)
+    # println((fold_size*(i-1))+1:fold_size*i)
+    # println(1000*i+1:1000*(i+1))
 end
